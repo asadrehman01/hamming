@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+@theme {
+  --font-logo: "Bebas Neue", sans-serif;
+  --font-body: "DM Sans", sans-serif;
+
+  --color-surface: #E8E0D5;
+  --color-ink: #0A0A0A;
+  --color-muted: #6B6360;
+  --color-greige-100: #F2EDE7;
+  --color-greige-200: #E8E0D5;
+  --color-greige-300: #D5CABF;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  font-family: "DM Sans", sans-serif;
+  background-color: #1A1A1A;
+  color: #0A0A0A;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
