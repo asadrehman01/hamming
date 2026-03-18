@@ -37,7 +37,7 @@ const SignupPage = () => {
     setError(null);
     setSuccess(false);
 
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
     });
@@ -45,8 +45,13 @@ const SignupPage = () => {
     if (signUpError) {
       setError(signUpError.message);
     } else {
-      // Step 2: Redirect to OTP verification page
-      navigate(`/verify-otp?email=${encodeURIComponent(email)}`);
+      if (data?.session) {
+        // Automatically logged in (if Supabase "Confirm email" is disabled)
+        navigate('/dashboard');
+      } else {
+        // Redirection to login with success message
+        setSuccess(true);
+      }
     }
     setLoading(false);
   };
@@ -78,7 +83,7 @@ const SignupPage = () => {
             {success ? (
               <div className="space-y-6">
                 <p className="text-[#0A0A0A] text-[11px] tracking-wider leading-relaxed">
-                  Registration successful. Please check your email to verify your account before logging in.
+                  Registration successful. You can now sign in to your account.
                 </p>
                 <Link to="/login" className="inline-block bg-[#0A0A0A] text-white py-3 px-8 text-[10px] tracking-[0.2em] uppercase font-medium hover:bg-black transition-all active:scale-[0.98]">
                   Back to Login
