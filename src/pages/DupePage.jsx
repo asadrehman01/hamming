@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import { getUserWithRetry } from "../lib/authUser";
+import { sendBroadcastEmail } from "../lib/backendApi";
 import { AlertCircle, CheckCircle2, Loader2, Send } from "lucide-react";
 
 const DupePage = () => {
@@ -30,7 +32,7 @@ const DupePage = () => {
   useEffect(() => {
     const run = async () => {
       try {
-        const { data: auth } = await supabase.auth.getUser();
+        const { data: auth } = await getUserWithRetry(supabase);
         const user = auth?.user;
         if (!user) return;
 
@@ -95,7 +97,7 @@ const DupePage = () => {
   }, []);
 
   const withUser = async () => {
-    const { data: auth, error } = await supabase.auth.getUser();
+    const { data: auth, error } = await getUserWithRetry(supabase);
     if (error) throw error;
     if (!auth?.user?.id) throw new Error("User not authenticated");
     return auth.user;
@@ -111,10 +113,7 @@ const DupePage = () => {
         throw new Error("Invalid recipient group selected.");
       }
 
-      const { error } = await supabase.functions.invoke("broadcast-email", {
-        body: { subject, message, recipientGroup },
-      });
-      if (error) throw error;
+      await sendBroadcastEmail({ subject, message, recipientGroup });
       setStatus({
         type: "success",
         message: "Broadcast initiated successfully!",
@@ -459,3 +458,4 @@ const DupePage = () => {
 };
 
 export default DupePage;
+

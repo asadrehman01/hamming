@@ -1,4 +1,5 @@
-import React, { useRef, useState } from "react";
+import React from "react";
+import PropTypes from "prop-types";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -7,20 +8,43 @@ import {
   Mail,
   ShieldCheck,
   PlugZap,
-  Bot,
+  ReceiptText,
   Settings,
-  Key,
-  LogOut,
 } from "lucide-react";
 // Assuming icons are from lucide-react
 import {
   ACCESS_MODE,
   getAccessMode,
   RECEPTION_ALLOWED_ROUTES,
-  clearAccessMode,
 } from "../lib/accessControl";
-import ChangeAdminPasswordModal from "./ChangeAdminPasswordModal";
-import { supabase } from "../lib/supabaseClient";
+
+const BugReporterIcon = ({ size = 17, className }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden="true"
+  >
+    <path d="M12 20v-9" />
+    <path d="M14 7a4 4 0 0 1 4 4v3a6 6 0 0 1-12 0v-3a4 4 0 0 1 4-4z" />
+    <path d="M14.12 3.88 16 2" />
+    <path d="M21 21a4 4 0 0 0-3.81-4" />
+    <path d="M21 5a4 4 0 0 1-3.55 3.97" />
+    <path d="M22 13h-4" />
+    <path d="M3 21a4 4 0 0 1 3.81-4" />
+    <path d="M3 5a4 4 0 0 0 3.55 3.97" />
+    <path d="M6 13H2" />
+    <path d="m8 2 1.88 1.88" />
+    <path d="M9 7.13V6a3 3 0 1 1 6 0v1.13" />
+  </svg>
+);
 
 const RevenueCombinedIcon = ({ size = 17, className }) => (
   <svg
@@ -68,43 +92,9 @@ const TransactionsLandmarkIcon = ({ size = 17, className }) => (
   </svg>
 );
 
-const Sidebar = ({ isOpen, onClose }) => {
+const Sidebar = ({ isOpen, onClose, onOpenSettings, onOpenBugReport }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
-  const settingsMenuRef = useRef(null);
-
-  React.useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        settingsMenuRef.current &&
-        !settingsMenuRef.current.contains(event.target)
-      ) {
-        setShowSettingsMenu(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  const handleLogout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      clearAccessMode();
-      navigate("/login");
-    } catch (err) {
-      console.error("Failed to sign out:", err);
-      window.alert(`Sign-out failed: ${err?.message || "Please try again."}`);
-    } finally {
-      setShowSettingsMenu(false);
-      onClose?.();
-    }
-  };
   const menuItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     { name: "Members", icon: Users, path: "/customers" },
@@ -117,8 +107,8 @@ const Sidebar = ({ isOpen, onClose }) => {
     },
     { name: "Communications", icon: Mail, path: "/communications" },
     { name: "Membership", icon: ShieldCheck, path: "/membership" },
-    { name: "Integrations", icon: PlugZap, path: "/integrations" },
-    { name: "Auto Migration", icon: Bot, path: "/auto-migration" },
+    { name: "Migration", icon: PlugZap, path: "/migration" },
+    { name: "Billing", icon: ReceiptText, path: "/billing" },
   ];
   const accessMode = getAccessMode();
   const visibleMenuItems =
@@ -136,7 +126,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         />
       )}{" "}
       <aside
-        className={` fixed inset-y-0 left-0 z-50 w-64 bg-[#0D0F14] border-r border-white/10 flex flex-col h-screen overflow-y-auto shadow-2xl transition-transform duration-300 ease-in-out text-[#B7BCC6] lg:translate-x-0 lg:static lg:block ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"} `}
+        className={` fixed inset-y-0 left-0 z-50 w-64 bg-[#0D0F14] border-r border-white/10 flex flex-col h-screen shadow-2xl transition-transform duration-300 ease-in-out text-[#B7BCC6] lg:translate-x-0 lg:static lg:block ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"} `}
         style={{ fontFamily: "var(--font-sidebar)" }}
       >
         {" "}
@@ -152,43 +142,17 @@ const Sidebar = ({ isOpen, onClose }) => {
               3rd Edition
             </p>{" "}
           </div>{" "}
-          <div
-            className="relative flex items-center gap-2"
-            ref={settingsMenuRef}
-          >
+          <div className="relative flex items-center gap-2">
             <button
-              onClick={() => setShowSettingsMenu((prev) => !prev)}
-              className="sidebar-settings-trigger p-2 text-white/40 hover:text-white transition-colors"
+              onClick={() => {
+                onOpenSettings();
+                if (window.innerWidth < 1024) onClose();
+              }}
               aria-label="Open settings"
-              aria-expanded={showSettingsMenu}
+              className="p-2 rounded-lg border border-white/10 bg-[#12151D] text-white/45 hover:text-white transition-colors"
             >
-              <Settings size={18} />
+              <Settings size={17} />
             </button>
-
-            {showSettingsMenu && (
-              <div className="absolute right-0 top-full mt-2 w-44 bg-[#151921] border border-white/10 rounded-xl py-1.5 shadow-2xl z-50">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowPasswordModal(true);
-                    setShowSettingsMenu(false);
-                  }}
-                  className="native-inline-btn w-full text-left px-4 py-2.5 text-[10px] tracking-[0.12em] text-[#C7CEDB] flex items-center gap-2"
-                >
-                  <Key size={13} />
-                  Change Password
-                </button>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="native-inline-btn w-full text-left px-4 py-2.5 text-[10px] tracking-[0.12em] text-red-400 flex items-center gap-2"
-                >
-                  <LogOut size={13} />
-                  Logout
-                </button>
-              </div>
-            )}
-
             {/* Close button for mobile */}
             <button
               onClick={onClose}
@@ -208,7 +172,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             </button>
           </div>
         </div>{" "}
-        <nav className="flex-1 px-3 py-3 space-y-1.5">
+        <nav className="flex-1 px-3 py-3 space-y-1.5 overflow-y-auto custom-scrollbar">
           {" "}
           {visibleMenuItems.map((item) => {
             const isActive = location.pathname === item.path;
@@ -238,13 +202,38 @@ const Sidebar = ({ isOpen, onClose }) => {
               </button>
             );
           })}{" "}
-        </nav>{" "}
-        <ChangeAdminPasswordModal
-          isOpen={showPasswordModal}
-          onClose={() => setShowPasswordModal(false)}
-        />{" "}
+        </nav>
+
+        <div className="sticky bottom-0 p-3 border-t border-white/10 bg-[#0D0F14] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <button
+            type="button"
+            onClick={() => {
+              onOpenBugReport();
+              if (window.innerWidth < 1024) onClose();
+            }}
+            className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl border border-white/10 text-[#B2B8C5] bg-white/[0.02] hover:text-[#E7EBF3] hover:bg-white/[0.04] transition-colors dm-sans-light-008"
+          >
+            <BugReporterIcon size={17} className="text-white/55" />
+            <span className="text-[11px] tracking-[0.08em] text-white/85">Report a Bug</span>
+          </button>
+        </div>
       </aside>{" "}
     </>
   );
 };
+
+Sidebar.propTypes = {
+  isOpen: PropTypes.bool,
+  onClose: PropTypes.func,
+  onOpenSettings: PropTypes.func,
+  onOpenBugReport: PropTypes.func,
+};
+
+Sidebar.defaultProps = {
+  isOpen: false,
+  onClose: () => {},
+  onOpenSettings: () => {},
+  onOpenBugReport: () => {},
+};
+
 export default Sidebar;

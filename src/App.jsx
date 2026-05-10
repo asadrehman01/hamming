@@ -10,7 +10,6 @@ import {
 import Layout from "./components/Layout";
 import AppErrorBoundary from "./components/AppErrorBoundary";
 import LoginPage from "./pages/LoginPage";
-import SignupPage from "./pages/SignupPage";
 import DashboardPage from "./pages/DashboardPage";
 import MembershipPage from "./pages/MembershipPage";
 import CustomersPage from "./pages/CustomersPage";
@@ -20,7 +19,13 @@ import TransactionsPage from "./pages/TransactionsPage";
 import CommunicationsPage from "./pages/CommunicationsPage";
 import IntegrationsPage from "./pages/IntegrationsPage";
 import AutoMigrationPage from "./pages/AutoMigrationPage";
+import BillingPage from "./pages/BillingPage";
+import AdminPage from "./pages/AdminPage";
+import AdminClientRevenuePage from "./pages/AdminClientRevenuePage";
+import AdminAccessPage from "./pages/AdminAccessPage";
+import SignupPage from "./pages/SignupPage";
 import { supabase } from "./lib/supabaseClient";
+import { isCurrentUserAccessAllowed } from "./lib/appAccess";
 import {
   getAccessMode,
   clearAccessMode,
@@ -56,6 +61,41 @@ function App() {
   useEffect(() => {
     let active = true;
 
+    const applySessionWithAccessCheck = async (candidateSession) => {
+      if (!active) return;
+
+      if (!candidateSession) {
+        setSession(null);
+        clearAccessMode();
+        return;
+      }
+
+      let accessAllowed = false;
+      let verificationError = null;
+      try {
+        accessAllowed = await isCurrentUserAccessAllowed();
+      } catch (accessError) {
+        verificationError = accessError;
+        console.error("Failed to verify app access status:", accessError);
+      }
+
+      if (!accessAllowed) {
+        if (verificationError) {
+          return;
+        }
+        if (supabase) {
+          await supabase.auth.signOut();
+        }
+        if (!active) return;
+        clearAccessMode();
+        setSession(null);
+        return;
+      }
+
+      if (!active) return;
+      setSession(candidateSession ?? null);
+    };
+
     const bootstrapSession = async () => {
       if (!supabase) {
         setAuthLoading(false);
@@ -64,16 +104,14 @@ function App() {
 
       try {
         const { data } = await supabase.auth.getSession();
-        if (active) {
-          setSession(data.session ?? null);
-          setAuthLoading(false);
-        }
+        await applySessionWithAccessCheck(data.session ?? null);
       } catch (error) {
         console.error("Failed to bootstrap session:", error);
         if (active) {
           setSession(null);
-          setAuthLoading(false);
         }
+      } finally {
+        if (active) setAuthLoading(false);
       }
     };
 
@@ -81,10 +119,7 @@ function App() {
 
     const { data: listener } = supabase?.auth.onAuthStateChange(
       (_event, nextSession) => {
-        setSession(nextSession ?? null);
-        if (!nextSession) {
-          clearAccessMode();
-        }
+        applySessionWithAccessCheck(nextSession ?? null);
       },
     ) ?? { data: { subscription: { unsubscribe: () => {} } } };
 
@@ -116,9 +151,21 @@ function App() {
               )
             }
           />
-          <Route path="/signup" element={<SignupPage />} />
-
+          <Route
+            path="/signup"
+            element={
+              session && getAccessMode() ? (
+                <Navigate to="/dashboard" replace />
+              ) : (
+                <SignupPage />
+              )
+            }
+          />
           <Route element={<RequireAuth session={session} />}>
+            <Route path="/admin" element={<AdminPage />} />
+            <Route path="/admin/client-revenue" element={<AdminClientRevenuePage />} />
+            <Route path="/admin/access" element={<AdminAccessPage />} />
+            <Route path="/access" element={<AdminAccessPage />} />
             <Route element={<RequireModeAccess />}>
               <Route element={<Layout />}>
                 <Route path="/dashboard" element={<DashboardPage />} />
@@ -131,7 +178,9 @@ function App() {
                   path="/communications"
                   element={<CommunicationsPage />}
                 />
-                <Route path="/integrations" element={<IntegrationsPage />} />
+                <Route path="/migration" element={<IntegrationsPage />} />
+                <Route path="/integrations" element={<Navigate to="/migration" replace />} />
+                <Route path="/billing" element={<BillingPage />} />
                 <Route path="/auto-migration" element={<AutoMigrationPage />} />
                 <Route
                   path="/onboarding-migration"

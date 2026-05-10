@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { getUserWithRetry } from "../lib/authUser";
 import {
   AreaChart,
   Area,
@@ -20,9 +21,16 @@ import {
   TrendingUp,
   Plus,
   Calendar,
+  RotateCw,
+  X,
 } from "lucide-react";
+import MonthlySummaryCard from "../components/MonthlySummaryCard";
+import ConfirmSummaryRemovalModal from "../components/ConfirmSummaryRemovalModal";
+import ConfirmExpenseCategoryRemovalModal from "../components/ConfirmExpenseCategoryRemovalModal";
 // Pricing is now managed dynamically via Supabase membership_plans table
 const RevenuePage = () => {
+  const DEFAULT_EXPENSE_CATEGORIES = ["Electricity", "Salaries", "Rent"];
+
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
   const [revenueData, setRevenueData] = useState([]);
@@ -50,24 +58,354 @@ const RevenuePage = () => {
   const [expenseTotal, setExpenseTotal] = useState(0);
   const [annualExpenseTotal, setAnnualExpenseTotal] = useState(0);
   const [expenseError, setExpenseError] = useState(null);
-  const COLORS = ["#f5f5f5", "#d4d4d4", "#a3a3a3", "#737373", "#525252"];
+  const [categoryToRemove, setCategoryToRemove] = useState(null);
+  const [removingCategoryId, setRemovingCategoryId] = useState("");
+
+  const [monthlySummaries, setMonthlySummaries] = useState([]);
+  const [loadingSummaries, setLoadingSummaries] = useState(false);
+  const [summaryError, setSummaryError] = useState(null);
+  const [generatingForMonth, setGeneratingForMonth] = useState(false);
+  const [removingSummaryKey, setRemovingSummaryKey] = useState("");
+  const [summaryToRemove, setSummaryToRemove] = useState(null);
+  const [autoSummaryChecked, setAutoSummaryChecked] = useState(false);
+  const [selectedSummaryMonth, setSelectedSummaryMonth] = useState(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    return d;
+  });
+
+  const summaryMonthOptions = Array.from({ length: 36 }, (_, index) => {
+    const date = new Date();
+    date.setDate(1);
+    date.setMonth(date.getMonth() - index);
+    return {
+      value: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`,
+      label: date.toLocaleString("default", { month: "long", year: "numeric" }),
+    };
+  });
+
+  const summariesSectionRef = React.useRef(null);
+  const SUMMARY_TABLE_NAME = "monthly_revenue_summaries";
   const safeAmount = (amt) => {
     const parsed = parseFloat(amt);
     return isFinite(parsed) ? parsed : 0;
   };
+  const normalizeDurationBucket = (value) => {
+    const raw = String(value || "").trim();
+    if (!raw) return null;
+    const normalized = raw
+      .toLowerCase()
+      .replace(/[_-]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (/\b(1\s*year|12\s*months?)\b/.test(normalized)) return "1 YEAR";
+    if (/\b6\s*months?\b/.test(normalized)) return "6 MONTHS";
+    if (/\b3\s*months?\b/.test(normalized)) return "3 MONTHS";
+    if (/\b(1\s*month|monthly)\b/.test(normalized)) return "1 MONTH";
+    return null;
+  };
+  const normalizeCustomerName = (firstName, lastName) =>
+    `${String(firstName || "").trim()} ${String(lastName || "").trim()}`
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .trim();
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const isTransientDataError = (error) => {
+    const message = String(error?.message || error || "").toLowerCase();
+    return (
+      message.includes("failed to fetch") ||
+      message.includes("network") ||
+      message.includes("timeout") ||
+      message.includes("timed out") ||
+      message.includes("lock broken") ||
+      message.includes("steal option") ||
+      message.includes("503") ||
+      message.includes("429")
+    );
+  };
+  const withRetry = async (operation, { retries = 2, baseDelayMs = 200 } = {}) => {
+    let lastError = null;
+
+    for (let attempt = 0; attempt <= retries; attempt += 1) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error;
+        if (!isTransientDataError(error) || attempt === retries) {
+          throw error;
+        }
+        await sleep(baseDelayMs * (attempt + 1));
+      }
+    }
+
+    throw lastError;
+  };
+  const getLocalSummariesKey = (gymId) => `monthly_summaries_fallback_${gymId}`;
+  const isSummaryTableMissingError = (error) => {
+    const message = String(error?.message || "").toLowerCase();
+    return message.includes("schema cache") && message.includes("monthly_revenue_summaries");
+  };
+  const readLocalSummaries = (gymId) => {
+    try {
+      const raw = localStorage.getItem(getLocalSummariesKey(gymId));
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+  const writeLocalSummaries = (gymId, summaries) => {
+    localStorage.setItem(
+      getLocalSummariesKey(gymId),
+      JSON.stringify(summaries.slice(0, 12)),
+    );
+  };
+  const upsertLocalSummary = (gymId, summary) => {
+    const existing = readLocalSummaries(gymId);
+    const filtered = existing.filter((item) => item.month_year !== summary.month_year);
+    const updated = [summary, ...filtered].sort(
+      (a, b) => new Date(b.month_year) - new Date(a.month_year),
+    );
+    writeLocalSummaries(gymId, updated);
+    return updated.slice(0, 12);
+  };
+  const removeLocalSummary = (gymId, monthYear) => {
+    const existing = readLocalSummaries(gymId);
+    const updated = existing.filter((item) => item.month_year !== monthYear);
+    writeLocalSummaries(gymId, updated);
+    return updated.slice(0, 12);
+  };
+  const getMonthKey = (dateObj) =>
+    `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, "0")}-01`;
   const getCurrentGymId = async () => {
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await getUserWithRetry(supabase);
     if (!user) throw new Error("User not authenticated");
     return user.id;
   };
   const handleReportClick = () => {
-    window.alert("Report export is coming soon.");
+    if (summariesSectionRef.current) {
+      summariesSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   };
-  const handleLiveFeedClick = () => {
-    window.alert("Live feed is coming soon.");
+
+  const fetchMonthlySummaries = async ({ isActive = () => true } = {}) => {
+    if (!isActive()) return;
+    setLoadingSummaries(true);
+    setSummaryError(null);
+    let gymId = null;
+    try {
+      gymId = await getCurrentGymId();
+      const { data: summaries, error } = await supabase
+        .from(SUMMARY_TABLE_NAME)
+        .select("*")
+        .eq("gym_id", gymId)
+        .order("month_year", { ascending: false })
+        .limit(12);
+
+      if (error) throw error;
+      if (!isActive()) return;
+      setMonthlySummaries(summaries || []);
+    } catch (err) {
+      console.error("Error fetching monthly summaries:", err);
+      if (!isActive()) return;
+      if (gymId && isSummaryTableMissingError(err)) {
+        const localSummaries = readLocalSummaries(gymId);
+        setMonthlySummaries(localSummaries);
+        setSummaryError(
+          "Monthly summary table is not deployed yet. Showing local summaries on this browser.",
+        );
+      } else {
+        setSummaryError("Failed to load monthly summaries. Please try again.");
+      }
+    } finally {
+      if (isActive()) {
+        setLoadingSummaries(false);
+      }
+    }
   };
+
+  const generateMonthlySummary = async (targetMonth) => {
+    setGeneratingForMonth(true);
+    setSummaryError(null);
+    try {
+      const gymId = await getCurrentGymId();
+
+      const firstDayOfMonth = new Date(
+        Date.UTC(targetMonth.getUTCFullYear(), targetMonth.getUTCMonth(), 1),
+      );
+      const firstDayOfNextMonth = new Date(
+        Date.UTC(targetMonth.getUTCFullYear(), targetMonth.getUTCMonth() + 1, 1),
+      );
+      const startDate = firstDayOfMonth.toISOString();
+      const nextMonthStart = firstDayOfNextMonth.toISOString();
+
+      const { data: payments, error: paymentsError } = await supabase
+        .from("payments")
+        .select("amount, created_at, revenue_month")
+        .eq("gym_id", gymId)
+        .eq("status", "completed")
+        .or(
+          `and(revenue_month.gte.${startDate},revenue_month.lt.${nextMonthStart}),and(revenue_month.is.null,created_at.gte.${startDate},created_at.lt.${nextMonthStart})`,
+        );
+      if (paymentsError) throw paymentsError;
+
+      const totalRevenue = (payments || []).reduce((sum, payment) => {
+        const recognitionDate = payment.revenue_month
+          ? new Date(payment.revenue_month)
+          : new Date(payment.created_at);
+        if (Number.isNaN(recognitionDate.getTime())) return sum;
+        if (recognitionDate < firstDayOfMonth || recognitionDate >= firstDayOfNextMonth) {
+          return sum;
+        }
+        return sum + (parseFloat(payment.amount) || 0);
+      }, 0);
+
+      const { count: totalSubscriptions, error: subsError } = await supabase
+        .from("subscriptions")
+        .select("id", { count: "exact", head: true })
+        .eq("gym_id", gymId)
+        .gte("created_at", startDate)
+        .lt("created_at", nextMonthStart);
+      if (subsError) throw subsError;
+
+      const { data: expenseRows, error: expensesError } = await supabase
+        .from("expenses")
+        .select("amount")
+        .eq("gym_id", gymId)
+        .gte("date", startDate)
+        .lt("date", nextMonthStart);
+      if (expensesError) throw expensesError;
+
+      const totalExpenses = (expenseRows || []).reduce(
+        (sum, e) => sum + (parseFloat(e.amount) || 0),
+        0,
+      );
+
+      const monthYear = firstDayOfMonth.toISOString().slice(0, 10);
+      const summaryPayload = {
+        gym_id: gymId,
+        month_year: monthYear,
+        total_revenue: totalRevenue,
+        total_subscriptions: totalSubscriptions || 0,
+        total_expenses: totalExpenses,
+        net_profit: totalRevenue - totalExpenses,
+      };
+
+      const { error: upsertError } = await supabase
+        .from(SUMMARY_TABLE_NAME)
+        .upsert([summaryPayload], { onConflict: "gym_id,month_year" });
+
+      if (upsertError) {
+        if (isSummaryTableMissingError(upsertError)) {
+          const localSummary = {
+            id: `local-${gymId}-${monthYear}`,
+            created_at: new Date().toISOString(),
+            ...summaryPayload,
+          };
+          const updatedLocal = upsertLocalSummary(gymId, localSummary);
+          setMonthlySummaries(updatedLocal);
+          setSummaryError(
+            "Summary table not found in Supabase yet. Saved this summary locally in this browser.",
+          );
+          window.alert(
+            `Summary generated for ${new Date(targetMonth).toLocaleString("default", { month: "long", year: "numeric" })} (saved locally)`,
+          );
+          return;
+        }
+        throw upsertError;
+      }
+
+      await fetchMonthlySummaries();
+      window.alert(
+        `Summary generated for ${new Date(targetMonth).toLocaleString("default", { month: "long", year: "numeric" })}`,
+      );
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : JSON.stringify(err);
+      console.error("Error generating monthly summary:", errorMessage);
+      setSummaryError(errorMessage);
+      window.alert(`Error generating summary: ${errorMessage}`);
+    } finally {
+      setGeneratingForMonth(false);
+    }
+  };
+
+  const requestRemoveMonthlySummary = (summary) => {
+    if (!summary?.month_year) return;
+    setSummaryToRemove(summary);
+  };
+
+  const removeMonthlySummary = async () => {
+    const summary = summaryToRemove;
+    if (!summary?.month_year) return;
+
+    const key = String(summary.id || summary.month_year);
+    setRemovingSummaryKey(key);
+    setSummaryError(null);
+
+    try {
+      const gymId = await getCurrentGymId();
+      const isLocalOnly = String(summary.id || "").startsWith("local-");
+
+      if (isLocalOnly) {
+        const updatedLocal = removeLocalSummary(gymId, summary.month_year);
+        setMonthlySummaries(updatedLocal);
+        return;
+      }
+
+      let deleteQuery = supabase
+        .from(SUMMARY_TABLE_NAME)
+        .delete()
+        .eq("gym_id", gymId);
+
+      if (summary.id) {
+        deleteQuery = deleteQuery.eq("id", summary.id);
+      } else {
+        deleteQuery = deleteQuery.eq("month_year", summary.month_year);
+      }
+
+      const { data: deletedRows, error: deleteError } = await deleteQuery.select("id");
+
+      if (deleteError) {
+        if (isSummaryTableMissingError(deleteError)) {
+          const updatedLocal = removeLocalSummary(gymId, summary.month_year);
+          setMonthlySummaries(updatedLocal);
+          return;
+        }
+        throw deleteError;
+      }
+
+      if (!Array.isArray(deletedRows) || deletedRows.length === 0) {
+        throw new Error("Delete was not permitted for this report.");
+      }
+
+      setMonthlySummaries((prev) =>
+        prev.filter((item) => item.month_year !== summary.month_year),
+      );
+    } catch (error) {
+      console.error("Failed to remove monthly summary:", error);
+      const message = String(error?.message || "");
+      const lower = message.toLowerCase();
+      if (
+        lower.includes("row-level security") ||
+        lower.includes("permission denied") ||
+        lower.includes("not permitted")
+      ) {
+        setSummaryError(
+          "Delete is blocked by database policy. Please apply the latest Supabase migration for monthly summary delete permissions.",
+        );
+      } else {
+        setSummaryError(message || "Failed to remove summary. Please try again.");
+      }
+    } finally {
+      setRemovingSummaryKey("");
+      setSummaryToRemove(null);
+    }
+  };
+
   useEffect(() => {
     let isActive = true;
     fetchRevenueData({ isActive: () => isActive });
@@ -89,20 +427,96 @@ const RevenuePage = () => {
       isActive = false;
     };
   }, []);
+  useEffect(() => {
+    let isActive = true;
+    fetchMonthlySummaries({ isActive: () => isActive });
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (loadingSummaries || generatingForMonth || autoSummaryChecked) return;
+
+    const now = new Date();
+    if (now.getDate() !== 1) {
+      setAutoSummaryChecked(true);
+      return;
+    }
+
+    const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const previousMonthKey = getMonthKey(previousMonth);
+    const alreadyGenerated = (monthlySummaries || []).some(
+      (summary) => summary.month_year === previousMonthKey,
+    );
+
+    if (alreadyGenerated) {
+      setAutoSummaryChecked(true);
+      return;
+    }
+
+    generateMonthlySummary(previousMonth).finally(() => {
+      setAutoSummaryChecked(true);
+    });
+  }, [
+    loadingSummaries,
+    generatingForMonth,
+    autoSummaryChecked,
+    monthlySummaries,
+  ]);
   const fetchExpensesData = async ({ isActive = () => true } = {}) => {
     if (!isActive()) return;
     setExpenseError(null);
     try {
       const gymId = await getCurrentGymId();
-      const { data: cats, error: catError } = await supabase
+      const normalizeCategoryName = (name) =>
+        String(name || "")
+          .trim()
+          .toLowerCase();
+
+      const { data: allCats, error: catError } = await supabase
         .from("expense_categories")
-        .select("*")
+        .select("id, name, is_active")
         .eq("gym_id", gymId)
-        .eq("is_active", true)
         .order("name");
       if (catError) throw catError;
+
+      const categoryNames = new Set(
+        (allCats || []).map((cat) => normalizeCategoryName(cat.name)),
+      );
+
+      const missingDefaults = DEFAULT_EXPENSE_CATEGORIES.filter(
+        (name) => !categoryNames.has(normalizeCategoryName(name)),
+      );
+
+      // Fallback seeding for users whose DB hasn't had the migration applied yet.
+      if (missingDefaults.length > 0) {
+        const { error: seedError } = await supabase
+          .from("expense_categories")
+          .insert(
+            missingDefaults.map((name) => ({
+              gym_id: gymId,
+              name,
+            })),
+          );
+        if (seedError) throw seedError;
+      }
+
+      let finalCategories = allCats || [];
+      if (missingDefaults.length > 0) {
+        const { data: refreshedCats, error: refreshError } = await supabase
+          .from("expense_categories")
+          .select("id, name, is_active")
+          .eq("gym_id", gymId)
+          .order("name");
+        if (refreshError) throw refreshError;
+        finalCategories = refreshedCats || [];
+      }
+
+      const activeCategories = finalCategories.filter((cat) => cat.is_active);
+
       if (!isActive()) return;
-      setCategories(cats || []);
+      setCategories(activeCategories);
       const startOfMonth = new Date(
         expenseMonth.getFullYear(),
         expenseMonth.getMonth(),
@@ -216,31 +630,128 @@ const RevenuePage = () => {
       setExpenseError("Failed to add category. Please try again.");
     }
   };
+
+  const requestRemoveCategory = (category) => {
+    if (!category?.id) return;
+    setCategoryToRemove(category);
+  };
+
+  const handleRemoveCategory = async () => {
+    if (!categoryToRemove?.id) return;
+    setExpenseError(null);
+    setRemovingCategoryId(categoryToRemove.id);
+    try {
+      const gymId = await getCurrentGymId();
+      const { data: updatedRows, error: deleteError } = await supabase
+        .from("expense_categories")
+        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .eq("gym_id", gymId)
+        .eq("id", categoryToRemove.id)
+        .eq("is_active", true)
+        .select("id");
+
+      if (deleteError) throw deleteError;
+      if (!Array.isArray(updatedRows) || updatedRows.length === 0) {
+        throw new Error("Delete was not permitted for this field.");
+      }
+
+      const removedId = categoryToRemove.id;
+      setCategories((prev) => prev.filter((cat) => cat.id !== removedId));
+      setExpenseInputs((prev) => {
+        const next = { ...prev };
+        delete next[removedId];
+        return next;
+      });
+    } catch (err) {
+      console.error("Error deleting category:", err);
+      const message = String(err?.message || "");
+      const lower = message.toLowerCase();
+      if (lower.includes("row-level security") || lower.includes("permission denied")) {
+        setExpenseError("Delete is blocked by database policy for this field.");
+      } else {
+        setExpenseError("Failed to delete field. Please try again.");
+      }
+    } finally {
+      setRemovingCategoryId("");
+      setCategoryToRemove(null);
+    }
+  };
+
   const fetchRevenueData = async ({ isActive = () => true } = {}) => {
     if (!isActive()) return;
     setLoading(true);
+    setFetchError(null);
     try {
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await withRetry(() => getUserWithRetry(supabase), { retries: 2 });
       if (!user) throw new Error("User not authenticated");
-      const [paymentsResult, customersResult] = await Promise.all([
-        supabase
-          .from("payments")
-          .select(` amount, status, created_at, subscriptions ( plan_name ) `)
-          .eq("gym_id", user.id),
-        supabase
-          .from("customers")
-          .select("membership_end_date")
-          .eq("gym_id", user.id),
-      ]);
+      const [paymentsResult, customersResult, subscriptionsResult] = await withRetry(
+        () =>
+          Promise.all([
+            supabase
+              .from("payments")
+              .select(` amount, status, created_at, revenue_month, subscription_id, sender_name, matched_customer_id, subscriptions ( plan_name ) `)
+              .eq("gym_id", user.id),
+            supabase
+              .from("customers")
+              .select("id, first_name, last_name, membership_end_date, membership_duration")
+              .eq("gym_id", user.id),
+            supabase
+              .from("subscriptions")
+              .select("id, amount, plan_name, status, created_at")
+              .eq("gym_id", user.id),
+          ]),
+        { retries: 2 },
+      );
       if (paymentsResult.error) throw paymentsResult.error;
       if (customersResult.error) throw customersResult.error;
+      if (subscriptionsResult.error) throw subscriptionsResult.error;
       if (!isActive()) return;
       const completedPayments = (paymentsResult.data || []).filter(
-        (payment) => String(payment.status || "").toLowerCase() === "completed",
+        (payment) => String(payment.status || "").trim().toLowerCase() === "completed",
       );
+      const subscriptionRows = subscriptionsResult.data || [];
+      const completedPaymentSubscriptionIds = new Set(
+        completedPayments
+          .map((payment) => payment.subscription_id)
+          .filter(Boolean),
+      );
+
+      // Backfill revenue from subscription ledger when no completed payment exists.
+      const fallbackSubscriptionRevenue = subscriptionRows
+        .filter((subscription) => {
+          const normalizedStatus = String(subscription.status || "").trim().toLowerCase();
+          return (
+            (normalizedStatus === "active" || normalizedStatus === "completed") &&
+            !completedPaymentSubscriptionIds.has(subscription.id)
+          );
+        })
+        .map((subscription) => ({
+          amount: subscription.amount,
+          created_at: subscription.created_at,
+          subscriptions: { plan_name: subscription.plan_name },
+        }));
+
+      const revenueRows = [...completedPayments, ...fallbackSubscriptionRevenue];
       const customerRows = customersResult.data || [];
+      const membershipDurationByCustomerId = new Map();
+      const membershipDurationByName = new Map();
+      const duplicateCustomerNames = new Set();
+
+      customerRows.forEach((customer) => {
+        if (customer?.id) {
+          membershipDurationByCustomerId.set(customer.id, customer.membership_duration || "");
+        }
+        const nameKey = normalizeCustomerName(customer.first_name, customer.last_name);
+        if (!nameKey) return;
+        if (membershipDurationByName.has(nameKey)) {
+          duplicateCustomerNames.add(nameKey);
+          membershipDurationByName.delete(nameKey);
+          return;
+        }
+        membershipDurationByName.set(nameKey, customer.membership_duration || "");
+      });
       // Process revenue for the year of the currently selected expense month
       const months = [
         "Jan",
@@ -266,16 +777,16 @@ const RevenuePage = () => {
         UNASSIGNED: 0,
       };
       let total = 0;
-      let thisMonthTotal = 0;
-      let lastMonthTotal = 0;
+      let selectedMonthTotal = 0;
+      let previousMonthTotal = 0;
       let activeCount = 0;
       const now = new Date();
       now.setHours(0, 0, 0, 0);
-      const currentMonth = now.getMonth();
-      const currentYearNum = now.getFullYear();
-      const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-      const lastMonthYear =
-        currentMonth === 0 ? currentYearNum - 1 : currentYearNum;
+      const selectedMonth = expenseMonth.getMonth();
+      const selectedYear = expenseMonth.getFullYear();
+      const prevMonthDate = new Date(selectedYear, selectedMonth - 1, 1);
+      const previousMonth = prevMonthDate.getMonth();
+      const previousMonthYear = prevMonthDate.getFullYear();
       customerRows.forEach((customer) => {
         const endDate = customer.membership_end_date
           ? new Date(customer.membership_end_date)
@@ -285,13 +796,27 @@ const RevenuePage = () => {
           activeCount++;
         }
       });
-      completedPayments.forEach((payment) => {
+      revenueRows.forEach((payment) => {
         const price = safeAmount(payment.amount);
-        const date = new Date(payment.created_at);
+        const date = payment.revenue_month ? new Date(payment.revenue_month) : new Date(payment.created_at);
         if (isNaN(date.getTime())) return;
-        const planName = payment.subscriptions?.plan_name;
-        if (planName && durationRevenue[planName] !== undefined) {
-          durationRevenue[planName] += price;
+        const senderNameKey = String(payment.sender_name || "")
+          .toLowerCase()
+          .replace(/\s+/g, " ")
+          .trim();
+
+        const paymentPlanDuration = normalizeDurationBucket(payment.subscriptions?.plan_name);
+        const matchedCustomerDuration = normalizeDurationBucket(
+          membershipDurationByCustomerId.get(payment.matched_customer_id),
+        );
+        const fallbackDuration =
+          senderNameKey && !duplicateCustomerNames.has(senderNameKey)
+            ? normalizeDurationBucket(membershipDurationByName.get(senderNameKey))
+            : null;
+        const durationKey = paymentPlanDuration || matchedCustomerDuration || fallbackDuration;
+
+        if (durationKey && durationRevenue[durationKey] !== undefined) {
+          durationRevenue[durationKey] += price;
         } else {
           durationRevenue.UNASSIGNED += price;
         }
@@ -299,32 +824,26 @@ const RevenuePage = () => {
           monthlyRevenue[date.getMonth()].revenue += price;
         }
         total += price;
-        if (
-          date.getMonth() === currentMonth &&
-          date.getFullYear() === currentYearNum
-        ) {
-          thisMonthTotal += price;
+        if (date.getMonth() === selectedMonth && date.getFullYear() === selectedYear) {
+          selectedMonthTotal += price;
         }
-        if (
-          date.getMonth() === lastMonth &&
-          date.getFullYear() === lastMonthYear
-        ) {
-          lastMonthTotal += price;
+        if (date.getMonth() === previousMonth && date.getFullYear() === previousMonthYear) {
+          previousMonthTotal += price;
         }
       });
       const monthlyGrowth =
-        lastMonthTotal > 0
-          ? ((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 100
-          : thisMonthTotal > 0
+        previousMonthTotal > 0
+          ? ((selectedMonthTotal - previousMonthTotal) / previousMonthTotal) * 100
+          : selectedMonthTotal > 0
             ? 100
             : 0;
       // Better growth metric: monthContributionPct (contribution of this month to total revenue YTD)
       const ytdTotal = monthlyRevenue.reduce((sum, m) => sum + m.revenue, 0);
-      const prevYtdTotal = ytdTotal - thisMonthTotal;
+      const prevYtdTotal = ytdTotal - selectedMonthTotal;
       const monthContributionPct =
         prevYtdTotal > 0
-          ? (thisMonthTotal / prevYtdTotal) * 100
-          : thisMonthTotal > 0
+          ? (selectedMonthTotal / prevYtdTotal) * 100
+          : selectedMonthTotal > 0
             ? 100
             : 0;
       setRevenueData(monthlyRevenue);
@@ -338,7 +857,7 @@ const RevenuePage = () => {
       setDurationStats(durStatsArray);
       setMetrics({
         totalRevenue: total,
-        monthlyRevenue: thisMonthTotal,
+        monthlyRevenue: selectedMonthTotal,
         monthlyGrowth: monthlyGrowth,
         totalGrowth: monthContributionPct,
         averageRevenue: completedPayments.length
@@ -349,7 +868,11 @@ const RevenuePage = () => {
     } catch (err) {
       console.error("Error fetching revenue:", err);
       if (!isActive()) return;
-      setFetchError("Failed to load revenue data.");
+      if (isTransientDataError(err)) {
+        setFetchError("Temporary connection issue while loading revenue data. Please wait a moment or refresh.");
+      } else {
+        setFetchError("Failed to load revenue data.");
+      }
     } finally {
       if (isActive()) {
         setLoading(false);
@@ -360,7 +883,7 @@ const RevenuePage = () => {
     try {
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await getUserWithRetry(supabase);
       if (!user) throw new Error("User not authenticated");
       // Fetch last payment and customer import reconciliation records
       const { data: paymentRec, error: paymentRecError } = await supabase
@@ -430,17 +953,10 @@ const RevenuePage = () => {
           {" "}
           <button
             onClick={handleReportClick}
-            className="flex-1 sm:flex-none px-4 md:px-6 py-3 bg-white/5 border border-white/10 rounded-xl text-xs tracking-[0.08em] font-light dm-sans-copy hover:bg-white/10 transition-all text-center"
+            className="flex-1 sm:flex-none px-4 md:px-6 py-3 bg-white text-black border border-white/10 rounded-xl text-xs tracking-[0.05em] font-light dm-sans-copy hover:bg-white/90 transition-colors text-center"
           >
             {" "}
             Report{" "}
-          </button>{" "}
-          <button
-            onClick={handleLiveFeedClick}
-            className="flex-1 sm:flex-none px-4 md:px-6 py-3 bg-white text-black rounded-xl text-xs tracking-[0.08em] font-light dm-sans-copy hover:bg-white/90 transition-all text-center"
-          >
-            {" "}
-            Live Feed{" "}
           </button>{" "}
         </div>{" "}
       </header>
@@ -460,7 +976,7 @@ const RevenuePage = () => {
             trend: null,
           },
           {
-            label: "Monthly Income",
+            label: `${expenseMonth.toLocaleString("default", { month: "short" })} Income`,
             value: `₹${metrics.monthlyRevenue.toLocaleString()}`,
             icon: <TrendingUp size={20} />,
             trend: metrics.monthlyGrowth,
@@ -747,6 +1263,15 @@ const RevenuePage = () => {
                     className="w-full bg-white/5 border border-white/10 rounded-lg pl-8 pr-4 py-2 focus:outline-none focus:border-red-400/50 transition-colors text-white font-mono"
                   />{" "}
                 </div>{" "}
+                <button
+                  type="button"
+                  onClick={() => requestRemoveCategory(cat)}
+                  disabled={removingCategoryId === cat.id}
+                  aria-label={`Delete ${cat.name} field`}
+                  className="native-inline-btn p-1.5 rounded-md border border-white/10 text-white/45 hover:text-red-300 hover:border-red-300/30 transition-colors disabled:opacity-50"
+                >
+                  <X size={14} />
+                </button>
               </div>
             ))}{" "}
             <div className="pt-4 flex justify-end">
@@ -754,7 +1279,7 @@ const RevenuePage = () => {
               <button
                 onClick={handleSaveExpenses}
                 disabled={savingExpenses}
-                className="bg-emerald-500 hover:bg-emerald-400 text-black font-light tracking-[0.08em] dm-sans-copy px-8 py-3 rounded-xl text-xs transition-all flex items-center gap-2"
+                className="bg-white text-black font-light tracking-[0.05em] dm-sans-copy px-8 py-3 rounded-xl text-xs hover:bg-white/90 transition-colors disabled:opacity-50 flex items-center gap-2"
               >
                 {" "}
                 {savingExpenses ? "Saving..." : "Save Ledger"}{" "}
@@ -799,7 +1324,7 @@ const RevenuePage = () => {
                     className="text-xs tracking-[0.08em] text-white/40 mb-1"
                     style={{ fontFamily: "Inter, sans-serif", fontWeight: 500 }}
                   >
-                    Total Revenue
+                    Selected Month Revenue
                   </h4>{" "}
                   <p className="text-3xl font-bold text-white tracking-tight">
                     ₹
@@ -884,6 +1409,109 @@ const RevenuePage = () => {
           </div>{" "}
         </div>{" "}
       </section>{" "}
+
+      <ConfirmExpenseCategoryRemovalModal
+        isOpen={Boolean(categoryToRemove)}
+        categoryName={categoryToRemove?.name || "this field"}
+        onConfirm={handleRemoveCategory}
+        onCancel={() => {
+          if (removingCategoryId) return;
+          setCategoryToRemove(null);
+        }}
+        isRemoving={Boolean(removingCategoryId)}
+      />
+
+      <section
+        ref={summariesSectionRef}
+        className="bg-[#151921] border border-white/5 p-6 md:p-10 rounded-2xl shadow-2xl shadow-black/40 mb-10"
+      >
+        {" "}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 mb-8">
+          <div>
+            <h3
+              className="text-xl font-normal tracking-[0.02em] text-white"
+              style={{ fontFamily: "DM Sans, sans-serif" }}
+            >
+              Monthly Revenue Summaries
+            </h3>
+            <p className="text-xs tracking-[0.08em] text-white/40 font-light dm-sans-copy">
+              Generate and review month-wise totals for revenue, subscriptions, expenses, and net profit
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+            <div className="flex items-center gap-2 bg-[#0a0c10] border border-white/10 rounded-lg px-3 py-2">
+              <Calendar size={14} className="text-white/50" />
+              <select
+                value={`${selectedSummaryMonth.getFullYear()}-${String(selectedSummaryMonth.getMonth() + 1).padStart(2, "0")}`}
+                onChange={(e) => {
+                  const [year, month] = e.target.value.split("-");
+                  setSelectedSummaryMonth(new Date(Number(year), Number(month) - 1, 1));
+                }}
+                className="bg-transparent text-white text-xs tracking-[0.08em] font-light dm-sans-copy focus:outline-none app-scrollbar"
+              >
+                {summaryMonthOptions.map((option) => (
+                  <option key={option.value} value={option.value} className="bg-[#0a0c10] text-white">
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              onClick={() => generateMonthlySummary(selectedSummaryMonth)}
+              disabled={generatingForMonth}
+              className="px-6 py-3 bg-white text-black rounded-xl text-xs tracking-[0.05em] font-light dm-sans-copy hover:bg-white/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <RotateCw size={14} className={generatingForMonth ? "animate-spin" : ""} />
+              {generatingForMonth ? "Generating..." : "Generate"}
+            </button>
+          </div>
+        </div>
+
+        {summaryError && (
+          <div className="mb-6 p-4 border bg-red-500/10 border-red-500/20 text-red-500 text-xs tracking-[0.08em] font-light dm-sans-copy">
+            {summaryError}
+          </div>
+        )}
+
+        {loadingSummaries ? (
+          <MonthlySummaryCard isLoading />
+        ) : monthlySummaries.length === 0 ? (
+          <div className="bg-[#0a0c10] border border-white/10 rounded-xl p-6 text-center text-white/40 text-xs tracking-[0.08em]">
+            No monthly summaries yet. Choose a month and click Generate.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {monthlySummaries.map((summary) => (
+              <MonthlySummaryCard
+                key={summary.id || summary.month_year}
+                summary={summary}
+                onRemove={requestRemoveMonthlySummary}
+                isRemoving={removingSummaryKey === String(summary.id || summary.month_year)}
+              />
+            ))}
+          </div>
+        )}
+
+        <ConfirmSummaryRemovalModal
+          isOpen={Boolean(summaryToRemove)}
+          monthLabel={
+            summaryToRemove?.month_year
+              ? new Date(summaryToRemove.month_year).toLocaleString("default", {
+                  month: "long",
+                  year: "numeric",
+                })
+              : "selected"
+          }
+          onConfirm={removeMonthlySummary}
+          onCancel={() => {
+            if (removingSummaryKey) return;
+            setSummaryToRemove(null);
+          }}
+          isRemoving={Boolean(removingSummaryKey)}
+        />
+      </section>{" "}
       {/* Comparison Bar Diagram */}{" "}
       <section className="bg-[#151921] border border-white/5 p-6 md:p-10 rounded-2xl shadow-2xl shadow-black/40 mb-10">
         {" "}
@@ -941,3 +1569,4 @@ const RevenuePage = () => {
   );
 };
 export default RevenuePage;
+

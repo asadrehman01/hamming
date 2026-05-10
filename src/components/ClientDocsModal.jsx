@@ -2,6 +2,33 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import SecureImage from "./SecureImage";
 
+const MIME_EXTENSION_MAP = {
+	"image/png": "png",
+	"image/jpeg": "jpg",
+	"image/jpg": "jpg",
+	"image/webp": "webp",
+	"image/gif": "gif",
+	"application/pdf": "pdf",
+};
+
+const ensureFileExtension = (fileName, mimeType) => {
+	const expectedExtension = MIME_EXTENSION_MAP[String(mimeType || "").toLowerCase()] || "bin";
+	const baseName = String(fileName || "").trim();
+	if (!baseName) return `download.${expectedExtension}`;
+
+	const lastDotIndex = baseName.lastIndexOf(".");
+	if (lastDotIndex <= 0) {
+		return `${baseName}.${expectedExtension}`;
+	}
+
+	const currentExtension = baseName.slice(lastDotIndex + 1).toLowerCase();
+	if (currentExtension !== expectedExtension) {
+		return `${baseName.slice(0, lastDotIndex)}.${expectedExtension}`;
+	}
+
+	return baseName;
+};
+
 const ClientDocsModal = ({ isOpen, onClose, customer, onDocsUpdated }) => {
 	const [photo, setPhoto] = useState(null);
 	const [aadhaar, setAadhaar] = useState(null);
@@ -103,6 +130,45 @@ const ClientDocsModal = ({ isOpen, onClose, customer, onDocsUpdated }) => {
 		}
 	};
 
+	const triggerDownload = (blob, fileName) => {
+		const objectUrl = URL.createObjectURL(blob);
+		const anchor = document.createElement("a");
+		anchor.href = objectUrl;
+		anchor.download = fileName;
+		document.body.appendChild(anchor);
+		anchor.click();
+		anchor.remove();
+		URL.revokeObjectURL(objectUrl);
+	};
+
+	const handleDownload = async (type) => {
+		const filePath = type === "photo" ? photoPreview : aadhaarPreview;
+		if (!filePath) return;
+
+		try {
+			if (filePath.startsWith("blob:")) {
+				const response = await fetch(filePath);
+				const blob = await response.blob();
+				const fileName = ensureFileExtension(`${type}_${customer.id}`, blob.type);
+				triggerDownload(blob, fileName);
+				return;
+			}
+
+			const { data, error: downloadError } = await supabase.storage
+				.from("customer-docs")
+				.download(filePath);
+
+			if (downloadError) throw downloadError;
+
+			const fileNameFromPath = filePath.split("/").pop() || `${type}_${customer.id}`;
+			const fileName = ensureFileExtension(fileNameFromPath, data?.type);
+			triggerDownload(data, fileName);
+		} catch (err) {
+			console.error(`Error downloading ${type}:`, err);
+			setError(`Could not download ${type}. Please try again.`);
+		}
+	};
+
 	return (
 		<div
 			className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/80 backdrop-blur-sm px-3 sm:px-4 pt-4 sm:pt-8 pb-[max(1rem,env(safe-area-inset-bottom))] animate-in fade-in duration-300 overflow-y-auto"
@@ -140,7 +206,7 @@ const ClientDocsModal = ({ isOpen, onClose, customer, onDocsUpdated }) => {
 							<label className="text-[10px] tracking-[0.2em] font-mono text-white/40 block">
 								Client Photo
 							</label>
-							<div className="h-32 sm:h-auto sm:aspect-square bg-white/5 border border-dashed border-white/10 flex items-center justify-center relative overflow-hidden group">
+							<div className="h-28 sm:h-auto sm:aspect-[1.58/1] bg-white/5 border border-dashed border-white/10 flex items-center justify-center relative overflow-hidden group">
 								{photoPreview ? (
 									photoPreview.startsWith("blob:") ? (
 										<img
@@ -178,16 +244,26 @@ const ClientDocsModal = ({ isOpen, onClose, customer, onDocsUpdated }) => {
 									className="absolute inset-0 opacity-0 cursor-pointer"
 								/>
 							</div>
-							<p className="text-[9px] text-white/35 tracking-wide">
-								Tap image area to upload or replace photo.
-							</p>
+							<div className="flex items-center justify-between gap-3">
+								<p className="text-[9px] text-white/35 tracking-wide">
+									Tap image area to upload or replace photo.
+								</p>
+								<button
+									type="button"
+									onClick={() => handleDownload("photo")}
+									disabled={!photoPreview}
+									className="text-[9px] tracking-[0.08em] text-white/70 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+								>
+									Download
+								</button>
+							</div>
 						</div>
 
 						<div className="space-y-3 sm:space-y-4">
 							<label className="text-[10px] tracking-[0.2em] font-mono text-white/40 block">
 								Aadhaar Card (Front/Back)
 							</label>
-							<div className="h-28 sm:h-auto sm:aspect-[1.58/1] bg-white/5 border border-dashed border-white/10 flex items-center justify-center relative overflow-hidden group">
+							<div className="h-32 sm:h-auto sm:aspect-square bg-white/5 border border-dashed border-white/10 flex items-center justify-center relative overflow-hidden group">
 								{aadhaarPreview ? (
 									aadhaarPreview.startsWith("blob:") ? (
 										<img
@@ -225,9 +301,19 @@ const ClientDocsModal = ({ isOpen, onClose, customer, onDocsUpdated }) => {
 									className="absolute inset-0 opacity-0 cursor-pointer"
 								/>
 							</div>
-							<p className="text-[9px] text-white/35 tracking-wide">
-								Tap document area to upload or replace Aadhaar file.
-							</p>
+							<div className="flex items-center justify-between gap-3">
+								<p className="text-[9px] text-white/35 tracking-wide">
+									Tap document area to upload or replace Aadhaar file.
+								</p>
+								<button
+									type="button"
+									onClick={() => handleDownload("aadhaar")}
+									disabled={!aadhaarPreview}
+									className="text-[9px] tracking-[0.08em] text-white/70 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+								>
+									Download
+								</button>
+							</div>
 						</div>
 					</div>
 				</div>

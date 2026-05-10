@@ -4,7 +4,7 @@ const { stdin, stdout } = require('node:process');
 
 const url = process.env.VITE_SUPABASE_URL 
   ? `${process.env.VITE_SUPABASE_URL}/functions/v1/broadcast-email`
-  : 'https://hmphfkyvfpcbohzamesn.supabase.co/functions/v1/broadcast-email';
+  : 'https://tauunmprgfnjzwbjulwb.supabase.co/functions/v1/broadcast-email';
 
 const key = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 const testRecipientEmail = process.env.TEST_RECIPIENT_EMAIL;

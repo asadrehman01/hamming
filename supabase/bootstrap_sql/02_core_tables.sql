@@ -1,0 +1,15 @@
+CREATE TABLE IF NOT EXISTS gyms (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL DEFAULT 'MY GYM',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS membership_plans (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  duration_type TEXT NOT NULL,
+  price NUMERIC(10,2) NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT membership_plans_duration_type_key UNIQUE (duration_type)
+);

@@ -1,7 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { getUserWithRetry } from "../lib/authUser";
 import SecureImage from "../components/SecureImage";
 import TrainerModal from "../components/TrainerModal";
+import TrainerDocsModal from "../components/TrainerDocsModal";
+import TrainerDetailsModal from "../components/TrainerDetailsModal";
 
 const TrainersPage = () => {
   const [trainers, setTrainers] = useState([]);
@@ -9,7 +12,13 @@ const TrainersPage = () => {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDocsModalOpen, setIsDocsModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [editingTrainer, setEditingTrainer] = useState(null);
+  const [activeTrainerPopup, setActiveTrainerPopup] = useState(null);
+  const popupRef = useRef(null);
+  const popupCancelRef = useRef(null);
+  const previousFocusRef = useRef(null);
 
   const displayTrainers = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -41,7 +50,7 @@ const TrainersPage = () => {
         const {
           data: { user },
           error: userError,
-        } = await supabase.auth.getUser();
+        } = await getUserWithRetry(supabase);
 
         if (userError) throw userError;
         if (!user?.id) throw new Error("User not authenticated");
@@ -80,6 +89,19 @@ const TrainersPage = () => {
   const handleOpenEditModal = (trainer) => {
     setEditingTrainer(trainer);
     setIsModalOpen(true);
+    setActiveTrainerPopup(null);
+  };
+
+  const handleOpenDocsModal = (trainer) => {
+    setEditingTrainer(trainer);
+    setIsDocsModalOpen(true);
+    setActiveTrainerPopup(null);
+  };
+
+  const handleOpenDetailsModal = (trainer) => {
+    setEditingTrainer(trainer);
+    setIsDetailsModalOpen(true);
+    setActiveTrainerPopup(null);
   };
 
   const handleTrainerSaved = (saved) => {
@@ -104,10 +126,60 @@ const TrainersPage = () => {
 
       if (deleteError) throw deleteError;
       setTrainers((prev) => prev.filter((t) => t.id !== trainerId));
+      setActiveTrainerPopup(null);
     } catch (err) {
       console.error("Failed to delete trainer:", err);
       setError(err.message || "Failed to delete trainer");
     }
+  };
+
+  useEffect(() => {
+    if (!activeTrainerPopup) return undefined;
+
+    previousFocusRef.current = document.activeElement;
+    popupCancelRef.current?.focus();
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setActiveTrainerPopup(null);
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+
+      const focusable = popupRef.current?.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+
+      if (!focusable || focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      if (previousFocusRef.current?.focus) {
+        previousFocusRef.current.focus();
+      }
+    };
+  }, [activeTrainerPopup]);
+
+  const openTrainerPopup = (trainer) => {
+    // Don't open popup if user is selecting text
+    if (window.getSelection().toString().length > 0) {
+      return;
+    }
+    setActiveTrainerPopup(trainer);
   };
 
   return (
@@ -118,7 +190,7 @@ const TrainersPage = () => {
             <h1 className="text-xl md:text-2xl text-white tracking-tight normal-case">
               Trainer Directory
             </h1>
-            <p className="text-[10px] tracking-[0.2em] text-white/35 font-mono mt-2">
+            <p className="text-[10px] tracking-[0.08em] text-white/35 dm-sans-light-008 mt-2">
               Trainer information and contact records
             </p>
           </div>
@@ -157,18 +229,31 @@ const TrainersPage = () => {
 
       <div className="border border-white/10 overflow-hidden">
         {loading && trainers.length === 0 ? (
-          <div className="p-14 text-center text-[10px] tracking-[0.2em] text-white/30 font-mono">
+          <div className="p-14 text-center text-[10px] tracking-[0.08em] text-white/30 dm-sans-light-008">
             Loading trainers...
           </div>
         ) : error ? (
-          <div className="p-8 text-center text-red-400 text-[10px] tracking-[0.15em] font-mono">
+          <div className="p-8 text-center text-red-400 text-[10px] tracking-[0.08em] dm-sans-light-008">
             {error}
           </div>
         ) : (
           <>
             <div className="md:hidden divide-y divide-white/10">
               {displayTrainers.map((trainer) => (
-                <div key={`mobile-${trainer.id}`} className="p-4 space-y-3">
+                <div
+                  key={`mobile-${trainer.id}`}
+                  className="p-4 space-y-3 cursor-pointer"
+                  onClick={() => openTrainerPopup(trainer)}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Open trainer actions for ${trainer.first_name || "this trainer"} ${trainer.last_name || ""}`}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      openTrainerPopup(trainer);
+                    }
+                  }}
+                >
                   <div className="flex items-center gap-3">
                     <SecureImage
                       filePath={trainer.photo_url}
@@ -184,7 +269,7 @@ const TrainersPage = () => {
                       <p className="text-[13px] text-white font-medium truncate">
                         {trainer.first_name} {trainer.last_name}
                       </p>
-                      <p className="text-[9px] text-white/35 font-mono tracking-widest truncate">
+                      <p className="text-[9px] text-white/35 dm-sans-light-008 tracking-[0.08em] truncate">
                         Id:{" "}
                         {(trainer?.id != null
                           ? String(trainer.id)
@@ -192,6 +277,26 @@ const TrainersPage = () => {
                         ).substring(0, 8)}
                       </p>
                     </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openTrainerPopup(trainer);
+                      }}
+                      className="native-inline-btn text-white/45 hover:text-white p-1"
+                      aria-label="Open trainer actions"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        fill="currentColor"
+                      >
+                        <circle cx="8" cy="3" r="1.5" />
+                        <circle cx="8" cy="8" r="1.5" />
+                        <circle cx="8" cy="13" r="1.5" />
+                      </svg>
+                    </button>
                   </div>
 
                   <div className="space-y-2 text-[11px]">
@@ -209,19 +314,10 @@ const TrainersPage = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4 pt-1">
-                    <button
-                      onClick={() => handleOpenEditModal(trainer)}
-                      className="native-inline-btn text-[10px] tracking-wider text-white/70"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(trainer.id)}
-                      className="native-inline-btn text-[10px] tracking-wider text-red-400/85"
-                    >
-                      Delete
-                    </button>
+                  <div className="pt-1">
+                    <span className="text-[10px] tracking-[0.08em] text-white/45 dm-sans-light-008">
+                      Tap trainer card for actions
+                    </span>
                   </div>
                 </div>
               ))}
@@ -230,16 +326,16 @@ const TrainersPage = () => {
             <table className="hidden md:table w-full text-left border-collapse table-fixed">
               <thead>
                 <tr className="bg-white/5 border-b border-white/10">
-                  <th className="p-4 text-[10px] tracking-[0.2em] font-mono text-white/40">
+                  <th className="p-4 text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
                     Name
                   </th>
-                  <th className="p-4 text-[10px] tracking-[0.2em] font-mono text-white/40">
+                  <th className="p-4 text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
                     Email
                   </th>
-                  <th className="p-4 text-[10px] tracking-[0.2em] font-mono text-white/40">
+                  <th className="p-4 text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
                     Phone
                   </th>
-                  <th className="p-4 text-[10px] tracking-[0.2em] font-mono text-white/40 text-right">
+                  <th className="p-4 text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40 text-right">
                     Actions
                   </th>
                 </tr>
@@ -248,7 +344,17 @@ const TrainersPage = () => {
                 {displayTrainers.map((trainer) => (
                   <tr
                     key={trainer.id}
-                    className="border-b border-white/5 hover:bg-white/[0.02] transition-colors"
+                    className="border-b border-white/5 hover:bg-white/[0.02] transition-colors cursor-pointer"
+                    onClick={() => openTrainerPopup(trainer)}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open trainer actions for ${trainer.first_name || "this trainer"} ${trainer.last_name || ""}`}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        openTrainerPopup(trainer);
+                      }
+                    }}
                   >
                     <td className="p-4">
                       <div className="flex items-center gap-4">
@@ -266,7 +372,7 @@ const TrainersPage = () => {
                           <span className="text-[13px] font-medium tracking-tight text-white truncate">
                             {trainer.first_name} {trainer.last_name}
                           </span>
-                          <span className="text-[9px] text-white/20 font-mono tracking-widest mt-1">
+                          <span className="text-[9px] text-white/20 dm-sans-light-008 tracking-[0.08em] mt-1">
                             Id:{" "}
                             {(trainer?.id != null
                               ? String(trainer.id)
@@ -285,16 +391,22 @@ const TrainersPage = () => {
                     <td className="p-4 text-right">
                       <div className="flex justify-end gap-3 items-center">
                         <button
-                          onClick={() => handleOpenEditModal(trainer)}
-                          className="native-inline-btn text-[10px] tracking-widest text-white/60"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openTrainerPopup(trainer);
+                          }}
+                          className="native-inline-btn text-white/40 hover:text-white transition-colors p-2"
                         >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(trainer.id)}
-                          className="native-inline-btn text-[10px] tracking-widest text-red-500/70"
-                        >
-                          Delete
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 16 16"
+                            fill="currentColor"
+                          >
+                            <circle cx="8" cy="3" r="1.5" />
+                            <circle cx="8" cy="8" r="1.5" />
+                            <circle cx="8" cy="13" r="1.5" />
+                          </svg>
                         </button>
                       </div>
                     </td>
@@ -305,7 +417,7 @@ const TrainersPage = () => {
 
             {!loading && displayTrainers.length === 0 && (
               <div className="p-14 text-center text-white/25 flex flex-col items-center gap-3">
-                <span className="text-[10px] tracking-[0.2em] font-mono">
+                <span className="text-[10px] tracking-[0.08em] dm-sans-light-008">
                   No trainer records found
                 </span>
                 <button
@@ -326,8 +438,85 @@ const TrainersPage = () => {
         onTrainerSaved={handleTrainerSaved}
         initialData={editingTrainer}
       />
+
+      <TrainerDocsModal
+        isOpen={isDocsModalOpen}
+        onClose={() => setIsDocsModalOpen(false)}
+        trainer={editingTrainer}
+        onDocsUpdated={handleTrainerSaved}
+      />
+
+      <TrainerDetailsModal
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+        trainer={editingTrainer}
+      />
+
+      {activeTrainerPopup && (
+        <div
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
+          onClick={() => setActiveTrainerPopup(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="trainer-actions-title"
+        >
+          <div
+            ref={popupRef}
+            className="w-full sm:max-w-md bg-[#0a0c10] border border-white/10 rounded-2xl p-4 sm:p-5 dm-sans-light-008 shadow-[0_22px_80px_rgba(0,0,0,0.55)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-1 pb-3 border-b border-white/10 mb-3">
+              <p className="text-[10px] tracking-[0.08em] text-white/45 uppercase">
+                Trainer Actions
+              </p>
+              <p id="trainer-actions-title" className="text-white text-[15px] tracking-[0.08em] font-light mt-0.5">
+                {activeTrainerPopup.first_name} {activeTrainerPopup.last_name}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleOpenEditModal(activeTrainerPopup)}
+              className="w-full text-left px-3 py-3 text-[11px] tracking-[0.08em] text-white/85 bg-white/[0.02] border border-white/10 rounded-xl hover:bg-white/[0.05] transition-colors"
+            >
+              Edit Information
+            </button>
+            <button
+              type="button"
+              onClick={() => handleOpenDocsModal(activeTrainerPopup)}
+              className="mt-2 w-full text-left px-3 py-3 text-[11px] tracking-[0.08em] text-white/85 bg-white/[0.02] border border-white/10 rounded-xl hover:bg-white/[0.05] transition-colors"
+            >
+              Trainer Docs
+            </button>
+            <button
+              type="button"
+              onClick={() => handleOpenDetailsModal(activeTrainerPopup)}
+              className="mt-2 w-full text-left px-3 py-3 text-[11px] tracking-[0.08em] text-white/85 bg-white/[0.02] border border-white/10 rounded-xl hover:bg-white/[0.05] transition-colors"
+            >
+              View Information
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDelete(activeTrainerPopup.id)}
+              className="mt-2 w-full text-left px-3 py-3 text-[11px] tracking-[0.08em] text-red-300/90 bg-red-400/[0.05] border border-red-300/15 rounded-xl hover:bg-red-400/[0.1] transition-colors"
+            >
+              Delete Trainer
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTrainerPopup(null)}
+              ref={popupCancelRef}
+              className="mt-3 w-full text-center px-3 py-2.5 text-[10px] tracking-[0.08em] text-white/65 border border-white/10 rounded-xl hover:bg-white/[0.04] transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default TrainersPage;
+

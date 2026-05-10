@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { getUserWithRetry } from "../lib/authUser";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ACCESS_MODE,
@@ -10,6 +11,7 @@ import {
   forceResetAdminPassword,
 } from "../lib/accessControl";
 import { isMigrationOnboardingCompleted } from "../lib/migrationOnboarding";
+import { isCurrentUserAccessAllowed } from "../lib/appAccess";
 const LoginPage = () => {
   const MIN_PASSWORD_LENGTH = 8;
   const navigate = useNavigate();
@@ -64,14 +66,12 @@ const LoginPage = () => {
   };
 
   const playUnlockAndNavigate = async (user) => {
-    if (!isMountedRef.current) return;
     setShowUnlockAnimation(true);
 
     await new Promise((resolve) => {
-      unlockTimeoutRef.current = setTimeout(resolve, 4000);
+      unlockTimeoutRef.current = setTimeout(resolve, 4200);
     });
 
-    if (!isMountedRef.current) return;
     navigatePostLogin(user);
   };
 
@@ -93,11 +93,19 @@ const LoginPage = () => {
         return;
       }
       const { data: userData, error: userError } =
-        await supabase.auth.getUser();
+        await getUserWithRetry(supabase);
       if (userError || !userData?.user) {
         setError(userError?.message || "Unable to fetch account details.");
         return;
       }
+
+      const accessAllowed = await isCurrentUserAccessAllowed();
+      if (!accessAllowed) {
+        setError("Access denied. Please contact administrator.");
+        await supabase.auth.signOut();
+        return;
+      }
+
       if (mode === ACCESS_MODE.RECEPTION) {
         setAccessMode(ACCESS_MODE.RECEPTION);
         await playUnlockAndNavigate(userData.user);
@@ -105,9 +113,11 @@ const LoginPage = () => {
       }
       const userId = userData.user.id;
       const adminExists = await hasAdminPassword(userId);
+      
       if (!adminExists) {
         setPendingUserId(userId);
         setAwaitingAdminSetup(true);
+        setError(null); // Clear any existing errors when showing modal
         return;
       }
       if (!adminPassword) {
@@ -160,7 +170,7 @@ const LoginPage = () => {
       setAwaitingAdminSetup(false);
       setPendingUserId(null);
       const { data: refreshedUser, error: getUserError } =
-        await supabase.auth.getUser();
+        await getUserWithRetry(supabase);
       if (getUserError || !refreshedUser?.user) {
         throw new Error(
           getUserError?.message || "Failed to fetch updated user.",
@@ -479,10 +489,9 @@ const LoginPage = () => {
                   )}{" "}
                   <Link
                     to="/signup"
-                    className="text-[10px] tracking-widest text-[#6B6360] font-medium hover:text-[#0A0A0A] transition-colors"
+                    className="text-[9px] tracking-widest text-[#6B6360] font-medium hover:text-[#0A0A0A] transition-colors"
                   >
-                    {" "}
-                    Create an Account{" "}
+                    Don't have an account? Create one
                   </Link>{" "}
                 </div>{" "}
               </form>{" "}
@@ -551,19 +560,32 @@ const LoginPage = () => {
             <p className="text-[10px] tracking-widest text-[#6B6360] mt-1">
               Required for future admin logins
             </p>{" "}
+            {error && (
+              <div className="mt-4 bg-red-500/10 border border-red-500/30 rounded p-3">
+                {" "}
+                <p className="text-red-600 text-[10px] tracking-wide">
+                  {error}
+                </p>{" "}
+              </div>
+            )}{" "}
             <form
               onSubmit={handleSetupAdminPassword}
               className="mt-6 space-y-4"
             >
               {" "}
-              <input
-                type="password"
-                placeholder="NEW ADMIN Password"
-                className="w-full bg-transparent border-b border-[#0A0A0A]/20 py-2 focus:border-[#0A0A0A] outline-none text-[#0A0A0A] caret-[#0A0A0A] text-base sm:text-[11px] tracking-wider placeholder:text-[#0A0A0A]/30"
-                value={adminPassword}
-                onChange={(e) => setAdminPasswordInput(e.target.value)}
-                required
-              />{" "}
+              <div>
+                <input
+                  type="password"
+                  placeholder="NEW ADMIN Password"
+                  className="w-full bg-transparent border-b border-[#0A0A0A]/20 py-2 focus:border-[#0A0A0A] outline-none text-[#0A0A0A] caret-[#0A0A0A] text-base sm:text-[11px] tracking-wider placeholder:text-[#0A0A0A]/30"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPasswordInput(e.target.value)}
+                  required
+                />{" "}
+                <p className="text-[8px] text-[#6B6360] mt-1">
+                  Minimum {MIN_PASSWORD_LENGTH} characters required
+                </p>{" "}
+              </div>{" "}
               <input
                 type="password"
                 placeholder="CONFIRM ADMIN Password"
@@ -697,3 +719,4 @@ const LoginPage = () => {
   );
 };
 export default LoginPage;
+

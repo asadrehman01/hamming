@@ -1,15 +1,42 @@
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { getUserWithRetry } from "../lib/authUser";
 import Papa from "papaparse";
-import { useNavigate } from "react-router-dom";
 import {
   logImportJob,
   normalizeRowKeys,
   mapPaymentRowFromPreset,
   getImportSourcePreset,
 } from "../lib/importJobs";
+import { toMonthStartDateString } from "../lib/financeDates";
 const TransactionsPage = () => {
-  const navigate = useNavigate();
+  const normalizeName = (value) =>
+    String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+  const parseDateOnly = (value) => {
+    if (!value) return null;
+    const raw = String(value).trim();
+    if (!raw) return null;
+    const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoMatch) {
+      const [, y, m, d] = isoMatch;
+      return new Date(Number(y), Number(m) - 1, Number(d), 0, 0, 0, 0);
+    }
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) return null;
+    parsed.setHours(0, 0, 0, 0);
+    return parsed;
+  };
+  const isCustomerActiveNow = (customer) => {
+    const start = parseDateOnly(customer?.membership_start_date);
+    const end = parseDateOnly(customer?.membership_end_date);
+    if (!start || !end) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return start <= today && today <= end;
+  };
   const [transactions, setTransactions] = useState([]);
   const [customerDirectory, setCustomerDirectory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -55,6 +82,30 @@ const TransactionsPage = () => {
     fetchCustomerDirectory();
   }, []);
   useEffect(() => {
+    const channel = supabase
+      .channel("transactions-ledger-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "payments" },
+        () => {
+          fetchTransactions();
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "customers" },
+        () => {
+          fetchCustomerDirectory();
+          fetchTransactions();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+  useEffect(() => {
     if (!statusMessage) return;
     setIsStatusVisible(true);
     const fadeOutId = setTimeout(() => {
@@ -95,7 +146,7 @@ const TransactionsPage = () => {
     try {
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await getUserWithRetry(supabase);
       if (!user) throw new Error("User not authenticated");
       const { data, error } = await supabase
         .from("payments")
@@ -108,12 +159,16 @@ const TransactionsPage = () => {
             sender_name,
             sender_account_name,
             source_transaction_id,
+            matched_customer_id,
+            revenue_month,
             created_at,
             subscriptions (
               plan_name,
               customers (
                 first_name,
-                last_name
+                last_name,
+                membership_start_date,
+                membership_end_date
               )
             )
           `,
@@ -132,11 +187,11 @@ const TransactionsPage = () => {
     try {
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await getUserWithRetry(supabase);
       if (!user) throw new Error("User not authenticated");
       const { data, error } = await supabase
         .from("customers")
-        .select("id, first_name, last_name")
+        .select("id, first_name, last_name, membership_start_date, membership_end_date")
         .eq("gym_id", user.id)
         .order("first_name", { ascending: true });
       if (error) throw error;
@@ -227,10 +282,21 @@ const TransactionsPage = () => {
     let insertedCount = 0;
     const failedRows = [];
     const applyErrors = [];
+    let matchedCount = 0;
+    let unmatchedCount = 0;
+    const directorySnapshot = [...customerDirectory];
     for (const row of rows) {
+      const matchedCustomer = directorySnapshot.find(
+        (customer) =>
+          normalizeName(`${customer.first_name || ""} ${customer.last_name || ""}`) ===
+          normalizeName(row.normalizedPayload.sender_name),
+      );
+      const sourceDate = row.normalizedPayload.created_at || new Date().toISOString();
       const insertPayload = {
         gym_id: userId,
         subscription_id: null,
+        matched_customer_id: matchedCustomer?.id || null,
+        revenue_month: toMonthStartDateString(matchedCustomer?.membership_start_date || sourceDate),
         ...row.normalizedPayload,
       };
       const { error } = await supabase.from("payments").insert(insertPayload);
@@ -244,9 +310,14 @@ const TransactionsPage = () => {
         });
       } else {
         insertedCount += 1;
+        if (matchedCustomer) {
+          matchedCount += 1;
+        } else {
+          unmatchedCount += 1;
+        }
       }
     }
-    return { insertedCount, failedRows, applyErrors };
+    return { insertedCount, failedRows, applyErrors, matchedCount, unmatchedCount };
   };
   const applyPaymentImport = async () => {
     setPaymentImportLoading(true);
@@ -254,12 +325,12 @@ const TransactionsPage = () => {
     try {
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await getUserWithRetry(supabase);
       if (!user) throw new Error("User not authenticated");
       const validRows = paymentImportRows.filter(
         (r) => r.validationStatus === "valid",
       );
-      const { insertedCount, failedRows, applyErrors } =
+      const { insertedCount, failedRows, applyErrors, matchedCount, unmatchedCount } =
         await runPaymentImportRows({ rows: validRows, userId: user.id });
       setPaymentFailedRows(failedRows);
       const completedTotal = validRows
@@ -291,7 +362,7 @@ const TransactionsPage = () => {
       });
       setPaymentImportStatus({
         type: "success",
-        message: `Imported ${insertedCount} payment rows. ${failedRows.length} rows failed and can be retried. ₹${completedTotal.toLocaleString()} revenue added.`,
+        message: `Imported ${insertedCount} payment rows. ${matchedCount} matched customers, ${unmatchedCount} unmatched. ${failedRows.length} rows failed and can be retried. ₹${completedTotal.toLocaleString()} revenue added.`,
       });
       await fetchTransactions();
     } catch (error) {
@@ -312,7 +383,7 @@ const TransactionsPage = () => {
     try {
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await getUserWithRetry(supabase);
       if (!user) throw new Error("User not authenticated");
       const { insertedCount, failedRows, applyErrors } =
         await runPaymentImportRows({
@@ -351,7 +422,7 @@ const TransactionsPage = () => {
       try {
         const {
           data: { user },
-        } = await supabase.auth.getUser();
+        } = await getUserWithRetry(supabase);
 
         if (user?.id) {
           await logImportJob({
@@ -420,7 +491,7 @@ const TransactionsPage = () => {
     try {
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await getUserWithRetry(supabase);
       if (!user) throw new Error("User not authenticated");
       const payload = {
         gym_id: user.id,
@@ -438,6 +509,16 @@ const TransactionsPage = () => {
             ? formData.source_transaction_id.trim()
             : null,
       };
+      const matchedCustomer =
+        customerDirectory.find(
+          (customer) =>
+            normalizeName(`${customer.first_name || ""} ${customer.last_name || ""}`) ===
+            normalizeName(formData.sender_name),
+        ) || null;
+      payload.matched_customer_id = selectedCustomerId || matchedCustomer?.id || null;
+      payload.revenue_month = toMonthStartDateString(
+        matchedCustomer?.membership_start_date || new Date(),
+      );
       const { error } = await supabase.from("payments").insert(payload);
       if (error) throw error;
       setStatusMessage({
@@ -473,7 +554,7 @@ const TransactionsPage = () => {
         {" "}
         <header className="mb-8 md:mb-12">
           {" "}
-          <p className="text-[10px] tracking-[0.3em] text-white/40 font-mono mb-2">
+          <p className="text-[10px] tracking-[0.08em] text-white/40 dm-sans-light-008 mb-2">
             Payment Ledger
           </p>{" "}
           <h1 className="text-4xl md:text-5xl font-medium tracking-tighter">
@@ -487,32 +568,14 @@ const TransactionsPage = () => {
             <h3 className="transactions-form-heading text-lg md:text-xl text-white tracking-tight ">
               Transactions
             </h3>{" "}
-            <span className="text-[9px] tracking-[0.2em] font-mono text-white/40">
+            <span className="text-[9px] tracking-[0.08em] dm-sans-light-008 text-white/40">
               Cash / UPI
             </span>{" "}
-          </div>{" "}
-          <div className="border-t border-white/5 pt-6">
-            {" "}
-            <p className="text-[10px] tracking-[0.2em] font-mono text-white/40">
-              Data Import Moved To Auto Migration
-            </p>{" "}
-            <p className="text-xs text-white/50 mt-1">
-              To import old payment files, use Auto Migration for the full
-              guided flow.
-            </p>{" "}
-            <button
-              type="button"
-              onClick={() => navigate("/auto-migration")}
-              className="mt-3 bg-white text-black px-5 py-2 text-[10px] tracking-[0.2em] font-medium mb-6"
-            >
-              {" "}
-              Open Auto Migration{" "}
-            </button>{" "}
           </div>{" "}
           {/* Manual Entry Section */}{" "}
           <div className="border-t border-white/5 pt-6">
             {" "}
-            <p className="text-[10px] tracking-[0.2em] font-mono text-white/40 mb-4">
+            <p className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40 mb-4">
               Add Manual Transaction
             </p>{" "}
             <p className="text-xs text-white/50 mb-4">
@@ -535,7 +598,7 @@ const TransactionsPage = () => {
             {" "}
             <div className="space-y-2">
               {" "}
-              <label className="text-[10px] tracking-[0.2em] font-mono text-white/40">
+              <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
                 Payment Mode
               </label>{" "}
               <select
@@ -556,7 +619,7 @@ const TransactionsPage = () => {
             </div>{" "}
             <div className="space-y-2">
               {" "}
-              <label className="text-[10px] tracking-[0.2em] font-mono text-white/40">
+              <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
                 Status
               </label>{" "}
               <select
@@ -580,7 +643,7 @@ const TransactionsPage = () => {
             </div>{" "}
             <div className="space-y-2">
               {" "}
-              <label className="text-[10px] tracking-[0.2em] font-mono text-white/40">
+              <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
                 Amount
               </label>{" "}
               <input
@@ -598,7 +661,7 @@ const TransactionsPage = () => {
             </div>{" "}
             <div className="space-y-2">
               {" "}
-              <label className="text-[10px] tracking-[0.2em] font-mono text-white/40">
+              <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
                 Sender Name
               </label>{" "}
               <div className="relative">
@@ -652,12 +715,12 @@ const TransactionsPage = () => {
                   )}{" "}
               </div>{" "}
               {formData.sender_name.trim() && senderMatches.length === 0 && (
-                <p className="text-[10px] text-amber-400 tracking-[0.15em] font-mono">
+                <p className="text-[10px] text-amber-400 tracking-[0.08em] dm-sans-light-008">
                   match not found
                 </p>
               )}{" "}
               {selectedCustomerId && (
-                <p className="text-[10px] text-emerald-400 tracking-[0.15em] font-mono">
+                <p className="text-[10px] text-emerald-400 tracking-[0.08em] dm-sans-light-008">
                   customer matched
                 </p>
               )}{" "}
@@ -667,7 +730,7 @@ const TransactionsPage = () => {
                 {" "}
                 <div className="space-y-2">
                   {" "}
-                  <label className="text-[10px] tracking-[0.2em] font-mono text-white/40">
+                  <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
                     Account Name
                   </label>{" "}
                   <input
@@ -686,7 +749,7 @@ const TransactionsPage = () => {
                 </div>{" "}
                 <div className="space-y-2">
                   {" "}
-                  <label className="text-[10px] tracking-[0.2em] font-mono text-white/40">
+                  <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
                     Transaction ID
                   </label>{" "}
                   <input
@@ -710,7 +773,7 @@ const TransactionsPage = () => {
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full md:w-auto bg-white text-black font-medium px-8 py-3 text-[10px] tracking-[0.2em] hover:bg-white/90 transition-colors disabled:opacity-50"
+                className="w-full md:w-auto bg-white text-black font-medium px-8 py-3 text-[10px] tracking-[0.08em] dm-sans-light-008 hover:bg-white/90 transition-colors disabled:opacity-50"
               >
                 {" "}
                 {saving ? "Saving..." : "Add Transaction"}{" "}
@@ -726,25 +789,25 @@ const TransactionsPage = () => {
               {" "}
               <tr className="bg-white/5 border-b border-white/10">
                 {" "}
-                <th className="p-6 text-[10px] tracking-[0.2em] font-mono text-white/40">
+                <th className="p-6 text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
                   Transaction ID
                 </th>{" "}
-                <th className="p-6 text-[10px] tracking-[0.2em] font-mono text-white/40">
+                <th className="p-6 text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
                   Sender / Customer
                 </th>{" "}
-                <th className="p-6 text-[10px] tracking-[0.2em] font-mono text-white/40">
+                <th className="p-6 text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
                   Mode
                 </th>{" "}
-                <th className="p-6 text-[10px] tracking-[0.2em] font-mono text-white/40">
+                <th className="p-6 text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
                   Account / Ref
                 </th>{" "}
-                <th className="p-6 text-[10px] tracking-[0.2em] font-mono text-white/40">
+                <th className="p-6 text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
                   Amount
                 </th>{" "}
-                <th className="p-6 text-[10px] tracking-[0.2em] font-mono text-white/40">
+                <th className="p-6 text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
                   Date
                 </th>{" "}
-                <th className="p-6 text-[10px] tracking-[0.2em] font-mono text-white/40 text-right">
+                <th className="p-6 text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40 text-right">
                   Status
                 </th>{" "}
               </tr>{" "}
@@ -752,6 +815,32 @@ const TransactionsPage = () => {
             <tbody>
               {" "}
               {transactions.map((tx) => (
+                (() => {
+                  const rawStatus = String(tx.status || "completed").toLowerCase();
+                  const linkedCustomer = tx.subscriptions?.customers || null;
+                  const fallbackCustomer = customerDirectory.find(
+                    (customer) =>
+                      normalizeName(`${customer.first_name || ""} ${customer.last_name || ""}`) ===
+                      normalizeName(tx.sender_name),
+                  );
+                  const resolvedCustomer = linkedCustomer || fallbackCustomer || null;
+                  const adjustedStatus =
+                    rawStatus === "inactive" && resolvedCustomer && isCustomerActiveNow(resolvedCustomer)
+                      ? "completed"
+                      : rawStatus;
+                  const statusClass =
+                    adjustedStatus === "completed"
+                      ? "text-emerald-500 bg-emerald-500/10 border-emerald-500/20"
+                      : adjustedStatus === "inactive"
+                        ? "text-red-400 bg-red-500/10 border-red-500/20"
+                        : "text-amber-500 bg-amber-500/10 border-amber-500/20";
+                  const statusLabel = adjustedStatus.charAt(0).toUpperCase() + adjustedStatus.slice(1);
+                  const matchLabel = resolvedCustomer
+                    ? `Matched: ${resolvedCustomer.first_name || ""} ${resolvedCustomer.last_name || ""}`.trim()
+                    : tx.matched_customer_id
+                      ? "Matched customer record"
+                      : "No matching customer";
+                  return (
                 <tr
                   key={tx.id}
                   className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group"
@@ -759,7 +848,7 @@ const TransactionsPage = () => {
                   {" "}
                   <td className="p-6">
                     {" "}
-                    <span className="text-[10px] text-white/40 font-mono tracking-widest ">
+                    <span className="text-[10px] text-white/40 dm-sans-light-008 tracking-[0.08em] ">
                       {" "}
                       #Tx-{tx.id.substring(0, 8)}{" "}
                     </span>{" "}
@@ -775,13 +864,16 @@ const TransactionsPage = () => {
                             ? `${tx.subscriptions.customers.first_name} ${tx.subscriptions.customers.last_name}`
                             : "N/A")}{" "}
                       </span>{" "}
-                      <span className="text-[9px] text-white/20 font-mono tracking-widest mt-1">
+                        <span className="text-[9px] text-white/20 dm-sans-light-008 tracking-[0.08em] mt-1">
+                          {matchLabel}
+                        </span>
+                      <span className="text-[9px] text-white/20 dm-sans-light-008 tracking-[0.08em] mt-1">
                         {" "}
                         Plan: {tx.subscriptions?.plan_name || "Individual"}{" "}
                       </span>{" "}
                     </div>{" "}
                   </td>{" "}
-                  <td className="p-6 text-[10px] text-white/40 font-mono tracking-wider">
+                  <td className="p-6 text-[10px] text-white/40 dm-sans-light-008 tracking-[0.08em]">
                     {" "}
                     {tx.payment_mode || "N/A"}{" "}
                   </td>{" "}
@@ -789,11 +881,11 @@ const TransactionsPage = () => {
                     {" "}
                     <div className="flex flex-col">
                       {" "}
-                      <span className="text-[10px] text-white/40 font-mono tracking-wide ">
+                      <span className="text-[10px] text-white/40 dm-sans-light-008 tracking-[0.08em] ">
                         {" "}
                         {tx.sender_account_name || "-"}{" "}
                       </span>{" "}
-                      <span className="text-[9px] text-white/20 font-mono tracking-widest mt-1">
+                      <span className="text-[9px] text-white/20 dm-sans-light-008 tracking-[0.08em] mt-1">
                         {" "}
                         {tx.source_transaction_id || "-"}{" "}
                       </span>{" "}
@@ -806,30 +898,31 @@ const TransactionsPage = () => {
                       ₹{tx.amount || "0"}{" "}
                     </span>{" "}
                   </td>{" "}
-                  <td className="p-6 text-sm text-white/40 font-mono">
+                  <td className="p-6 text-sm text-white/40 dm-sans-light-008 tracking-[0.08em]">
                     {" "}
-                    {new Date(tx.created_at).toLocaleDateString()}{" "}
+                    {tx.created_at && !Number.isNaN(new Date(tx.created_at).getTime())
+                      ? new Date(tx.created_at).toLocaleDateString("en-GB")
+                      : "-"}{" "}
                   </td>{" "}
                   <td className="p-6 text-right">
                     {" "}
                     <span
-                      className={`text-[9px] tracking-[0.2em] font-medium px-3 py-1 border ${tx.status === "completed" ? "text-emerald-500 bg-emerald-500/10 border-emerald-500/20" : "text-amber-500 bg-amber-500/10 border-amber-500/20"}`}
+                      className={`text-[9px] tracking-[0.08em] dm-sans-light-008 font-medium px-3 py-1 border ${statusClass}`}
                     >
                       {" "}
-                      {String(tx.status || "completed")
-                        .charAt(0)
-                        .toUpperCase()}
-                      {String(tx.status || "completed").slice(1)}{" "}
+                      {statusLabel}{" "}
                     </span>{" "}
                   </td>{" "}
                 </tr>
+                  );
+                })()
               ))}{" "}
             </tbody>{" "}
           </table>{" "}
           {loading && (
             <div className="p-24 text-center">
               {" "}
-              <span className="text-[10px] tracking-[0.5em] text-white/20 animate-pulse font-mono font-medium">
+              <span className="text-[10px] tracking-[0.08em] text-white/20 animate-pulse dm-sans-light-008">
                 Downloading Ledger...
               </span>{" "}
             </div>
@@ -837,10 +930,10 @@ const TransactionsPage = () => {
           {!loading && transactions.length === 0 && (
             <div className="p-24 text-center text-white/40 flex flex-col items-center gap-4">
               {" "}
-              <span className="text-[10px] tracking-[0.3em] font-mono font-medium">
+              <span className="text-[10px] tracking-[0.08em] dm-sans-light-008">
                 No Recent Transactions Found
               </span>{" "}
-              <span className="text-[9px] tracking-widest">
+              <span className="text-[9px] tracking-[0.08em] dm-sans-light-008">
                 Transactions will appear here once applications are processed
                 and paid.
               </span>{" "}

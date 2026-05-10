@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { getUserWithRetry } from "../lib/authUser";
+import { sendBroadcastEmail } from "../lib/backendApi";
 import {
   Send,
   Users,
@@ -8,10 +10,20 @@ import {
   CheckCircle2,
   Loader2,
   History,
-  Link as LinkIcon,
-  Key,
-  AtSign,
 } from "lucide-react";
+
+const DEFAULT_EXPIRY_TEMPLATE = {
+  subject: "{first_name}, your membership expires in 3 days",
+  body_text:
+    "Hi {first_name},\n\nJust a quick reminder that your gym membership will expire in 3 days.\n\nRenew now to keep your workouts uninterrupted and continue your progress.\n\nIf you need any help with renewal, just reply to this email and we will assist you.\n\nSee you at the gym!",
+};
+
+const DEFAULT_REVIEW_TEMPLATE = {
+  subject: "Welcome to the gym, {first_name}! Share your 5-star experience",
+  body_text:
+    "Hi {first_name},\n\nWelcome to the gym. We are excited to have you with us.\n\nIf your first experience has been great, please rate us 5 stars on Google here:\n{review_link}\n\nYour feedback helps us grow and helps more people discover our gym.\n\nThank you for being part of our community!",
+};
+
 const CommunicationsPage = () => {
   // Shared states
   const [activeTab, setActiveTab] = useState("BROADCAST");
@@ -25,45 +37,82 @@ const CommunicationsPage = () => {
   const [stats, setStats] = useState(null);
   const [statsLoading, setStatsLoading] = useState(true);
   // Automation states
-  const [template, setTemplate] = useState({ subject: "", body_text: "" });
+  const [template, setTemplate] = useState(DEFAULT_EXPIRY_TEMPLATE);
   const [savingTemplate, setSavingTemplate] = useState(false);
-  const [reviewTemplate, setReviewTemplate] = useState({
-    subject: "",
-    body_text: "",
-  });
+  const [reviewTemplate, setReviewTemplate] = useState(DEFAULT_REVIEW_TEMPLATE);
   const [savingReviewTemplate, setSavingReviewTemplate] = useState(false);
   const [broadcastingReview, setBroadcastingReview] = useState(false);
-  // Integrations states
-  const [integration, setIntegration] = useState({
-    reply_to_email: "",
-    sender_profile: "",
-    google_business_link: "",
-  });
-  const [savingIntegration, setSavingIntegration] = useState(false);
-  const [integrationId, setIntegrationId] = useState(null);
-  const [integrationLoading, setIntegrationLoading] = useState(false);
-  const [integrationError, setIntegrationError] = useState(null);
-  const tabOrder = ["BROADCAST", "AUTOMATION", "INTEGRATIONS"];
+  const tabOrder = ["BROADCAST", "AUTOMATION"];
   const normalizedActiveTab = tabOrder.includes(activeTab)
     ? activeTab
     : "BROADCAST";
   const activeTabIndex = Math.max(tabOrder.indexOf(normalizedActiveTab), 0);
   const recipientGroups = ["ALL", "ACTIVE", "EXPIRED"];
-  const recipientGroupIndex = Math.max(
-    recipientGroups.indexOf(recipientGroup),
-    0,
-  );
   useEffect(() => {
     fetchStats();
     fetchTemplate();
-    fetchIntegration();
   }, []);
   const getCurrentGymId = async () => {
-    const { data: authData, error: authError } = await supabase.auth.getUser();
+    const { data: authData, error: authError } = await getUserWithRetry(supabase);
     if (authError) throw authError;
     if (!authData?.user?.id) throw new Error("User not authenticated");
     return authData.user.id;
   };
+
+  const saveTemplateForGym = async ({ gymId, name, subject, bodyText }) => {
+    const payload = {
+      subject,
+      body_text: bodyText,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data: updatedRows, error: updateError } = await supabase
+      .from("automation_templates")
+      .update(payload)
+      .eq("gym_id", gymId)
+      .eq("name", name)
+      .select("id")
+      .limit(1);
+
+    if (updateError) throw updateError;
+    if ((updatedRows || []).length > 0) return;
+
+    const { error: insertError } = await supabase
+      .from("automation_templates")
+      .insert({
+        gym_id: gymId,
+        name,
+        subject,
+        body_text: bodyText,
+        updated_at: new Date().toISOString(),
+      });
+
+    if (!insertError) return;
+
+    const insertMessage = String(insertError?.message || "").toLowerCase();
+    if (
+      insertMessage.includes("automation_templates_name_key") ||
+      insertMessage.includes("duplicate key")
+    ) {
+      const { error: legacyUpsertError } = await supabase
+        .from("automation_templates")
+        .upsert(
+          {
+            gym_id: gymId,
+            name,
+            subject,
+            body_text: bodyText,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "gym_id,name" },
+        );
+      if (legacyUpsertError) throw legacyUpsertError;
+      return;
+    }
+
+    throw insertError;
+  };
+
   const fetchStats = async () => {
     setStatsLoading(true);
     try {
@@ -128,10 +177,34 @@ const CommunicationsPage = () => {
 
       if (expiryData) {
         setTemplate(expiryData);
+      } else {
+        setTemplate(DEFAULT_EXPIRY_TEMPLATE);
+        try {
+          await saveTemplateForGym({
+            gymId,
+            name: "EXPIRY_REMINDER",
+            subject: DEFAULT_EXPIRY_TEMPLATE.subject,
+            bodyText: DEFAULT_EXPIRY_TEMPLATE.body_text,
+          });
+        } catch (seedError) {
+          console.error("Failed to seed default expiry template:", seedError);
+        }
       }
 
       if (reviewData) {
         setReviewTemplate(reviewData);
+      } else {
+        setReviewTemplate(DEFAULT_REVIEW_TEMPLATE);
+        try {
+          await saveTemplateForGym({
+            gymId,
+            name: "GOOGLE_REVIEW_REQUEST",
+            subject: DEFAULT_REVIEW_TEMPLATE.subject,
+            bodyText: DEFAULT_REVIEW_TEMPLATE.body_text,
+          });
+        } catch (seedError) {
+          console.error("Failed to seed default review template:", seedError);
+        }
       }
 
       const queryErrors = [expiryError, reviewError].filter(Boolean);
@@ -153,70 +226,12 @@ const CommunicationsPage = () => {
       });
     }
   };
-  const fetchIntegration = async () => {
-    setIntegrationLoading(true);
-    setIntegrationError(null);
-    try {
-      const { data: authData, error: authError } =
-        await supabase.auth.getUser();
-      if (authError) throw authError;
-      if (!authData?.user?.id) {
-        throw new Error("User not authenticated");
-      }
-      const { data, error } = await supabase
-        .from("gym_integrations")
-        .select("id, reply_to_email, sender_profile, google_business_link")
-        .eq("provider", "RESEND")
-        .eq("gym_id", authData.user.id)
-        .maybeSingle();
-      if (error) {
-        throw error;
-      }
-      if (data) {
-        setIntegration({
-          reply_to_email: data.reply_to_email || "",
-          sender_profile: data.sender_profile || "",
-          google_business_link: data.google_business_link || "",
-        });
-        setIntegrationId(data.id);
-      } else {
-        setIntegrationId(null);
-        setIntegration({
-          reply_to_email: "",
-          sender_profile: "",
-          google_business_link: "",
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching integration:", error);
-      setIntegrationError("Failed to load integration settings.");
-      setStatus({
-        type: "error",
-        message: "Failed to load integration settings.",
-      });
-    } finally {
-      setIntegrationLoading(false);
-    }
-  };
   const handleSend = async (e) => {
     e.preventDefault();
     setLoading(true);
     setStatus(null);
     try {
-      const { error } = await supabase.functions.invoke("broadcast-email", {
-        body: { subject, message, recipientGroup },
-      });
-      if (error) {
-        let errorMsg = error.message;
-        try {
-          const body = await error.context.json();
-          errorMsg = `Error [${error.context.status}]: ${body.error || error.message}`;
-          if (body.details) errorMsg += ` - ${JSON.stringify(body.details)}`;
-        } catch {
-          // keep fallback error message
-        }
-        throw new Error(errorMsg);
-      }
+      await sendBroadcastEmail({ subject, message, recipientGroup });
       setStatus({
         type: "success",
         message: "Broadcast initiated successfully!",
@@ -227,15 +242,18 @@ const CommunicationsPage = () => {
       console.error("Error sending broadcast:", err);
       setStatus({
         type: "error",
-        message:
-          err.message === "Failed to fetch"
-            ? "Edge Function not yet deployed or Resend key missing."
-            : err.message,
+        message: err.message,
       });
     } finally {
       setLoading(false);
     }
   };
+
+  const autoResizeTextarea = (e) => {
+    e.target.style.height = "auto";
+    e.target.style.height = `${e.target.scrollHeight}px`;
+  };
+
   const handleSaveTemplate = async (e) => {
     e.preventDefault();
     setSavingTemplate(true);
@@ -244,16 +262,12 @@ const CommunicationsPage = () => {
       const gymId = await getCurrentGymId();
       if (!gymId) throw new Error("User not authenticated");
 
-      const { error } = await supabase
-        .from("automation_templates")
-        .update({
-          subject: template.subject,
-          body_text: template.body_text,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("name", "EXPIRY_REMINDER")
-        .eq("gym_id", gymId);
-      if (error) throw error;
+      await saveTemplateForGym({
+        gymId,
+        name: "EXPIRY_REMINDER",
+        subject: template.subject,
+        bodyText: template.body_text,
+      });
       setStatus({
         type: "success",
         message: "Automation template updated successfully!",
@@ -273,16 +287,12 @@ const CommunicationsPage = () => {
       const gymId = await getCurrentGymId();
       if (!gymId) throw new Error("User not authenticated");
 
-      const { error } = await supabase
-        .from("automation_templates")
-        .update({
-          subject: reviewTemplate.subject,
-          body_text: reviewTemplate.body_text,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("name", "GOOGLE_REVIEW_REQUEST")
-        .eq("gym_id", gymId);
-      if (error) throw error;
+      await saveTemplateForGym({
+        gymId,
+        name: "GOOGLE_REVIEW_REQUEST",
+        subject: reviewTemplate.subject,
+        bodyText: reviewTemplate.body_text,
+      });
       setStatus({
         type: "success",
         message: "Review Request template updated successfully!",
@@ -304,25 +314,12 @@ const CommunicationsPage = () => {
     setBroadcastingReview(true);
     setStatus(null);
     try {
-      const { data, error } = await supabase.functions.invoke(
-        "broadcast-email",
-        {
-          body: {
-            subject: reviewTemplate.subject,
-            message: reviewTemplate.body_text,
-            recipientGroup: "UNREVIEWED",
-            isReviewRequest: true,
-          },
-        },
-      );
-      if (error) throw new Error(error.message || String(error));
-      if (data && data.error) {
-        const details =
-          typeof data.error === "string"
-            ? data.error
-            : JSON.stringify(data.error) || "Unknown error";
-        throw new Error(details);
-      }
+      const data = await sendBroadcastEmail({
+        subject: reviewTemplate.subject,
+        message: reviewTemplate.body_text,
+        recipientGroup: "UNREVIEWED",
+        isReviewRequest: true,
+      });
       setStatus({
         type: "success",
         message: `Sent bulk review requests to ${data.count || 0} unreviewed members!`,
@@ -334,57 +331,8 @@ const CommunicationsPage = () => {
       setBroadcastingReview(false);
     }
   };
-  const handleSaveIntegration = async (e) => {
-    e.preventDefault();
-    setSavingIntegration(true);
-    setStatus(null);
-    try {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-      if (userError) throw userError;
-      if (!user?.id) throw new Error("User not authenticated");
-
-      if (integrationId) {
-        const { error } = await supabase
-          .from("gym_integrations")
-          .update({
-            reply_to_email: integration.reply_to_email,
-            sender_profile: integration.sender_profile,
-            google_business_link: integration.google_business_link,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", integrationId);
-        if (error) throw error;
-      } else {
-        const { data, error } = await supabase
-          .from("gym_integrations")
-          .insert({
-            provider: "RESEND",
-            gym_id: user.id,
-            reply_to_email: integration.reply_to_email,
-            sender_profile: integration.sender_profile,
-            google_business_link: integration.google_business_link,
-          })
-          .select("id")
-          .single();
-        if (error) throw error;
-        if (data) setIntegrationId(data.id);
-      }
-      setStatus({
-        type: "success",
-        message: "Settings saved! Your branding is live.",
-      });
-    } catch (err) {
-      console.error("Error saving integration:", err);
-      setStatus({ type: "error", message: err.message });
-    } finally {
-      setSavingIntegration(false);
-    }
-  };
   return (
-    <div className="app-page flex-1 p-8 overflow-auto bg-[#0a0c10] text-emerald-50">
+    <div className="app-page flex-1 p-8 overflow-auto bg-[#0a0c10] text-white">
       {" "}
       <div className="max-w-5xl mx-auto">
         {" "}
@@ -392,7 +340,7 @@ const CommunicationsPage = () => {
           {" "}
           <div>
             {" "}
-            <p className="text-[10px] tracking-[0.3em] text-white/40 font-mono mb-2">
+            <p className="text-[10px] tracking-[0.08em] text-white/40 dm-sans-light-008 mb-2">
               Communication engine
             </p>{" "}
             <h1 className="text-4xl md:text-5xl font-medium tracking-tighter text-white">
@@ -402,46 +350,43 @@ const CommunicationsPage = () => {
               Broadcast & Automation center
             </p>{" "}
           </div>{" "}
-          <div
-            className="toggle-button-group toggle-button-group-3 communications-tab-strip"
-            style={{ "--toggle-active-index": activeTabIndex }}
-          >
-            {" "}
-            <button
-              onClick={() => {
-                setActiveTab("BROADCAST");
-                setStatus(null);
-              }}
-              className={`toggle-button ${normalizedActiveTab === "BROADCAST" ? "is-active" : ""}`}
-            >
-              {" "}
-              Broadcast{" "}
-            </button>{" "}
-            <button
-              onClick={() => {
-                setActiveTab("AUTOMATION");
-                setStatus(null);
-              }}
-              className={`toggle-button ${normalizedActiveTab === "AUTOMATION" ? "is-active" : ""}`}
-            >
-              {" "}
-              Automation{" "}
-            </button>{" "}
-            <button
-              onClick={() => {
-                setActiveTab("INTEGRATIONS");
-                setStatus(null);
-              }}
-              className={`toggle-button ${normalizedActiveTab === "INTEGRATIONS" ? "is-active" : ""}`}
-            >
-              {" "}
-              Integrations{" "}
-            </button>{" "}
-          </div>{" "}
-        </header>{" "}
+        </header>
+
+        <div className="flex flex-wrap gap-3 mb-3">
+          {tabOrder.map((tab, idx) => {
+            const isActive = activeTabIndex === idx;
+            const label = tab.charAt(0) + tab.slice(1).toLowerCase();
+            return (
+              <button
+                key={tab}
+                onClick={() => {
+                  setActiveTab(tab);
+                  setStatus(null);
+                }}
+                className={`px-4 md:px-6 py-3 rounded-xl text-xs tracking-[0.05em] font-light dm-sans-copy whitespace-nowrap transition-colors border ${
+                  isActive
+                    ? "bg-[#151921] text-white border-white/10"
+                    : "bg-white/90 text-black border-white/90 hover:bg-white"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+        <div
+          className="tab-panel flex-1 relative z-[5]"
+          style={{
+            backgroundColor: "#0a0c10",
+            border: "1.5px solid rgba(255,255,255,0.1)",
+            borderRadius: "12px",
+            padding: "28px",
+            minHeight: "220px",
+          }}
+        >
         {status && (
           <div
-            className={`mb-8 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 ${status.type === "success" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"}`}
+            className={`mb-8 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 ${status.type === "success" ? "bg-white/5 text-white/80 border border-white/20" : "bg-red-500/10 text-red-400 border border-red-500/20"}`}
           >
             {" "}
             {status.type === "success" ? (
@@ -473,7 +418,7 @@ const CommunicationsPage = () => {
                     <Users className="w-5 h-5 text-white/65" />
                   </div>
                 </div>
-                <p className="mt-2 text-[10px] tracking-[0.08em] text-white/40">
+                <p className="mt-2 text-[10px] tracking-[0.08em] text-white/40 dm-sans-light-008">
                   Contacts in system
                 </p>
               </div>{" "}
@@ -493,7 +438,7 @@ const CommunicationsPage = () => {
                     <CheckCircle2 className="w-5 h-5 text-white/65" />
                   </div>
                 </div>
-                <p className="mt-2 text-[10px] tracking-[0.08em] text-white/40">
+                <p className="mt-2 text-[10px] tracking-[0.08em] text-white/40 dm-sans-light-008">
                   Eligible for broadcast
                 </p>
               </div>{" "}
@@ -513,7 +458,7 @@ const CommunicationsPage = () => {
                     <AlertCircle className="w-5 h-5 text-white/65" />
                   </div>
                 </div>{" "}
-                <p className="mt-2 text-[10px] tracking-[0.08em] text-white/40">
+                <p className="mt-2 text-[10px] tracking-[0.08em] text-white/40 dm-sans-light-008">
                   Re-engagement pool
                 </p>
               </div>{" "}
@@ -524,42 +469,44 @@ const CommunicationsPage = () => {
                 {" "}
                 <form
                   onSubmit={handleSend}
-                  className="p-6 rounded-2xl space-y-4"
+                  className="border border-white/10 bg-[#1A1A1A] rounded-2xl p-5 sm:p-8 space-y-6"
                 >
                   {" "}
-                  <div className="flex items-center gap-3 pb-4 border-b border-white/5 font-mono text-emerald-500 tracking-wider">
+                  <div className="flex items-center gap-3 pb-5 border-b border-white/10">
                     {" "}
                     <Mail className="w-5 h-5 text-white" />{" "}
-                    <h2 className="text-xl font-medium font-logo text-white">
+                    <h2 className="text-xl sm:text-2xl tracking-tight text-white font-light dm-sans-copy normal-case">
                       New broadcast
                     </h2>{" "}
                   </div>{" "}
                   <div className="space-y-2">
                     {" "}
-                    <label className="text-xs font-light tracking-[0.08em] text-white/40">
+                    <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
                       Recipient group
                     </label>{" "}
-                    <div
-                      className="toggle-button-group toggle-button-group-3 broadcast-recipient-toggle"
-                      style={{ "--toggle-active-index": recipientGroupIndex }}
-                    >
-                      {" "}
-                      {recipientGroups.map((group) => (
-                        <button
-                          key={group}
-                          type="button"
-                          onClick={() => setRecipientGroup(group)}
-                          className={`toggle-button ${recipientGroup === group ? "is-active" : ""}`}
-                        >
-                          {" "}
-                          {group.charAt(0) + group.slice(1).toLowerCase()}{" "}
-                        </button>
-                      ))}{" "}
+                    <div className="flex flex-wrap gap-2"> 
+                      {recipientGroups.map((group) => {
+                        const isActiveGroup = recipientGroup === group;
+                        return (
+                          <button
+                            key={group}
+                            type="button"
+                            onClick={() => setRecipientGroup(group)}
+                            className={`px-4 md:px-5 py-2.5 rounded-xl text-xs tracking-[0.05em] font-light dm-sans-copy whitespace-nowrap transition-colors border ${
+                              isActiveGroup
+                                ? "bg-[#151921] text-white border-white/10"
+                                : "bg-white/90 text-black border-white/90 hover:bg-white"
+                            }`}
+                          >
+                            {group.charAt(0) + group.slice(1).toLowerCase()}
+                          </button>
+                        );
+                      })}
                     </div>{" "}
                   </div>{" "}
                   <div className="space-y-2">
                     {" "}
-                    <label className="text-xs font-light tracking-[0.08em] text-white/40">
+                    <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
                       Subject line
                     </label>{" "}
                     <input
@@ -568,41 +515,31 @@ const CommunicationsPage = () => {
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
                       placeholder="e.g., Special Offer for Renewals!"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500/50 transition-colors text-white text-sm placeholder:text-xs"
+                      className="w-full bg-transparent border-b border-white/15 py-2 text-sm text-white placeholder:text-white/25 outline-none dm-sans-light-008"
                     />{" "}
                   </div>{" "}
                   <div className="space-y-2">
                     {" "}
-                    <label className="text-xs font-light tracking-[0.08em] text-white/40">
+                    <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
                       Message content
                     </label>{" "}
                     <textarea
                       required
-                      rows={6}
+                      rows={3}
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
+                      onInput={autoResizeTextarea}
                       placeholder="Type your message here..."
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500/50 transition-colors resize-none text-white leading-relaxed text-sm placeholder:text-xs"
+                      className="w-full bg-transparent border-b border-white/15 py-2 text-sm text-white placeholder:text-white/25 outline-none overflow-hidden leading-relaxed dm-sans-light-008"
+                      style={{ minHeight: "84px" }}
                     />{" "}
                   </div>{" "}
                   <button
                     type="submit"
                     disabled={loading}
-                    className="broadcast-send-btn"
+                    className="w-full bg-white text-black py-4 text-[10px] tracking-[0.08em] dm-sans-light-008 font-medium disabled:opacity-40"
                   >
-                    <span className="broadcast-send-btn__label">
-                      {loading ? "Sending..." : "Send Broadcast"}
-                    </span>
-                    <span
-                      className="broadcast-send-btn__icon"
-                      aria-hidden="true"
-                    >
-                      {loading ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                      ) : (
-                        "\u2192"
-                      )}
-                    </span>
+                    {loading ? "Sending..." : "Send Broadcast"}
                   </button>{" "}
                 </form>{" "}
               </div>{" "}
@@ -610,12 +547,12 @@ const CommunicationsPage = () => {
                 {" "}
                 <div className="bg-[#1B1B1D] border border-white/5 p-6 rounded-2xl hover:border-emerald-500/20 transition-colors">
                   {" "}
-                  <div className="flex items-center gap-3 mb-4 text-[#A1A1A3] font-mono text-[10px] tracking-[0.2em]">
+                  <div className="flex items-center gap-3 mb-4 text-[#A1A1A3] text-[10px] tracking-[0.08em] dm-sans-light-008">
                     {" "}
                     <History className="w-4 h-4 text-white" />{" "}
-                    <h3 className="font-medium">Mailing Tips</h3>{" "}
+                    <h3 className="font-light tracking-[0.08em] dm-sans-light-008">Mailing Tips</h3>{" "}
                   </div>{" "}
-                  <ul className="space-y-4 text-xs text-[#A1A1A3] leading-relaxed font-sans">
+                  <ul className="space-y-4 text-xs text-[#A1A1A3] leading-relaxed dm-sans-light-008 tracking-[0.08em]">
                     {" "}
                     <li className="flex gap-3">
                       <div className="w-1.5 h-1.5 rounded-full bg-white mt-1.5 flex-shrink-0" />
@@ -681,7 +618,7 @@ const CommunicationsPage = () => {
                       <label className="text-xs font-light tracking-[0.08em] text-white/40">
                         Message body
                       </label>{" "}
-                      <span className="text-[10px] text-emerald-500/60 font-mono italic">
+                      <span className="text-[10px] text-white/60 font-mono italic">
                         Use {"{first_name}"}
                       </span>{" "}
                     </div>{" "}
@@ -733,7 +670,7 @@ const CommunicationsPage = () => {
                     </p>{" "}
                     <p>
                       Use placeholders like{" "}
-                      <code className="text-emerald-500">{"{first_name}"}</code>{" "}
+                      <code className="text-white/60">{"{first_name}"}</code>{" "}
                       to personalize.
                     </p>{" "}
                   </div>{" "}
@@ -786,7 +723,7 @@ const CommunicationsPage = () => {
                         <label className="text-xs font-light tracking-[0.08em] text-white/40">
                           Message body
                         </label>{" "}
-                        <span className="text-[10px] text-emerald-500/60 font-mono italic">
+                        <span className="text-[10px] text-white/60 font-mono italic">
                           Use {"{first_name}"} / {"{review_link}"}
                         </span>{" "}
                       </div>{" "}
@@ -829,8 +766,8 @@ const CommunicationsPage = () => {
                       {" "}
                       New members will instantly receive this request upon
                       registration if you've added your{" "}
-                      <span className="text-emerald-400">
-                        Google Link in the Integrations tab
+                      <span className="text-white">
+                        Google Link in Billing - Gym Information
                       </span>
                       . <br />
                       <br /> Want to harvest reviews from your historical member
@@ -864,193 +801,11 @@ const CommunicationsPage = () => {
               </div>{" "}
             </div>{" "}
           </div>
-        ) : normalizedActiveTab === "INTEGRATIONS" ? (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 animate-in fade-in slide-in-from-right-4">
-            {" "}
-            <div className="lg:col-span-2">
-              {" "}
-              <form
-                onSubmit={handleSaveIntegration}
-                className="bg-[#151921] border border-white/5 p-8 rounded-2xl space-y-6 font-light"
-                style={{ fontFamily: "DM Sans, sans-serif" }}
-              >
-                {" "}
-                {integrationLoading && (
-                  <div className="text-[10px] tracking-[0.08em] text-white/40 font-light">
-                    Loading integration settings...
-                  </div>
-                )}{" "}
-                {integrationError && (
-                  <div className="p-3 border bg-red-500/10 border-red-500/20 text-red-400 text-[10px] tracking-[0.08em] font-light">
-                    {" "}
-                    {integrationError}{" "}
-                  </div>
-                )}{" "}
-                <div className="flex items-center justify-between pb-6 border-b border-white/5">
-                  {" "}
-                  <div
-                    className="flex items-center gap-3 font-light text-white tracking-[0.01em]"
-                    style={{ fontFamily: "DM Sans, sans-serif" }}
-                  >
-                    {" "}
-                    <h2 className="text-xl font-light tracking-[0.02em]">
-                      Your gym settings
-                    </h2>{" "}
-                  </div>{" "}
-                  <div
-                    className="text-[10px] tracking-[0.08em] text-white font-light"
-                    style={{ fontFamily: "DM Sans, sans-serif" }}
-                  >
-                    {" "}
-                    Powered by Hamming{" "}
-                  </div>{" "}
-                </div>{" "}
-                <div className="space-y-4">
-                  {" "}
-                  <div className="space-y-2">
-                    {" "}
-                    <label className="text-xs font-light tracking-[0.08em] text-white/40 flex items-center gap-2">
-                      {" "}
-                      <Mail className="w-4 h-4" /> Gym Display Name{" "}
-                    </label>{" "}
-                    <input
-                      type="text"
-                      value={integration.sender_profile}
-                      onChange={(e) =>
-                        setIntegration({
-                          ...integration,
-                          sender_profile: e.target.value,
-                        })
-                      }
-                      placeholder="e.g., Hamming Fitness"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 focus:outline-none focus:border-emerald-500/50 transition-colors text-white"
-                    />{" "}
-                    <p className="text-[11px] tracking-[0.08em] text-white/40 font-light">
-                      This is the name your clients see in the "From" field of
-                      every email.
-                    </p>{" "}
-                  </div>{" "}
-                  <div className="space-y-2">
-                    {" "}
-                    <label className="text-xs font-light tracking-[0.08em] text-white/40 flex items-center gap-2">
-                      {" "}
-                      <AtSign className="w-4 h-4" /> Reply-To Email{" "}
-                    </label>{" "}
-                    <input
-                      type="email"
-                      value={integration.reply_to_email}
-                      onChange={(e) =>
-                        setIntegration({
-                          ...integration,
-                          reply_to_email: e.target.value,
-                        })
-                      }
-                      placeholder="e.g., support@yourgym.com"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 focus:outline-none focus:border-emerald-500/50 transition-colors text-white"
-                    />{" "}
-                    <p className="text-[11px] tracking-[0.08em] text-white/40 font-light">
-                      When a client hits &quot;Reply&quot; to an email, their
-                      message will land in this inbox.
-                    </p>{" "}
-                  </div>{" "}
-                  <div className="space-y-2 pt-4 border-t border-white/5">
-                    {" "}
-                    <label className="text-xs font-light tracking-[0.08em] text-emerald-400 flex items-center gap-2">
-                      {" "}
-                      <LinkIcon className="w-4 h-4" /> Google Business Link{" "}
-                    </label>{" "}
-                    <input
-                      type="url"
-                      value={integration.google_business_link}
-                      onChange={(e) =>
-                        setIntegration({
-                          ...integration,
-                          google_business_link: e.target.value,
-                        })
-                      }
-                      placeholder="https://g.page/r/..."
-                      className="w-full bg-emerald-500/5 border border-emerald-500/20 rounded-xl px-4 py-4 focus:outline-none focus:border-emerald-500/50 transition-colors text-white font-mono"
-                    />{" "}
-                    <p className="text-[11px] tracking-[0.08em] text-white/40 font-light">
-                      Leave empty to disable automated Google review requests.
-                    </p>{" "}
-                  </div>{" "}
-                </div>{" "}
-                <button
-                  type="submit"
-                  disabled={savingIntegration}
-                  className="broadcast-send-btn"
-                >
-                  <span className="broadcast-send-btn__label">
-                    {savingIntegration ? "Saving..." : "Save settings"}
-                  </span>
-                  <span className="broadcast-send-btn__icon" aria-hidden="true">
-                    {savingIntegration ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      "\u2192"
-                    )}
-                  </span>
-                </button>{" "}
-              </form>{" "}
-            </div>{" "}
-            <div className="space-y-8">
-              {" "}
-              <div className="bg-[#151921] border border-white/5 p-6 rounded-2xl">
-                {" "}
-                <h3 className="text-sm font-medium mb-4 text-emerald-400 tracking-widest flex items-center gap-2">
-                  {" "}
-                  <CheckCircle2 className="w-4 h-4" /> How It Works{" "}
-                </h3>{" "}
-                <div className="space-y-4 text-xs text-white/50 leading-relaxed font-sans">
-                  {" "}
-                  <p>
-                    Hamming sends all your emails from its own verified domain,
-                    so there's{" "}
-                    <strong className="text-white/70">
-                      no setup required on your end
-                    </strong>
-                    .
-                  </p>{" "}
-                  <p>
-                    Your <strong className="text-white/70">Gym Name</strong>{" "}
-                    appears as the sender, and your{" "}
-                    <strong className="text-white/70">Reply-To</strong> email
-                    ensures client replies land directly in your inbox.
-                  </p>{" "}
-                  <p>
-                    Just drop in your Google Business link and your clients will
-                    start receiving review requests automatically.
-                  </p>{" "}
-                </div>{" "}
-              </div>{" "}
-              <div className="bg-[#0B0E14] border border-white/5 p-6 rounded-2xl text-center">
-                {" "}
-                <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/10">
-                  {" "}
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    className="w-6 h-6 text-white/40"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    {" "}
-                    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />{" "}
-                  </svg>{" "}
-                </div>{" "}
-                <h3 className="font-medium text-sm tracking-tight mb-2">
-                  WhatsApp Support
-                </h3>{" "}
-                <p className="text-[10px] text-white/40 tracking-widest font-mono">
-                  Coming soon
-                </p>{" "}
-              </div>{" "}
-            </div>{" "}
-          </div>
-        ) : null}{" "}
-      </div>{" "}
+        ) : null}
+        </div>
+      </div>
     </div>
   );
 };
 export default CommunicationsPage;
+

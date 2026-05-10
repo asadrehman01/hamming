@@ -26,16 +26,98 @@ export const getImportSourcePreset = () => {
   return ['generic', 'legacy_a', 'legacy_b'].includes(preset) ? preset : 'generic';
 };
 
+export const detectImportSourcePresetFromRows = (rows = []) => {
+  const firstNonEmpty = (rows || []).find((row) =>
+    Object.values(row || {}).some((value) => String(value || '').trim() !== '')
+  );
+
+  if (!firstNonEmpty) return 'generic';
+
+  const keys = Object.keys(firstNonEmpty || {}).map(normalizeHeader);
+  const keySet = new Set(keys);
+
+  const matchesLegacyA =
+    keySet.has('mobile_no') ||
+    keySet.has('email_id') ||
+    keySet.has('payment_date') ||
+    keySet.has('plan');
+
+  if (matchesLegacyA) return 'legacy_a';
+
+  const matchesLegacyB =
+    keySet.has('firstname') ||
+    keySet.has('phone_number') ||
+    keySet.has('payment_status') ||
+    keySet.has('plan_name');
+
+  if (matchesLegacyB) return 'legacy_b';
+
+  return 'generic';
+};
+
+export const normalizeMembershipDuration = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '1 MONTH';
+
+  const normalized = raw.toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+  if (/\b(1\s*year|12\s*months?)\b/.test(normalized)) return '1 YEAR';
+  if (/\b6\s*months?\b/.test(normalized)) return '6 MONTHS';
+  if (/\b3\s*months?\b/.test(normalized)) return '3 MONTHS';
+  if (/\b(1\s*month|monthly)\b/.test(normalized)) return '1 MONTH';
+
+  return raw.toUpperCase();
+};
+
 export const mapCustomerRowFromPreset = (normalizedSource, sourcePreset = 'generic') => {
+  const parseDate = (dateStr) => {
+    if (!dateStr) return '';
+    const trimmed = String(dateStr || '').trim();
+    if (!trimmed) return '';
+
+    // Already ISO (YYYY-MM-DD): keep as-is.
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      return trimmed;
+    }
+
+    // DD/MM/YY, DD/MM/YYYY, DD-MM-YY, DD-MM-YYYY
+    const parts = trimmed.split(/[\/-]/).map((part) => String(part).trim());
+    if (parts.length === 3) {
+      const [d, m, y] = parts;
+      if (d && m && y) {
+        const dayNum = parseInt(d, 10);
+        const monthNum = parseInt(m, 10);
+        const yearNum = parseInt(y, 10);
+        const yyyy = y.length === 2 ? String(2000 + yearNum) : String(yearNum);
+        if (
+          Number.isFinite(dayNum) &&
+          Number.isFinite(monthNum) &&
+          Number.isFinite(parseInt(yyyy, 10)) &&
+          dayNum >= 1 &&
+          dayNum <= 31 &&
+          monthNum >= 1 &&
+          monthNum <= 12
+        ) {
+          const dd = String(dayNum).padStart(2, '0');
+          const mm = String(monthNum).padStart(2, '0');
+          return `${yyyy}-${mm}-${dd}`;
+        }
+      }
+    }
+    return trimmed;
+  };
+
   if (sourcePreset === 'legacy_a') {
     return {
       first_name: String(normalizedSource.first_name || '').trim(),
       last_name: String(normalizedSource.last_name || '').trim(),
       phone: String(normalizedSource.mobile_no || normalizedSource.phone || '').trim(),
       email: String(normalizedSource.email_id || normalizedSource.email || '').trim().toLowerCase(),
-      membership_duration: String(normalizedSource.plan || normalizedSource.membership_duration || '1 MONTH').trim(),
-      membership_start_date: String(normalizedSource.start_date || normalizedSource.membership_start_date || '').trim(),
-      membership_end_date: String(normalizedSource.end_date || normalizedSource.membership_end_date || '').trim(),
+      membership_duration: normalizeMembershipDuration(
+        normalizedSource.plan || normalizedSource.membership_duration || '1 MONTH',
+      ),
+      membership_start_date: parseDate(normalizedSource.start_date || normalizedSource.membership_start_date || ''),
+      membership_end_date: parseDate(normalizedSource.end_date || normalizedSource.membership_end_date || ''),
     };
   }
 
@@ -45,9 +127,11 @@ export const mapCustomerRowFromPreset = (normalizedSource, sourcePreset = 'gener
       last_name: String(normalizedSource.lastname || normalizedSource.last_name || '').trim(),
       phone: String(normalizedSource.phone_number || normalizedSource.phone || '').trim(),
       email: String(normalizedSource.email || '').trim().toLowerCase(),
-      membership_duration: String(normalizedSource.plan_name || normalizedSource.membership_duration || '1 MONTH').trim(),
-      membership_start_date: String(normalizedSource.start_date || normalizedSource.membership_start_date || '').trim(),
-      membership_end_date: String(normalizedSource.end_date || normalizedSource.membership_end_date || '').trim(),
+      membership_duration: normalizeMembershipDuration(
+        normalizedSource.plan_name || normalizedSource.membership_duration || '1 MONTH',
+      ),
+      membership_start_date: parseDate(normalizedSource.start_date || normalizedSource.membership_start_date || ''),
+      membership_end_date: parseDate(normalizedSource.end_date || normalizedSource.membership_end_date || ''),
     };
   }
 
@@ -56,13 +140,51 @@ export const mapCustomerRowFromPreset = (normalizedSource, sourcePreset = 'gener
     last_name: String(normalizedSource.last_name || normalizedSource.lastname || '').trim(),
     phone: String(normalizedSource.phone || normalizedSource.phone_number || '').trim(),
     email: String(normalizedSource.email || '').trim().toLowerCase(),
-    membership_duration: String(normalizedSource.membership_duration || normalizedSource.plan_name || '1 MONTH').trim(),
-    membership_start_date: String(normalizedSource.membership_start_date || normalizedSource.start_date || '').trim(),
-    membership_end_date: String(normalizedSource.membership_end_date || normalizedSource.end_date || '').trim(),
+    membership_duration: normalizeMembershipDuration(
+      normalizedSource.membership_duration || normalizedSource.plan_name || '1 MONTH',
+    ),
+    membership_start_date: parseDate(normalizedSource.membership_start_date || normalizedSource.start_date || ''),
+    membership_end_date: parseDate(normalizedSource.membership_end_date || normalizedSource.end_date || ''),
   };
 };
 
 export const mapPaymentRowFromPreset = (normalizedSource, sourcePreset = 'generic') => {
+  const parsePaymentCreatedAt = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return new Date().toISOString();
+
+    // Keep ISO-like values untouched.
+    if (/^\d{4}-\d{2}-\d{2}(?:[T\s].*)?$/.test(raw)) {
+      return raw;
+    }
+
+    // Treat slash/dash dates as DD/MM/YY or DD/MM/YYYY.
+    const datePart = raw.split(/[T\s]/)[0];
+    const parts = datePart.split(/[\/-]/).map((part) => String(part).trim());
+    if (parts.length === 3) {
+      const [d, m, y] = parts;
+      const day = Number.parseInt(d, 10);
+      const month = Number.parseInt(m, 10);
+      const yearNum = Number.parseInt(y, 10);
+      if (
+        Number.isFinite(day) &&
+        Number.isFinite(month) &&
+        Number.isFinite(yearNum) &&
+        day >= 1 &&
+        day <= 31 &&
+        month >= 1 &&
+        month <= 12
+      ) {
+        const yyyy = y.length === 2 ? 2000 + yearNum : yearNum;
+        const dd = String(day).padStart(2, '0');
+        const mm = String(month).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+      }
+    }
+
+    return raw;
+  };
+
   if (sourcePreset === 'legacy_a') {
     const parsedAmount = parseFloat(normalizedSource.amount || 0);
     return {
@@ -72,7 +194,7 @@ export const mapPaymentRowFromPreset = (normalizedSource, sourcePreset = 'generi
       sender_name: String(normalizedSource.customer_name || normalizedSource.sender_name || '').trim(),
       sender_account_name: String(normalizedSource.account_name || normalizedSource.sender_account_name || '').trim(),
       source_transaction_id: String(normalizedSource.transaction_id || normalizedSource.source_transaction_id || '').trim(),
-      created_at: String(normalizedSource.payment_date || normalizedSource.created_at || new Date().toISOString()),
+      created_at: parsePaymentCreatedAt(normalizedSource.payment_date || normalizedSource.created_at),
     };
   }
 
@@ -85,7 +207,7 @@ export const mapPaymentRowFromPreset = (normalizedSource, sourcePreset = 'generi
       sender_name: String(normalizedSource.customer_name || normalizedSource.sender_name || '').trim(),
       sender_account_name: String(normalizedSource.sender_account_name || '').trim(),
       source_transaction_id: String(normalizedSource.transaction_id || normalizedSource.source_transaction_id || '').trim(),
-      created_at: String(normalizedSource.created_at || new Date().toISOString()),
+      created_at: parsePaymentCreatedAt(normalizedSource.created_at),
     };
   }
 
@@ -99,7 +221,7 @@ export const mapPaymentRowFromPreset = (normalizedSource, sourcePreset = 'generi
     sender_name: String(normalizedSource.sender_name || normalizedSource.customer_name || '').trim(),
     sender_account_name: String(normalizedSource.sender_account_name || '').trim(),
     source_transaction_id: String(normalizedSource.transaction_id || normalizedSource.source_transaction_id || '').trim(),
-    created_at: String(normalizedSource.created_at || new Date().toISOString()),
+    created_at: parsePaymentCreatedAt(normalizedSource.created_at),
   };
 };
 

@@ -602,10 +602,10 @@ Deno.serve(async (req) => {
         id: string;
         payload: Record<string, unknown>;
       }> = [];
-      const insertsByKey = new Map<
-        string,
-        { rowIndex: number; normalizedPayload: CustomerPayload }
-      >();
+      const insertRows: Array<{
+        rowIndex: number;
+        payload: Record<string, unknown>;
+      }> = [];
 
       validRows.forEach((row) => {
         const payload = row.normalizedPayload;
@@ -639,13 +639,14 @@ Deno.serve(async (req) => {
           return;
         }
 
-        const key = phone || email || `row-${row.rowIndex}`;
-        if (!insertsByKey.has(key)) {
-          insertsByKey.set(key, {
-            rowIndex: row.rowIndex,
-            normalizedPayload: payload,
-          });
-        }
+        insertRows.push({
+          rowIndex: row.rowIndex,
+          payload: {
+            ...payload,
+            gym_id: gymId,
+            updated_at: new Date().toISOString(),
+          },
+        });
       });
 
       const dbErrors = [...validationErrors];
@@ -677,15 +678,6 @@ Deno.serve(async (req) => {
           }
         });
       }
-
-      const insertRows = Array.from(insertsByKey.values()).map((row) => ({
-        rowIndex: row.rowIndex,
-        payload: {
-          ...row.normalizedPayload,
-          gym_id: gymId,
-          updated_at: new Date().toISOString(),
-        },
-      }));
 
       const { successCount } = await insertRowsWithFallback(admin, {
         table: "customers",

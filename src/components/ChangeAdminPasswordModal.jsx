@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { changeAdminPassword } from "../lib/accessControl";
 import { supabase } from "../lib/supabaseClient";
+import { getUserWithRetry } from "../lib/authUser";
 const ChangeAdminPasswordModal = ({ isOpen, onClose }) => {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -34,7 +35,7 @@ const ChangeAdminPasswordModal = ({ isOpen, onClose }) => {
         const {
           data: { user },
           error: getUserError,
-        } = await supabase.auth.getUser();
+        } = await getUserWithRetry(supabase);
 
         if (cancelled) return;
 
@@ -144,13 +145,26 @@ const ChangeAdminPasswordModal = ({ isOpen, onClose }) => {
   };
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 dm-sans-light-008"
+      onClick={onClose}
+      role="presentation"
+    >
       {" "}
-      <div className="bg-[#151921] border border-white/10 rounded-2xl max-w-md w-full p-6 md:p-8 animate-in fade-in zoom-in-95 duration-200">
+      <div
+        className="bg-[#151921] border border-white/10 rounded-2xl max-w-md w-full p-6 md:p-8 animate-in fade-in zoom-in-95 duration-200"
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="change-admin-password-title"
+      >
         {" "}
         <div className="flex items-center justify-between mb-6">
           {" "}
-          <h2 className="text-lg md:text-xl font-medium text-white tracking-tight">
+          <h2
+            id="change-admin-password-title"
+            className="text-lg md:text-xl font-medium text-white tracking-tight"
+          >
             Change Admin Password
           </h2>{" "}
           <button
@@ -162,9 +176,9 @@ const ChangeAdminPasswordModal = ({ isOpen, onClose }) => {
           </button>{" "}
         </div>{" "}
         {success ? (
-          <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 text-center">
+          <div className="bg-white/5 border border-white/10 rounded-lg p-4 text-center">
             {" "}
-            <p className="text-emerald-400 text-sm font-medium">
+            <p className="text-white text-sm font-medium">
               Password changed successfully!
             </p>{" "}
           </div>
@@ -246,3 +260,4 @@ const ChangeAdminPasswordModal = ({ isOpen, onClose }) => {
   );
 };
 export default ChangeAdminPasswordModal;
+

@@ -1,6 +1,293 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { getUserWithRetry } from "../lib/authUser";
+import { toMonthStartDateString } from "../lib/financeDates";
 import SecureImage from "./SecureImage";
+
+// Helper: Send email via Supabase Edge Function with exponential backoff retry.
+// Never throws; always logs result (success or final failure).
+const sendEmailViaEdgeFunction = async ({
+  subject,
+  message,
+  htmlMessage,
+  recipientEmail,
+  description = "email",
+}) => {
+  const maxAttempts = 4;
+  const backoffMs = [100, 200, 400, 800]; // exponential backoff
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      if (attempt > 0) {
+        await new Promise((res) => setTimeout(res, backoffMs[attempt - 1]));
+        console.log(`[${description}] Retry attempt ${attempt + 1}/${maxAttempts}...`);
+      } else {
+        console.log(`[${description}] Sending to ${recipientEmail}...`);
+      }
+
+      const { data, error } = await supabase.functions.invoke("broadcast-email", {
+        body: {
+          subject,
+          message,
+          htmlMessage: htmlMessage || undefined,
+          recipientGroup: "INDIVIDUAL",
+          recipientEmail,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      console.log(`[${description}] SUCCESS to ${recipientEmail}`);
+      return { success: true, data };
+    } catch (err) {
+      const msg = err?.message || String(err);
+      console.warn(`[${description}] Attempt ${attempt + 1} failed: ${msg}`);
+
+      if (attempt === maxAttempts - 1) {
+        console.error(`[${description}] FINAL FAILURE after ${maxAttempts} attempts to ${recipientEmail}: ${msg}`);
+        return { success: false, error: msg };
+      }
+    }
+  }
+
+  return { success: false, error: "Unknown error" };
+};
+
+const formatBillDate = (value) => {
+  if (!value) return "-";
+  const raw = value instanceof Date ? null : String(value).trim();
+  const date = value instanceof Date
+    ? value
+    : (/^\d{4}-\d{2}-\d{2}$/.test(raw || "")
+        ? (() => {
+            const [y, m, d] = (raw || "").split("-").map((part) => Number(part));
+            return new Date(y, m - 1, d, 0, 0, 0, 0);
+          })()
+        : new Date(value));
+
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString("en-IN");
+};
+
+const buildReceiptMessage = ({
+  gymDisplayName,
+  billNumber,
+  issuedAt,
+  customerName,
+  customerEmail,
+  customerPhone,
+  membershipPlan,
+  membershipStart,
+  membershipEnd,
+  amount,
+  contactEmail,
+  contactPhone,
+  addressLine1,
+  addressLine2,
+  city,
+  state,
+  postalCode,
+  taxLabel,
+  taxValue,
+  footerNote,
+}) => {
+  const addressParts = [
+    addressLine1,
+    addressLine2,
+    [city, state, postalCode].filter(Boolean).join(" - "),
+  ].filter(Boolean);
+
+  return [
+    `${gymDisplayName}`,
+    ...addressParts,
+    contactPhone ? `Phone: ${contactPhone}` : null,
+    contactEmail ? `Email: ${contactEmail}` : null,
+    taxLabel && taxValue ? `${taxLabel}: ${taxValue}` : null,
+    "",
+    `Receipt No: ${billNumber}`,
+    `Date: ${formatBillDate(issuedAt)}`,
+    "",
+    `Customer: ${customerName || "-"}`,
+    `Customer Email: ${customerEmail || "-"}`,
+    `Customer Phone: ${customerPhone || "-"}`,
+    "",
+    `Membership Plan: ${membershipPlan || "-"}`,
+    `Membership Start: ${membershipStart ? formatBillDate(membershipStart) : "-"}`,
+    `Membership End: ${membershipEnd ? formatBillDate(membershipEnd) : "-"}`,
+    `Amount Paid: INR ${Number(amount || 0).toLocaleString("en-IN", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    })}`,
+    `Payment Mode: Cash`,
+    "",
+    footerNote || "Thank you for training with us.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+};
+
+const escapeHtml = (value) =>
+  String(value == null ? "" : value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const buildReceiptHtml = ({
+  gymDisplayName,
+  billNumber,
+  issuedAt,
+  customerName,
+  customerEmail,
+  customerPhone,
+  membershipPlan,
+  membershipStart,
+  membershipEnd,
+  amount,
+  contactEmail,
+  contactPhone,
+  addressLine1,
+  addressLine2,
+  city,
+  state,
+  postalCode,
+  taxLabel,
+  taxValue,
+  footerNote,
+}) => {
+  const safeGymName = escapeHtml(gymDisplayName || "Gym");
+  const safeBillNumber = escapeHtml(billNumber || "-");
+  const safeDate = escapeHtml(formatBillDate(issuedAt));
+  const safeCustomerName = escapeHtml(customerName || "-");
+  const safeCustomerEmail = escapeHtml(customerEmail || "-");
+  const safeCustomerPhone = escapeHtml(customerPhone || "-");
+  const safeMembershipPlan = escapeHtml(membershipPlan || "-");
+  const safeMembershipStart = escapeHtml(
+    membershipStart ? formatBillDate(membershipStart) : "-",
+  );
+  const safeMembershipEnd = escapeHtml(
+    membershipEnd ? formatBillDate(membershipEnd) : "-",
+  );
+  const safeAmount = Number(amount || 0).toLocaleString("en-IN", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+
+  const fullAddress = [
+    addressLine1,
+    addressLine2,
+    [city, state, postalCode].filter(Boolean).join(", "),
+  ]
+    .filter(Boolean)
+    .join("<br>");
+
+  const companyMeta = [
+    fullAddress || null,
+    contactPhone ? `Phone: ${escapeHtml(contactPhone)}` : null,
+    contactEmail ? `Email: ${escapeHtml(contactEmail)}` : null,
+    taxLabel && taxValue
+      ? `${escapeHtml(taxLabel)}: ${escapeHtml(taxValue)}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join("<br>");
+
+  const safeFooter = escapeHtml(footerNote || "Thank you for training with us.");
+
+  return `
+<!doctype html>
+<html lang="en">
+  <body style="margin:0;padding:0;background:#0a0c10;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#0a0c10;padding:28px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#f7f7f7;border:1px solid #dcdcdc;color:#111111;font-family:'DM Sans','Segoe UI',Arial,sans-serif;">
+            <tr>
+              <td style="padding:24px 24px 14px 24px;border-bottom:1px dashed #b8b8b8;text-align:center;">
+                <div style="font-size:34px;line-height:1.1;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;">${safeGymName}</div>
+                ${companyMeta ? `<div style="margin-top:10px;font-size:14px;line-height:1.45;color:#2f2f2f;">${companyMeta}</div>` : ""}
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:18px 24px 8px 24px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td style="font-size:26px;font-weight:600;letter-spacing:0.06em;">INVOICE</td>
+                    <td align="right" style="font-size:28px;font-weight:700;letter-spacing:0.03em;">#${safeBillNumber}</td>
+                  </tr>
+                  <tr>
+                    <td colspan="2" style="padding-top:6px;font-size:14px;color:#343434;">Date: ${safeDate}</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:8px 24px 0 24px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-top:1px dashed #b8b8b8;border-bottom:1px dashed #b8b8b8;">
+                  <tr>
+                    <td style="padding:10px 0;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#4a4a4a;width:34%;">Bill To</td>
+                    <td style="padding:10px 0;font-size:14px;line-height:1.5;">
+                      <strong>${safeCustomerName}</strong><br>
+                      ${safeCustomerEmail}<br>
+                      ${safeCustomerPhone}
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:14px 24px 0 24px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
+                  <tr>
+                    <th align="left" style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#4a4a4a;padding:0 0 8px 0;border-bottom:1px dashed #b8b8b8;">Description</th>
+                    <th align="right" style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#4a4a4a;padding:0 0 8px 0;border-bottom:1px dashed #b8b8b8;">Amount</th>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;font-size:14px;line-height:1.45;border-bottom:1px dashed #b8b8b8;">
+                      Membership Plan: ${safeMembershipPlan}<br>
+                      Period: ${safeMembershipStart} to ${safeMembershipEnd}<br>
+                      Payment Mode: Cash
+                    </td>
+                    <td align="right" style="padding:12px 0;font-size:16px;font-weight:600;border-bottom:1px dashed #b8b8b8;">INR ${safeAmount}</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:16px 24px 10px 24px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td style="font-size:30px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">Total:</td>
+                    <td align="right" style="font-size:34px;font-weight:700;letter-spacing:0.03em;">INR ${safeAmount}</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:8px 24px 24px 24px;border-top:1px dashed #b8b8b8;text-align:center;">
+                <div style="font-size:13px;line-height:1.5;color:#3d3d3d;">${safeFooter}</div>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+};
+
 const CustomerModal = ({
   isOpen,
   onClose,
@@ -15,6 +302,7 @@ const CustomerModal = ({
   const [duration, setDuration] = useState("1 MONTH");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [amountPaid, setAmountPaid] = useState("");
   const [photo, setPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [aadhaarPhoto, setAadhaarPhoto] = useState(null);
@@ -23,12 +311,24 @@ const CustomerModal = ({
   const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
   const aadhaarInputRef = useRef(null);
+  const formatIsoLocal = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  };
+  const parseIsoLocal = (value) => {
+    const raw = String(value || "").trim();
+    const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return null;
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 0, 0, 0, 0);
+  };
   // Helper to calculate end date based on plan - wrapped in useCallback for stability
   const calculateEndDate = useCallback((start, dur) => {
     if (!start || !dur) return "";
     try {
-      const startDate = new Date(start);
-      if (isNaN(startDate.getTime())) return "";
+      const startDate = parseIsoLocal(start);
+      if (!startDate || Number.isNaN(startDate.getTime())) return "";
       // Handle invalid date input
       const endDate = new Date(startDate);
       if (dur === "1 MONTH") {
@@ -44,7 +344,7 @@ const CustomerModal = ({
       if (endDate.getDate() !== startDate.getDate()) {
         endDate.setDate(0);
       }
-      return endDate.toISOString().split("T")[0];
+      return formatIsoLocal(endDate);
     } catch (err) {
       console.error("Error calculating end date:", err);
       return "";
@@ -60,6 +360,7 @@ const CustomerModal = ({
       setDuration(initialData.membership_duration || "1 MONTH");
       setStartDate(initialData.membership_start_date || "");
       setEndDate(initialData.membership_end_date || "");
+      setAmountPaid(initialData.price_paid != null ? String(initialData.price_paid) : "");
       setPhotoPreview(initialData.photo_url || null);
       setPhoto(null);
       setAadhaarPreview(initialData.aadhaar_url || null);
@@ -71,9 +372,10 @@ const CustomerModal = ({
       setEmail("");
       setPhone("");
       setDuration("1 MONTH");
-      const today = new Date().toISOString().split("T")[0];
+      const today = formatIsoLocal(new Date());
       setStartDate(today);
       setEndDate(calculateEndDate(today, "1 MONTH"));
+      setAmountPaid("");
       setPhotoPreview(null);
       setPhoto(null);
       setAadhaarPreview(null);
@@ -150,16 +452,19 @@ const CustomerModal = ({
     e.preventDefault();
     setLoading(true);
     setError(null);
+    let onboardingStatus = "Skipped (existing customer update).";
+    let receiptStatus = "Skipped (existing customer update).";
     try {
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await getUserWithRetry(supabase);
       if (!user) throw new Error("User not authenticated");
       let gymId = initialData?.gym_id;
+      let gymName = "MY GYM";
       if (!initialData) {
         let { data: gymData, error: gymError } = await supabase
           .from("gyms")
-          .select("id")
+          .select("id, name")
           .eq("id", user.id)
           .single();
         if (gymError && gymError.code === "PGRST116") {
@@ -170,10 +475,12 @@ const CustomerModal = ({
             .single();
           if (createGymError) throw createGymError;
           gymId = newGym.id;
+          gymName = newGym.name || "MY GYM";
         } else if (gymError) {
           throw gymError;
         } else {
           gymId = gymData.id;
+          gymName = gymData.name || "MY GYM";
         }
       }
       let photo_url = initialData?.photo_url || null;
@@ -216,6 +523,18 @@ const CustomerModal = ({
         );
       }
       const normalizedCurrentPrice = Number(currentPrice);
+      const parsedAmountPaid = Number(amountPaid);
+      const normalizedPaidAmount =
+        Number.isFinite(parsedAmountPaid) && parsedAmountPaid > 0
+          ? parsedAmountPaid
+          : normalizedCurrentPrice;
+
+      if (!initialData || isRenewal) {
+        if (!Number.isFinite(parsedAmountPaid) || parsedAmountPaid <= 0) {
+          throw new Error("Please enter a valid amount paid for this membership.");
+        }
+      }
+
       const payload = {
         first_name: firstName,
         last_name: lastName,
@@ -226,7 +545,7 @@ const CustomerModal = ({
         membership_end_date: endDate,
         photo_url,
         aadhaar_url,
-        price_paid: normalizedCurrentPrice,
+        price_paid: normalizedPaidAmount,
         updated_at: new Date().toISOString(),
       };
       const safePayload = {
@@ -265,75 +584,197 @@ const CustomerModal = ({
           gym_id: gymId,
           customer_id: resultData.id,
           plan_name: duration,
-          amount: normalizedCurrentPrice,
+          amount: normalizedPaidAmount,
           status: "ACTIVE",
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
-        const { error: subError } = await supabase
+        const { data: insertedSubscription, error: subError } = await supabase
           .from("subscriptions")
-          .insert([subPayload]);
+          .insert([subPayload])
+          .select("id")
+          .single();
         if (subError) {
           console.error("Failed to log subscription history:", subError);
           // Non-blocking error: we still want to finish the customer save cleanly
         } else {
           console.log("Subscription History Logged.");
+
+          const paymentPayload = {
+            gym_id: gymId,
+            subscription_id: insertedSubscription?.id || null,
+            matched_customer_id: resultData.id,
+            amount: normalizedPaidAmount,
+            status: "completed",
+            payment_mode: "cash",
+            sender_name: `${resultData.first_name || ""} ${resultData.last_name || ""}`.trim(),
+            sender_account_name: resultData.email || null,
+            revenue_month: toMonthStartDateString(startDate),
+          };
+
+          const { error: paymentError } = await supabase
+            .from("payments")
+            .insert([paymentPayload]);
+
+          if (paymentError) {
+            console.error("Failed to auto-log payment transaction:", paymentError);
+          }
         }
       }
       // Google Review Auto-Sender (Only for Brand New Customers)
       if (!initialData) {
+        // Billing Receipt Auto-Sender (Only for Brand New Customers)
         try {
-          // Replace 'RESEND' filter with query by existence of google_business_link
+          const { data: billingSettings, error: billingSettingsError } = await supabase
+            .from("billing_settings")
+            .select("*")
+            .eq("gym_id", gymId)
+            .maybeSingle();
+
+          if (billingSettingsError) {
+            console.error("Failed to load billing settings:", billingSettingsError);
+            receiptStatus = "Failed (could not load billing settings).";
+          } else if (billingSettings?.receipt_enabled && resultData?.email) {
+            const billDate = new Date();
+            const billNumber = `${(billingSettings.invoice_prefix || "REC").toUpperCase()}-${billDate
+              .toISOString()
+              .slice(0, 10)
+              .replace(/-/g, "")}-${String(resultData.id || "").slice(0, 8).toUpperCase()}`;
+
+            const customerName = `${resultData.first_name || ""} ${resultData.last_name || ""}`.trim();
+            const subject = `Receipt ${billNumber} | ${billingSettings.gym_display_name || gymName || "Gym"}`;
+            const message = buildReceiptMessage({
+              gymDisplayName: billingSettings.gym_display_name || gymName || "Gym",
+              billNumber,
+              issuedAt: billDate,
+              customerName,
+              customerEmail: resultData.email,
+              customerPhone: resultData.phone,
+              membershipPlan: duration,
+              membershipStart: startDate,
+              membershipEnd: endDate,
+              amount: normalizedPaidAmount,
+              contactEmail: billingSettings.contact_email,
+              contactPhone: billingSettings.contact_phone,
+              addressLine1: billingSettings.address_line1,
+              addressLine2: billingSettings.address_line2,
+              city: billingSettings.city,
+              state: billingSettings.state,
+              postalCode: billingSettings.postal_code,
+              taxLabel: billingSettings.tax_label,
+              taxValue: billingSettings.tax_value,
+              footerNote: billingSettings.footer_note,
+            });
+
+            const htmlMessage = buildReceiptHtml({
+              gymDisplayName: billingSettings.gym_display_name || gymName || "Gym",
+              billNumber,
+              issuedAt: billDate,
+              customerName,
+              customerEmail: resultData.email,
+              customerPhone: resultData.phone,
+              membershipPlan: duration,
+              membershipStart: startDate,
+              membershipEnd: endDate,
+              amount: normalizedPaidAmount,
+              contactEmail: billingSettings.contact_email,
+              contactPhone: billingSettings.contact_phone,
+              addressLine1: billingSettings.address_line1,
+              addressLine2: billingSettings.address_line2,
+              city: billingSettings.city,
+              state: billingSettings.state,
+              postalCode: billingSettings.postal_code,
+              taxLabel: billingSettings.tax_label,
+              taxValue: billingSettings.tax_value,
+              footerNote: billingSettings.footer_note,
+            });
+
+            // Send receipt with retry (never fails the save)
+            const receiptResult = await sendEmailViaEdgeFunction({
+              subject,
+              message,
+              htmlMessage,
+              recipientEmail: resultData.email,
+              description: "Receipt",
+            });
+            receiptStatus = receiptResult.success
+              ? `Sent to ${resultData.email}.`
+              : `Failed (${receiptResult.error || "unknown error"}).`;
+          } else if (!billingSettings?.receipt_enabled) {
+            receiptStatus = "Skipped (receipt disabled in Billing settings).";
+          } else {
+            receiptStatus = "Skipped (customer email missing).";
+          }
+        } catch (receiptError) {
+          console.error("Failed to auto-send receipt:", receiptError);
+          receiptStatus = "Failed (receipt could not be sent).";
+        }
+
+        // Send review email (with retry, never fails the save)
+        try {
           const { data: integ } = await supabase
             .from("gym_integrations")
             .select("google_business_link")
             .eq("gym_id", gymId)
+            .eq("provider", "RESEND")
             .not("google_business_link", "is", null)
             .maybeSingle();
-          if (integ?.google_business_link) {
+
+          if (integ?.google_business_link && resultData.email && resultData.first_name) {
             const { data: revTemplate } = await supabase
               .from("automation_templates")
               .select("subject, body_text")
+              .eq("gym_id", gymId)
               .eq("name", "GOOGLE_REVIEW_REQUEST")
-              .single();
-            // Validate template and recipient email
-            if (
-              revTemplate?.subject &&
-              revTemplate?.body_text &&
-              resultData.email &&
-              resultData.first_name
-            ) {
-              const personalizedBody = revTemplate.body_text.replace(
-                /{first_name}/g,
-                resultData.first_name,
-              );
-              const personalizedSubject = revTemplate.subject.replace(
-                /{first_name}/g,
-                resultData.first_name,
-              );
-              // Await the invocation or at least catch its error
-              const { error: invokeError } = await supabase.functions.invoke(
-                "broadcast-email",
-                {
-                  body: {
-                    subject: personalizedSubject,
-                    message: personalizedBody,
-                    recipientGroup: "INDIVIDUAL",
-                    recipientEmail: resultData.email,
-                    isReviewRequest: true,
-                  },
-                },
-              );
-              if (invokeError) throw invokeError;
-              console.log("Instant Review Request Dispatched.");
-            }
+              .maybeSingle();
+
+            const fallbackTemplate = {
+              subject: "Welcome to the gym, {first_name}! Share your 5-star experience",
+              body_text:
+                "Hi {first_name},\n\nWelcome to the gym. We are excited to have you with us.\n\nIf your first experience has been great, please rate us 5 stars on Google here:\n{review_link}\n\nYour feedback helps us grow and helps more people discover our gym.\n\nThank you for being part of our community!",
+            };
+
+            const activeTemplate = {
+              subject: revTemplate?.subject || fallbackTemplate.subject,
+              body_text: revTemplate?.body_text || fallbackTemplate.body_text,
+            };
+
+            const reviewLink = integ?.google_business_link || "";
+            const personalizedBody = activeTemplate.body_text
+              .replace(/{first_name}/g, resultData.first_name)
+              .replace(/{review_link}/g, reviewLink);
+            const personalizedSubject = activeTemplate.subject.replace(
+              /{first_name}/g,
+              resultData.first_name,
+            );
+
+            const reviewResult = await sendEmailViaEdgeFunction({
+              subject: personalizedSubject,
+              message: personalizedBody,
+              recipientEmail: resultData.email,
+              description: "Review Request",
+            });
+            onboardingStatus = reviewResult.success
+              ? `Sent to ${resultData.email}.`
+              : `Failed (${reviewResult.error || "unknown error"}).`;
+          } else if (!resultData.email) {
+            onboardingStatus = "Skipped (customer email missing).";
+          } else if (!resultData.first_name) {
+            onboardingStatus = "Skipped (customer first name missing).";
+          } else {
+            onboardingStatus = "Skipped (Google onboarding link not configured).";
           }
         } catch (revErr) {
-          console.error("Failed to auto-send review:", revErr);
+          console.error("[Review Request] Failed to prepare/send:", revErr);
+          onboardingStatus = "Failed (review request could not be sent).";
         }
       }
       setLoading(false);
-      onCustomerSaved(resultData);
+      onCustomerSaved(resultData, {
+        onboardingStatus,
+        receiptStatus,
+        isNewApplication: !initialData,
+      });
       onClose();
     } catch (err) {
       console.error("Error saving customer:", err);
@@ -350,13 +791,17 @@ const CustomerModal = ({
       }}
     >
       {" "}
-      <div className="bg-[#1A1A1A] border border-white/10 w-full max-w-lg p-4 md:p-6 shadow-2xl animate-in zoom-in-95 duration-300 overflow-y-auto max-h-[86vh]">
+      <div className="bg-[#1A1A1A] border border-white/10 w-full max-w-lg p-4 md:p-6 shadow-2xl animate-in zoom-in-95 duration-300 overflow-y-auto overflow-x-hidden max-h-[86vh]">
         {" "}
         <div className="flex justify-between items-center mb-4 md:mb-6">
           {" "}
           <h2 className="font-logo text-3xl tracking-tight text-white ">
             {" "}
-            {initialData ? "Update Information" : "New Application"}{" "}
+            {isRenewal
+              ? "Renew Form"
+              : initialData
+                ? "Edit Information"
+                : "New Application"}{" "}
           </h2>{" "}
           <button
             onClick={onClose}
@@ -367,12 +812,12 @@ const CustomerModal = ({
           </button>{" "}
         </div>{" "}
         {error && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] tracking-widest font-mono">
+          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] tracking-[0.08em] dm-sans-light-008">
             {" "}
             {error}{" "}
           </div>
         )}{" "}
-        <form onSubmit={handleSubmit} className="space-y-4 md:space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4 md:space-y-5 w-full min-w-0 overflow-x-hidden">
           {" "}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {" "}
@@ -428,7 +873,7 @@ const CustomerModal = ({
                 accept="image/*"
                 className="hidden"
               />{" "}
-              <span className="text-[8px] tracking-[0.2em] font-mono text-white/20 mt-2">
+              <span className="text-[8px] tracking-[0.08em] dm-sans-light-008 text-white/20 mt-2">
                 Profile Photo
               </span>{" "}
             </div>{" "}
@@ -493,7 +938,7 @@ const CustomerModal = ({
                 accept="image/*"
                 className="hidden"
               />{" "}
-              <span className="text-[8px] tracking-[0.2em] font-mono text-white/20 mt-2">
+              <span className="text-[8px] tracking-[0.08em] dm-sans-light-008 text-white/20 mt-2">
                 Identity Proof
               </span>{" "}
             </div>{" "}
@@ -502,7 +947,7 @@ const CustomerModal = ({
             {" "}
             <div className="space-y-2">
               {" "}
-              <label className="text-[10px] tracking-[0.2em] font-mono text-white/40 block">
+              <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40 block">
                 First Name
               </label>{" "}
               <input
@@ -510,13 +955,13 @@ const CustomerModal = ({
                 required
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 p-2.5 md:p-3 text-white text-sm focus:outline-none focus:border-white/30 transition-colors font-body"
+                className="w-full bg-white/5 border border-white/10 p-2.5 md:p-3 text-white text-sm focus:outline-none focus:border-white/30 transition-colors dm-sans-light-008 placeholder:text-white/30"
                 placeholder="Shayaan"
               />{" "}
             </div>{" "}
             <div className="space-y-2">
               {" "}
-              <label className="text-[10px] tracking-[0.2em] font-mono text-white/40 block">
+              <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40 block">
                 Last Name
               </label>{" "}
               <input
@@ -524,7 +969,7 @@ const CustomerModal = ({
                 required
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 p-2.5 md:p-3 text-white text-sm focus:outline-none focus:border-white/30 transition-colors font-body"
+                className="w-full bg-white/5 border border-white/10 p-2.5 md:p-3 text-white text-sm focus:outline-none focus:border-white/30 transition-colors dm-sans-light-008 placeholder:text-white/30"
                 placeholder="Shaikh"
               />{" "}
             </div>{" "}
@@ -533,7 +978,7 @@ const CustomerModal = ({
             {" "}
             <div className="space-y-2">
               {" "}
-              <label className="text-[10px] tracking-[0.2em] font-mono text-white/40 block">
+              <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40 block">
                 Email Address
               </label>{" "}
               <input
@@ -541,13 +986,13 @@ const CustomerModal = ({
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 p-2.5 md:p-3 text-white text-sm focus:outline-none focus:border-white/30 transition-colors font-body"
+                className="w-full bg-white/5 border border-white/10 p-2.5 md:p-3 text-white text-sm focus:outline-none focus:border-white/30 transition-colors dm-sans-light-008 placeholder:text-white/30"
                 placeholder="hello@hamming.co"
               />{" "}
             </div>{" "}
             <div className="space-y-2">
               {" "}
-              <label className="text-[10px] tracking-[0.2em] font-mono text-white/40 block">
+              <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40 block">
                 Phone Number
               </label>{" "}
               <input
@@ -555,7 +1000,7 @@ const CustomerModal = ({
                 required
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 p-2.5 md:p-3 text-white text-sm focus:outline-none focus:border-white/30 transition-colors font-body"
+                className="w-full bg-white/5 border border-white/10 p-2.5 md:p-3 text-white text-sm focus:outline-none focus:border-white/30 transition-colors dm-sans-light-008 placeholder:text-white/30"
                 placeholder="+91 00000 00000"
               />{" "}
             </div>{" "}
@@ -563,7 +1008,7 @@ const CustomerModal = ({
           <div className="w-full h-[1px] bg-white/10 my-4" />{" "}
           <div className="space-y-2">
             {" "}
-            <label className="text-[10px] tracking-[0.2em] font-mono text-white/40 block">
+            <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40 block">
               {" "}
               Membership Duration{" "}
               {isRenewal && (
@@ -577,7 +1022,7 @@ const CustomerModal = ({
               <select
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 p-3 text-white text-sm focus:outline-none focus:border-white/30 transition-colors font-body appearance-none cursor-pointer"
+                className="w-full bg-white/5 border border-white/10 p-3 text-white text-sm focus:outline-none focus:border-white/30 transition-colors dm-sans-light-008 appearance-none cursor-pointer"
               >
                 {" "}
                 <option value="1 MONTH" className="bg-[#1A1A1A] text-white">
@@ -613,7 +1058,7 @@ const CustomerModal = ({
             {" "}
             <div className="space-y-2">
               {" "}
-              <label className="text-[10px] tracking-[0.2em] font-mono text-white/40 block">
+              <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40 block">
                 {" "}
                 Start Date{" "}
                 {isRenewal && (
@@ -621,41 +1066,66 @@ const CustomerModal = ({
                     (FILL)
                   </span>
                 )}{" "}
-              </label>{" "}
+              </label>
               <input
                 type="date"
                 required
+                lang="en-GB"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 p-2.5 md:p-3 text-white text-sm focus:outline-none focus:border-white/30 transition-colors font-body [color-scheme:dark]"
+                className="w-full bg-white/5 border border-white/10 p-2.5 md:p-3 text-white text-sm focus:outline-none focus:border-white/30 transition-colors dm-sans-light-008 [color-scheme:dark]"
               />{" "}
             </div>{" "}
             <div className="space-y-2">
               {" "}
-              <label className="text-[10px] tracking-[0.2em] font-mono text-white/40 block">
+              <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40 block">
                 End Date (Auto)
-              </label>{" "}
+              </label>
               <input
                 type="date"
                 readOnly
+                lang="en-GB"
                 value={endDate}
-                className="w-full bg-white/5 border border-white/10 p-2.5 md:p-3 text-white/40 text-sm focus:outline-none font-body cursor-not-allowed [color-scheme:dark]"
+                className="w-full bg-white/5 border border-white/10 p-2.5 md:p-3 text-white/40 text-sm focus:outline-none dm-sans-light-008 cursor-not-allowed [color-scheme:dark]"
               />{" "}
             </div>{" "}
+          </div>{" "}
+          <div className="space-y-2">
+            {" "}
+            <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40 block">
+              Amount Paid (INR)
+              {!initialData || isRenewal ? (
+                <span className="text-red-500 ml-2 font-medium tracking-tight">
+                  (REQUIRED)
+                </span>
+              ) : null}
+            </label>{" "}
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              required={!initialData || isRenewal}
+              value={amountPaid}
+              onChange={(e) => setAmountPaid(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 p-2.5 md:p-3 text-white text-sm focus:outline-none focus:border-white/30 transition-colors dm-sans-light-008 placeholder:text-white/30"
+              placeholder="Enter the amount paid by client"
+            />{" "}
           </div>{" "}
           <div className="pt-2">
             {" "}
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-white text-black py-3.5 px-4 text-[10px] tracking-[0.3em] font-medium hover:bg-white/90 transition-all active:scale-[0.98] disabled:opacity-50"
+              className="w-full bg-white text-black py-3.5 px-4 text-[10px] tracking-[0.3em] font-medium dm-sans-light-008 hover:bg-white/90 transition-all active:scale-[0.98] disabled:opacity-50"
             >
               {" "}
               {loading
                 ? "Processing..."
-                : initialData
-                  ? "Save changes"
-                  : "Submit application"}{" "}
+                : isRenewal
+                  ? "Renew Membership"
+                  : initialData
+                    ? "Save Information"
+                    : "Submit Application"}{" "}
             </button>{" "}
           </div>{" "}
         </form>{" "}
@@ -664,3 +1134,4 @@ const CustomerModal = ({
   );
 };
 export default CustomerModal;
+

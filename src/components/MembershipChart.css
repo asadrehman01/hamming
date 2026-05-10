@@ -1,0 +1,61 @@
+.dashboard-page-vibe .dashboard-page-vibe-chart {
+  background: #fbfbfb !important;
+  border-color: #e6e6e6 !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05) !important;
+}
+
+.dashboard-page-vibe .dashboard-chart-title {
+  color: #0d0d0d !important;
+}
+
+.dashboard-page-vibe .dashboard-chart-label {
+  color: #666666 !important;
+}
+
+.dashboard-page-vibe .dashboard-chart-bar-new {
+  background: #8a8a8a !important;
+}
+
+.dashboard-page-vibe .dashboard-bar-new {
+  background: #0d0d0d !important;
+}
+
+.dashboard-page-vibe .dashboard-bar-new:hover {
+  background: #333333 !important;
+}
+
+.dashboard-page-vibe .dashboard-bar-lost {
+  background: #bfbfbf !important;
+}
+
+.dashboard-page-vibe .dashboard-bar-lost:hover {
+  background: #999999 !important;
+}
+
+.dashboard-page-vibe .dashboard-month-label {
+  color: #8a8a8a !important;
+}
+
+.dashboard-page-vibe .dashboard-chart-select {
+  background: #ffffff !important;
+  border-color: #e0e0e0 !important;
+  color: #0d0d0d !important;
+}
+
+.dashboard-page-vibe .dashboard-chart-select:hover {
+  background: #f0f0f0 !important;
+}
+
+.dashboard-page-vibe .dashboard-chart-option {
+  background: #ffffff !important;
+  color: #0d0d0d !important;
+}
+
+.dashboard-page-vibe .dashboard-chart-arrow {
+  color: #8a8a8a !important;
+}
+
+.dashboard-page-vibe .dashboard-tooltip {
+  background: #0d0d0d !important;
+  color: #ffffff !important;
+}

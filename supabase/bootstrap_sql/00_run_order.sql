@@ -1,0 +1,18 @@
+-- Run files in this exact order in Supabase SQL Editor:
+-- 01_extensions.sql
+-- 02_core_tables.sql
+-- 03_business_tables.sql
+-- 04_finance_tables.sql
+-- 05_import_tables.sql
+-- 06_comms_tables.sql
+-- 07_views.sql
+-- 08_indexes.sql
+-- 09_triggers.sql
+-- 10_rls_policies.sql
+-- 11_seed_data.sql
+-- 12_storage_setup.sql
+--
+-- Notes:
+-- 1) This is inferred from repository code usage.
+-- 2) Replace nothing in these files unless you intentionally customize behavior.
+-- 3) Run each file fully before moving to the next.

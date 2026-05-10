@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { getUserWithRetry } from "../lib/authUser";
 import SecureImage from "./SecureImage";
 
 const TrainerModal = ({
@@ -161,7 +162,7 @@ const TrainerModal = ({
       const {
         data: { user },
         error: userError,
-      } = await supabase.auth.getUser();
+      } = await getUserWithRetry(supabase);
 
       if (userError) throw userError;
       if (!user?.id) throw new Error("User not authenticated");
@@ -244,14 +245,14 @@ const TrainerModal = ({
             <h2 className="font-logo text-2xl sm:text-3xl tracking-tight text-white normal-case">
               {initialData ? "Edit Trainer" : "New Trainer"}
             </h2>
-            <p className="text-[10px] tracking-widest text-white/35 font-mono mt-1">
+            <p className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/35 mt-1">
               Trainer Information
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="native-inline-btn text-[10px] tracking-widest text-white/50 hover:text-white"
+            className="native-inline-btn text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/50 hover:text-white"
           >
             Close
           </button>
@@ -259,7 +260,7 @@ const TrainerModal = ({
 
         <form onSubmit={handleSubmit} className="p-5 sm:p-8 space-y-6">
           {error && (
-            <div className="p-3 border border-red-500/30 bg-red-500/10 text-red-400 text-[10px] tracking-widest font-mono">
+            <div className="p-3 border border-red-500/30 bg-red-500/10 text-red-400 text-[10px] tracking-[0.08em] dm-sans-light-008">
               {error}
             </div>
           )}
@@ -270,7 +271,7 @@ const TrainerModal = ({
               placeholder="First name"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              className="w-full bg-transparent border-b border-white/15 py-2 text-sm text-white placeholder:text-white/25 outline-none"
+              className="w-full bg-transparent border-b border-white/15 py-2 text-sm text-white placeholder:text-white/25 outline-none dm-sans-light-008"
               required
             />
             <input
@@ -278,7 +279,7 @@ const TrainerModal = ({
               placeholder="Last name"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              className="w-full bg-transparent border-b border-white/15 py-2 text-sm text-white placeholder:text-white/25 outline-none"
+              className="w-full bg-transparent border-b border-white/15 py-2 text-sm text-white placeholder:text-white/25 outline-none dm-sans-light-008"
               required
             />
             <input
@@ -286,7 +287,7 @@ const TrainerModal = ({
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-transparent border-b border-white/15 py-2 text-sm text-white placeholder:text-white/25 outline-none lowercase"
+              className="w-full bg-transparent border-b border-white/15 py-2 text-sm text-white placeholder:text-white/25 outline-none lowercase dm-sans-light-008"
               required
             />
             <input
@@ -294,14 +295,14 @@ const TrainerModal = ({
               placeholder="Phone"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full bg-transparent border-b border-white/15 py-2 text-sm text-white placeholder:text-white/25 outline-none"
+              className="w-full bg-transparent border-b border-white/15 py-2 text-sm text-white placeholder:text-white/25 outline-none dm-sans-light-008"
               required
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="space-y-3">
-              <p className="text-[10px] tracking-[0.2em] font-mono text-white/40">
+              <p className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
                 Photo
               </p>
               <button
@@ -324,7 +325,7 @@ const TrainerModal = ({
                       />
                     )
                   ) : (
-                    <span className="text-[10px] text-white/30 tracking-widest">
+                    <span className="text-[10px] text-white/30 tracking-[0.08em] dm-sans-light-008">
                       Select photo
                     </span>
                   )}
@@ -340,7 +341,7 @@ const TrainerModal = ({
             </div>
 
             <div className="space-y-3">
-              <p className="text-[10px] tracking-[0.2em] font-mono text-white/40">
+              <p className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
                 Id Document
               </p>
               <button
@@ -363,7 +364,7 @@ const TrainerModal = ({
                       />
                     )
                   ) : (
-                    <span className="text-[10px] text-white/30 tracking-widest">
+                    <span className="text-[10px] text-white/30 tracking-[0.08em] dm-sans-light-008">
                       Select document
                     </span>
                   )}
@@ -382,7 +383,7 @@ const TrainerModal = ({
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-white text-black py-4 text-[10px] tracking-[0.2em] font-medium disabled:opacity-40"
+            className="w-full bg-white text-black py-4 text-[10px] tracking-[0.08em] dm-sans-light-008 font-medium disabled:opacity-40"
           >
             {loading
               ? "Saving..."
@@ -397,3 +398,4 @@ const TrainerModal = ({
 };
 
 export default TrainerModal;
+
