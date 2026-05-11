@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "poller": "node scripts/scanner-poller.js"
   },
   "dependencies": {
     "@fontsource/geist": "^5.2.8",
@@ -16,6 +17,8 @@
     "crypto-js": "^4.2.0",
     "exceljs": "^4.4.0",
     "lucide-react": "^0.577.0",
+    "node-cron": "^4.2.1",
+    "node-zklib": "^1.3.0",
     "papaparse": "^5.5.3",
     "prop-types": "^15.8.1",
     "react": "^19.2.4",

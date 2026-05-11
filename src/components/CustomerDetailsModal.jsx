@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { Calendar, History, IndianRupee } from "lucide-react";
+import { Calendar, History, IndianRupee, Activity } from "lucide-react";
+import MemberAttendanceModal from "./MemberAttendanceModal";
 
 const addDurationToDate = (startDate, planName) => {
   const endDate = new Date(startDate);
@@ -26,6 +27,7 @@ const addDurationToDate = (startDate, planName) => {
 const CustomerDetailsModal = ({ isOpen, onClose, customer }) => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showAttendance, setShowAttendance] = useState(false);
 
   const parseDateOnly = (value) => {
     if (!value) return null;
@@ -146,6 +148,7 @@ const CustomerDetailsModal = ({ isOpen, onClose, customer }) => {
     : "Unknown";
 
   return (
+    <>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
       onClick={(e) => {
@@ -193,6 +196,26 @@ const CustomerDetailsModal = ({ isOpen, onClose, customer }) => {
             </p>
           </div>
         </div>
+
+        {/* ── Attendance launcher ── */}
+        <button
+          type="button"
+          onClick={() => setShowAttendance(true)}
+          className="w-full flex items-center justify-between rounded-xl border border-white/[0.07] bg-white/[0.02] hover:bg-white/[0.05] transition-colors px-4 py-3 mb-5 group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center flex-shrink-0">
+              <Activity size={14} className="text-indigo-400" />
+            </div>
+            <div className="text-left">
+              <p className="text-[12px] text-white/80 font-medium tracking-tight">Attendance</p>
+              <p className="text-[10px] text-white/35 font-light">View check-in history &amp; visit stats</p>
+            </div>
+          </div>
+          <span className="text-[10px] text-white/25 group-hover:text-white/50 transition-colors tracking-widest">
+            VIEW →
+          </span>
+        </button>
 
         <div>
           <h3 className="text-xs tracking-[0.08em] text-white/65 mb-4 flex items-center gap-2 font-light">
@@ -266,6 +289,13 @@ const CustomerDetailsModal = ({ isOpen, onClose, customer }) => {
         </div>
       </div>
     </div>
+
+    <MemberAttendanceModal
+      isOpen={showAttendance}
+      onClose={() => setShowAttendance(false)}
+      customer={customer}
+    />
+  </>
   );
 };
 

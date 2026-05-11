@@ -10,6 +10,7 @@ import {
   PlugZap,
   ReceiptText,
   Settings,
+  Fingerprint,
 } from "lucide-react";
 // Assuming icons are from lucide-react
 import {
@@ -107,6 +108,7 @@ const Sidebar = ({ isOpen, onClose, onOpenSettings, onOpenBugReport }) => {
     },
     { name: "Communications", icon: Mail, path: "/communications" },
     { name: "Membership", icon: ShieldCheck, path: "/membership" },
+    { name: "Attendance", icon: Fingerprint, path: "/attendance" },
     { name: "Migration", icon: PlugZap, path: "/migration" },
     { name: "Billing", icon: ReceiptText, path: "/billing" },
   ];
@@ -130,7 +132,7 @@ const Sidebar = ({ isOpen, onClose, onOpenSettings, onOpenBugReport }) => {
         style={{ fontFamily: "var(--font-sidebar)" }}
       >
         {" "}
-        <div className="p-8 flex justify-between items-center">
+        <div className="p-4 sm:p-8 flex justify-between items-center flex-shrink-0">
           {" "}
           <div>
             {" "}
@@ -172,7 +174,7 @@ const Sidebar = ({ isOpen, onClose, onOpenSettings, onOpenBugReport }) => {
             </button>
           </div>
         </div>{" "}
-        <nav className="flex-1 px-3 py-3 space-y-1.5 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 px-2 sm:px-3 py-2 sm:py-3 space-y-1.5 overflow-y-auto overflow-x-hidden custom-scrollbar">
           {" "}
           {visibleMenuItems.map((item) => {
             const isActive = location.pathname === item.path;
@@ -204,17 +206,17 @@ const Sidebar = ({ isOpen, onClose, onOpenSettings, onOpenBugReport }) => {
           })}{" "}
         </nav>
 
-        <div className="sticky bottom-0 p-3 border-t border-white/10 bg-[#0D0F14] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div className="sticky bottom-0 p-2 sm:p-3 border-t border-white/10 bg-[#0D0F14] pb-[max(0.75rem,env(safe-area-inset-bottom))] flex-shrink-0">
           <button
             type="button"
             onClick={() => {
               onOpenBugReport();
               if (window.innerWidth < 1024) onClose();
             }}
-            className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl border border-white/10 text-[#B2B8C5] bg-white/[0.02] hover:text-[#E7EBF3] hover:bg-white/[0.04] transition-colors dm-sans-light-008"
+            className="w-full flex items-center gap-2 sm:gap-3.5 px-2 sm:px-3.5 py-2 sm:py-3 rounded-xl border border-white/10 text-[#B2B8C5] bg-white/[0.02] hover:text-[#E7EBF3] hover:bg-white/[0.04] transition-colors dm-sans-light-008 text-xs sm:text-[11px]"
           >
-            <BugReporterIcon size={17} className="text-white/55" />
-            <span className="text-[11px] tracking-[0.08em] text-white/85">Report a Bug</span>
+            <BugReporterIcon size={16} className="text-white/55 flex-shrink-0" />
+            <span className="tracking-[0.08em] text-white/85">Report a Bug</span>
           </button>
         </div>
       </aside>{" "}

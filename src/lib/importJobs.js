@@ -118,6 +118,8 @@ export const mapCustomerRowFromPreset = (normalizedSource, sourcePreset = 'gener
       ),
       membership_start_date: parseDate(normalizedSource.start_date || normalizedSource.membership_start_date || ''),
       membership_end_date: parseDate(normalizedSource.end_date || normalizedSource.membership_end_date || ''),
+      // Member ID: 'Member ID' column normalises to 'member_id'; 'ID' normalises to 'id'
+      gym_member_id: String(normalizedSource.member_id || normalizedSource.id || '').trim() || undefined,
     };
   }
 
@@ -132,6 +134,7 @@ export const mapCustomerRowFromPreset = (normalizedSource, sourcePreset = 'gener
       ),
       membership_start_date: parseDate(normalizedSource.start_date || normalizedSource.membership_start_date || ''),
       membership_end_date: parseDate(normalizedSource.end_date || normalizedSource.membership_end_date || ''),
+      gym_member_id: String(normalizedSource.member_id || normalizedSource.id || '').trim() || undefined,
     };
   }
 
@@ -145,6 +148,7 @@ export const mapCustomerRowFromPreset = (normalizedSource, sourcePreset = 'gener
     ),
     membership_start_date: parseDate(normalizedSource.membership_start_date || normalizedSource.start_date || ''),
     membership_end_date: parseDate(normalizedSource.membership_end_date || normalizedSource.end_date || ''),
+    gym_member_id: String(normalizedSource.member_id || normalizedSource.id || '').trim() || undefined,
   };
 };
 

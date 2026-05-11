@@ -47,25 +47,35 @@ const IntegrationsPage = () => {
   }, []);
 
   return (
-    <div className="app-page native-buttons-page integrations-typography p-6 md:p-10">
+    <div className="app-page native-buttons-page integrations-typography integrations-page-vibe p-6 md:p-10">
+      <style>{` 
+.integrations-page-vibe { background-color: #ffffff !important; color: #0d0d0d; min-height: 100vh; }
+.integrations-page-vibe h1, .integrations-page-vibe h2, .integrations-page-vibe h3, .integrations-page-vibe .integrations-header-helvetica, .integrations-page-vibe .migration-header-title { font-family: 'Playfair Display', serif; font-weight: 400; color: #0d0d0d; letter-spacing: 0.02em; }
+.integrations-page-vibe .integrations-subtle, .integrations-page-vibe .migration-subtle { color: #666666; }
+.integrations-page-vibe [class*="text-white/"] { color: #666666 !important; }
+.integrations-page-vibe [class*="text-white"] { color: #0d0d0d !important; }
+.integrations-page-vibe [class*="bg-white/[0.02]"], .integrations-page-vibe [class*="bg-white/[0.04]"], .integrations-page-vibe [class*="bg-black/20"], .integrations-page-vibe [class*="bg-[#151921]"], .integrations-page-vibe [class*="bg-[#0a0c10]"] { background-color: #fbfbfb !important; }
+.integrations-page-vibe [class*="border-white"] { border-color: #e6e6e6 !important; }
+.integrations-page-vibe button { border-color: #e0e0e0 !important; }
+`}</style>
       <div className="w-full max-w-[1200px] mx-auto space-y-8">
         <header className="space-y-2">
-          <p className="text-[10px] tracking-[0.25em] font-mono text-white/40">
+          <p className="text-[10px] tracking-[0.25em] font-mono integrations-subtle">
             Migration
           </p>
-          <h1 className="text-4xl md:text-5xl font-medium tracking-tighter text-white integrations-header-helvetica">
+          <h1 className="migration-header-title text-4xl md:text-5xl font-medium tracking-tighter text-[#0d0d0d]">
             Data Migration
           </h1>
-          <p className="text-sm text-white/50">
+          <p className="text-sm integrations-subtle">
             One clean standard format for all imports. Legacy files are auto-detected during migration.
           </p>
         </header>
 
-        <section className="border border-white/10 bg-white/[0.02] p-5 md:p-6">
-          <p className="text-[10px] tracking-[0.2em] font-mono text-white/40 mb-4">
+        <section className="border border-[#e6e6e6] bg-[#fbfbfb] p-5 md:p-6 rounded-2xl">
+          <p className="migration-header-title text-[10px] tracking-[0.2em] text-[#0d0d0d] uppercase mb-4">
             Download Templates
           </p>
-          <p className="text-xs text-white/50 mb-4">
+          <p className="text-xs integrations-subtle mb-4">
             Download and fill these standard templates, then use migration below.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -74,15 +84,15 @@ const IntegrationsPage = () => {
                 key={importType}
                 type="button"
                 onClick={() => downloadTemplate(importType)}
-                className="border border-white/10 hover:border-white/20 p-4 flex items-center justify-between transition-colors"
+                className="border border-[#e6e6e6] hover:border-[#d6d6d6] p-4 flex items-center justify-between transition-colors rounded-xl bg-white"
               >
                 <div>
-                  <p className="text-sm text-white capitalize">{importType} File</p>
-                  <p className="text-[10px] text-white/40 tracking-[0.15em] mt-1">
+                  <p className="migration-header-title text-sm text-[#0d0d0d] capitalize">{importType} File</p>
+                  <p className="text-[10px] integrations-subtle tracking-[0.15em] mt-1">
                     {selectedSourceName}
                   </p>
                 </div>
-                <Download size={16} className="text-white/60" />
+                <Download size={16} className="text-[#666666]" />
               </button>
             ))}
           </div>
@@ -90,10 +100,10 @@ const IntegrationsPage = () => {
 
         <section className="space-y-4">
           <div className="space-y-1">
-            <p className="text-[10px] tracking-[0.25em] font-mono text-white/40">
+            <p className="text-[10px] tracking-[0.25em] font-mono integrations-subtle">
               Migration
             </p>
-            <h2 className="text-2xl text-white integrations-migration-title">Automatic Migration</h2>
+            <h2 className="migration-header-title text-2xl md:text-[2.05rem] text-[#0d0d0d]">Automatic Migration</h2>
           </div>
           <AutoMigrationPage embedded />
         </section>

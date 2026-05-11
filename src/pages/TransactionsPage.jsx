@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { getUserWithRetry } from "../lib/authUser";
 import Papa from "papaparse";
@@ -10,6 +11,7 @@ import {
 } from "../lib/importJobs";
 import { toMonthStartDateString } from "../lib/financeDates";
 const TransactionsPage = () => {
+  const navigate = useNavigate();
   const normalizeName = (value) =>
     String(value || "")
       .trim()
@@ -554,7 +556,7 @@ const TransactionsPage = () => {
         {" "}
         <header className="mb-8 md:mb-12">
           {" "}
-          <p className="text-[10px] tracking-[0.08em] text-white/40 dm-sans-light-008 mb-2">
+          <p className="text-[10px] tracking-[0.2em] text-white/40 font-mono mb-2">
             Payment Ledger
           </p>{" "}
           <h1 className="text-4xl md:text-5xl font-medium tracking-tighter">
@@ -568,14 +570,32 @@ const TransactionsPage = () => {
             <h3 className="transactions-form-heading text-lg md:text-xl text-white tracking-tight ">
               Transactions
             </h3>{" "}
-            <span className="text-[9px] tracking-[0.08em] dm-sans-light-008 text-white/40">
+            <span className="text-[9px] tracking-[0.2em] font-mono text-white/40">
               Cash / UPI
             </span>{" "}
+          </div>{" "}
+          <div className="border-t border-white/5 pt-6">
+            {" "}
+            <p className="text-[10px] tracking-[0.2em] font-mono text-white/40">
+              Data Import Moved To Auto Migration
+            </p>{" "}
+            <p className="text-xs text-white/50 mt-1">
+              To import old payment files, use Auto Migration for the full
+              guided flow.
+            </p>{" "}
+            <button
+              type="button"
+              onClick={() => navigate("/auto-migration")}
+              className="mt-3 bg-white text-black px-5 py-2 text-[10px] tracking-[0.2em] font-medium mb-6"
+            >
+              {" "}
+              Open Auto Migration{" "}
+            </button>{" "}
           </div>{" "}
           {/* Manual Entry Section */}{" "}
           <div className="border-t border-white/5 pt-6">
             {" "}
-            <p className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40 mb-4">
+            <p className="text-[10px] tracking-[0.2em] font-mono text-white/40 mb-4">
               Add Manual Transaction
             </p>{" "}
             <p className="text-xs text-white/50 mb-4">
@@ -598,7 +618,7 @@ const TransactionsPage = () => {
             {" "}
             <div className="space-y-2">
               {" "}
-              <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
+              <label className="text-[10px] tracking-[0.2em] font-mono text-white/40">
                 Payment Mode
               </label>{" "}
               <select
@@ -619,7 +639,7 @@ const TransactionsPage = () => {
             </div>{" "}
             <div className="space-y-2">
               {" "}
-              <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
+              <label className="text-[10px] tracking-[0.2em] font-mono text-white/40">
                 Status
               </label>{" "}
               <select
@@ -643,7 +663,7 @@ const TransactionsPage = () => {
             </div>{" "}
             <div className="space-y-2">
               {" "}
-              <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
+              <label className="text-[10px] tracking-[0.2em] font-mono text-white/40">
                 Amount
               </label>{" "}
               <input
@@ -661,7 +681,7 @@ const TransactionsPage = () => {
             </div>{" "}
             <div className="space-y-2">
               {" "}
-              <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
+              <label className="text-[10px] tracking-[0.2em] font-mono text-white/40">
                 Sender Name
               </label>{" "}
               <div className="relative">
@@ -715,12 +735,12 @@ const TransactionsPage = () => {
                   )}{" "}
               </div>{" "}
               {formData.sender_name.trim() && senderMatches.length === 0 && (
-                <p className="text-[10px] text-amber-400 tracking-[0.08em] dm-sans-light-008">
+                <p className="text-[10px] text-amber-400 tracking-[0.2em] font-mono">
                   match not found
                 </p>
               )}{" "}
               {selectedCustomerId && (
-                <p className="text-[10px] text-emerald-400 tracking-[0.08em] dm-sans-light-008">
+                <p className="text-[10px] text-emerald-400 tracking-[0.2em] font-mono">
                   customer matched
                 </p>
               )}{" "}
@@ -730,7 +750,7 @@ const TransactionsPage = () => {
                 {" "}
                 <div className="space-y-2">
                   {" "}
-                  <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
+                  <label className="text-[10px] tracking-[0.2em] font-mono text-white/40">
                     Account Name
                   </label>{" "}
                   <input
@@ -749,7 +769,7 @@ const TransactionsPage = () => {
                 </div>{" "}
                 <div className="space-y-2">
                   {" "}
-                  <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
+                  <label className="text-[10px] tracking-[0.2em] font-mono text-white/40">
                     Transaction ID
                   </label>{" "}
                   <input
@@ -773,7 +793,7 @@ const TransactionsPage = () => {
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full md:w-auto bg-white text-black font-medium px-8 py-3 text-[10px] tracking-[0.08em] dm-sans-light-008 hover:bg-white/90 transition-colors disabled:opacity-50"
+                className="w-full md:w-auto bg-white text-black font-medium px-8 py-3 text-[10px] tracking-[0.2em] font-mono hover:bg-white/90 transition-colors disabled:opacity-50"
               >
                 {" "}
                 {saving ? "Saving..." : "Add Transaction"}{" "}
@@ -789,25 +809,25 @@ const TransactionsPage = () => {
               {" "}
               <tr className="bg-white/5 border-b border-white/10">
                 {" "}
-                <th className="p-6 text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
+                <th className="p-6 text-[10px] tracking-[0.2em] font-mono text-white/40">
                   Transaction ID
                 </th>{" "}
-                <th className="p-6 text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
+                <th className="p-6 text-[10px] tracking-[0.2em] font-mono text-white/40">
                   Sender / Customer
                 </th>{" "}
-                <th className="p-6 text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
+                <th className="p-6 text-[10px] tracking-[0.2em] font-mono text-white/40">
                   Mode
                 </th>{" "}
-                <th className="p-6 text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
+                <th className="p-6 text-[10px] tracking-[0.2em] font-mono text-white/40">
                   Account / Ref
                 </th>{" "}
-                <th className="p-6 text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
+                <th className="p-6 text-[10px] tracking-[0.2em] font-mono text-white/40">
                   Amount
                 </th>{" "}
-                <th className="p-6 text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
+                <th className="p-6 text-[10px] tracking-[0.2em] font-mono text-white/40">
                   Date
                 </th>{" "}
-                <th className="p-6 text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40 text-right">
+                <th className="p-6 text-[10px] tracking-[0.2em] font-mono text-white/40 text-right">
                   Status
                 </th>{" "}
               </tr>{" "}
@@ -848,7 +868,7 @@ const TransactionsPage = () => {
                   {" "}
                   <td className="p-6">
                     {" "}
-                    <span className="text-[10px] text-white/40 dm-sans-light-008 tracking-[0.08em] ">
+                    <span className="text-[10px] text-white/40 font-mono tracking-[0.2em] ">
                       {" "}
                       #Tx-{tx.id.substring(0, 8)}{" "}
                     </span>{" "}
@@ -864,16 +884,16 @@ const TransactionsPage = () => {
                             ? `${tx.subscriptions.customers.first_name} ${tx.subscriptions.customers.last_name}`
                             : "N/A")}{" "}
                       </span>{" "}
-                        <span className="text-[9px] text-white/20 dm-sans-light-008 tracking-[0.08em] mt-1">
+                        <span className="text-[9px] text-white/20 font-mono tracking-[0.2em] mt-1">
                           {matchLabel}
                         </span>
-                      <span className="text-[9px] text-white/20 dm-sans-light-008 tracking-[0.08em] mt-1">
+                      <span className="text-[9px] text-white/20 font-mono tracking-[0.2em] mt-1">
                         {" "}
                         Plan: {tx.subscriptions?.plan_name || "Individual"}{" "}
                       </span>{" "}
                     </div>{" "}
                   </td>{" "}
-                  <td className="p-6 text-[10px] text-white/40 dm-sans-light-008 tracking-[0.08em]">
+                  <td className="p-6 text-[10px] text-white/40 font-mono tracking-[0.2em]">
                     {" "}
                     {tx.payment_mode || "N/A"}{" "}
                   </td>{" "}
@@ -881,11 +901,11 @@ const TransactionsPage = () => {
                     {" "}
                     <div className="flex flex-col">
                       {" "}
-                      <span className="text-[10px] text-white/40 dm-sans-light-008 tracking-[0.08em] ">
+                      <span className="text-[10px] text-white/40 font-mono tracking-[0.2em] ">
                         {" "}
                         {tx.sender_account_name || "-"}{" "}
                       </span>{" "}
-                      <span className="text-[9px] text-white/20 dm-sans-light-008 tracking-[0.08em] mt-1">
+                      <span className="text-[9px] text-white/20 font-mono tracking-[0.2em] mt-1">
                         {" "}
                         {tx.source_transaction_id || "-"}{" "}
                       </span>{" "}
@@ -898,7 +918,7 @@ const TransactionsPage = () => {
                       ₹{tx.amount || "0"}{" "}
                     </span>{" "}
                   </td>{" "}
-                  <td className="p-6 text-sm text-white/40 dm-sans-light-008 tracking-[0.08em]">
+                  <td className="p-6 text-sm text-white/40 font-mono tracking-[0.2em]">
                     {" "}
                     {tx.created_at && !Number.isNaN(new Date(tx.created_at).getTime())
                       ? new Date(tx.created_at).toLocaleDateString("en-GB")
@@ -907,7 +927,7 @@ const TransactionsPage = () => {
                   <td className="p-6 text-right">
                     {" "}
                     <span
-                      className={`text-[9px] tracking-[0.08em] dm-sans-light-008 font-medium px-3 py-1 border ${statusClass}`}
+                      className={`text-[9px] tracking-[0.2em] font-mono font-medium px-3 py-1 border ${statusClass}`}
                     >
                       {" "}
                       {statusLabel}{" "}
@@ -922,7 +942,7 @@ const TransactionsPage = () => {
           {loading && (
             <div className="p-24 text-center">
               {" "}
-              <span className="text-[10px] tracking-[0.08em] text-white/20 animate-pulse dm-sans-light-008">
+              <span className="text-[10px] tracking-[0.2em] text-white/20 animate-pulse font-mono">
                 Downloading Ledger...
               </span>{" "}
             </div>
@@ -930,10 +950,10 @@ const TransactionsPage = () => {
           {!loading && transactions.length === 0 && (
             <div className="p-24 text-center text-white/40 flex flex-col items-center gap-4">
               {" "}
-              <span className="text-[10px] tracking-[0.08em] dm-sans-light-008">
+              <span className="text-[10px] tracking-[0.2em] font-mono">
                 No Recent Transactions Found
               </span>{" "}
-              <span className="text-[9px] tracking-[0.08em] dm-sans-light-008">
+              <span className="text-[9px] tracking-[0.2em] font-mono">
                 Transactions will appear here once applications are processed
                 and paid.
               </span>{" "}

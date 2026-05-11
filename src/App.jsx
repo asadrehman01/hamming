@@ -20,6 +20,8 @@ import CommunicationsPage from "./pages/CommunicationsPage";
 import IntegrationsPage from "./pages/IntegrationsPage";
 import AutoMigrationPage from "./pages/AutoMigrationPage";
 import BillingPage from "./pages/BillingPage";
+import AttendancePage from "./pages/AttendancePage";
+import ScannerMappingPage from "./pages/ScannerMappingPage";
 import AdminPage from "./pages/AdminPage";
 import AdminClientRevenuePage from "./pages/AdminClientRevenuePage";
 import AdminAccessPage from "./pages/AdminAccessPage";
@@ -181,6 +183,8 @@ function App() {
                 <Route path="/migration" element={<IntegrationsPage />} />
                 <Route path="/integrations" element={<Navigate to="/migration" replace />} />
                 <Route path="/billing" element={<BillingPage />} />
+                <Route path="/attendance" element={<AttendancePage />} />
+                <Route path="/scanner-mapping" element={<ScannerMappingPage />} />
                 <Route path="/auto-migration" element={<AutoMigrationPage />} />
                 <Route
                   path="/onboarding-migration"

@@ -184,3 +184,23 @@ export const sendBugReport = async (payload) =>
 export const fetchAdminUsers = async () => {
   return postBackendApi("/api/admin-users", {});
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Member ID Settings & Preview
+// ─────────────────────────────────────────────────────────────────────────────
+export const fetchIdSettings = async () => getBackendApi('/api/gym/id-settings');
+export const saveIdSettings = async (payload) => postBackendApi('/api/gym/id-settings', payload);
+export const previewMemberId = async (payload) => postBackendApi('/api/gym/preview-id', payload);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Scanner Integration & Mapping
+// ─────────────────────────────────────────────────────────────────────────────
+export const fetchUnmappedIds = async () => getBackendApi('/api/scanner/unmapped-ids');
+export const mapScannerMember = async (payload) => postBackendApi('/api/scanner/map-member', payload);
+export const autoMapScannerMembers = async () => postBackendApi('/api/scanner/auto-map', {});
+
+// Additional scanner settings
+export const testScannerConnection = async (payload) => postBackendApi('/api/scanner/test-connection', payload);
+export const syncScanner = async (payload) => postBackendApi('/api/scanner/sync', payload);
+export const enrollScannerMember = async (payload) => postBackendApi('/api/scanner/enroll', payload);
+export const unenrollScannerMember = async (payload) => postBackendApi('/api/scanner/unenroll', payload);

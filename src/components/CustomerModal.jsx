@@ -297,6 +297,7 @@ const CustomerModal = ({
 }) => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [gymMemberId, setGymMemberId] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [duration, setDuration] = useState("1 MONTH");
@@ -369,6 +370,7 @@ const CustomerModal = ({
       console.log("Initializing New Application");
       setFirstName("");
       setLastName("");
+      setGymMemberId("");
       setEmail("");
       setPhone("");
       setDuration("1 MONTH");

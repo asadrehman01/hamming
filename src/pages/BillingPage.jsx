@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { getUserWithRetry } from "../lib/authUser";
 import { isMigrationOnboardingCompleted } from "../lib/migrationOnboarding";
-import { Mail, AtSign, Link as LinkIcon } from "lucide-react";
+import { Mail, AtSign, Link as LinkIcon, Fingerprint, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
+import { fetchIdSettings, saveIdSettings, previewMemberId } from "../lib/backendApi";
 
 const DEFAULT_BILLING_VALUES = {
   receipt_enabled: true,
@@ -25,6 +26,12 @@ const BillingPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [idSettings, setIdSettings] = useState({ id_format: "", id_padding: 3 });
+  const [idPreview, setIdPreview] = useState("");
+  const [idSaving, setIdSaving] = useState(false);
+  const [idSuccess, setIdSuccess] = useState("");
+  const [idError, setIdError] = useState("");
+  const [hasExistingMembers, setHasExistingMembers] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState("");
   const [integrationId, setIntegrationId] = useState(null);
@@ -220,6 +227,39 @@ const BillingPage = () => {
       active = false;
     };
   }, []);
+
+  // ── Load ID settings + member count on mount ───────────────────────────
+  useEffect(() => {
+    let alive = true;
+    fetchIdSettings()
+      .then((data) => { if (alive) setIdSettings({ id_format: data.id_format ?? "", id_padding: data.id_padding ?? 3 }); })
+      .catch(() => {});
+    supabase.from("customers").select("id", { count: "exact", head: true })
+      .then(({ count }) => { if (alive && count > 0) setHasExistingMembers(true); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  // ── Debounced preview (400ms) ───────────────────────────────────
+  useEffect(() => {
+    const t = setTimeout(() => {
+      previewMemberId({ id_format: idSettings.id_format, id_padding: idSettings.id_padding })
+        .then((d) => setIdPreview(d.preview ?? ""))
+        .catch(() => setIdPreview(""));
+    }, 400);
+    return () => clearTimeout(t);
+  }, [idSettings.id_format, idSettings.id_padding]);
+
+  // ── Save ID format ────────────────────────────────────────────────
+  const handleSaveIdSettings = async () => {
+    setIdSaving(true); setIdError(""); setIdSuccess("");
+    try {
+      await saveIdSettings({ id_format: idSettings.id_format, id_padding: idSettings.id_padding });
+      setIdSuccess("ID format saved. New members will be assigned IDs in this format.");
+    } catch (err) {
+      setIdError(err.message || "Failed to save ID format.");
+    } finally { setIdSaving(false); }
+  };
 
   const handleSave = async (event) => {
     event.preventDefault();
@@ -544,6 +584,74 @@ const BillingPage = () => {
             {saving ? "Saving..." : "Save Billing Settings"}
           </button>
         </form>
+
+        {/* ── Member ID Format ───────────────────────────────────────── */}
+        <div className="rounded-2xl border border-white/10 bg-[#151921] p-5 md:px-7 md:pt-7 pb-7 space-y-5 mt-4">
+          <div className="flex items-center gap-2 pb-1 border-b border-white/[0.06]">
+            <Fingerprint size={15} className="text-indigo-400" />
+            <h2 className="dm-sans-light-008 text-[11px] uppercase tracking-[0.12em] text-white/75">Member ID Format</h2>
+          </div>
+
+          {hasExistingMembers && (
+            <div className="flex items-start gap-2.5 rounded-xl border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3">
+              <AlertTriangle size={13} className="text-amber-400 mt-0.5 shrink-0" />
+              <p className="text-[11px] text-amber-200/80 dm-sans-light-008">
+                Changing your format only affects new members. Existing IDs will not change.
+              </p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-2">
+              <label className="dm-sans-light-008 text-[10px] uppercase tracking-[0.12em] text-white/55">ID Prefix</label>
+              <input
+                type="text"
+                value={idSettings.id_format}
+                onChange={(e) => setIdSettings((s) => ({ ...s, id_format: e.target.value }))}
+                maxLength={10}
+                placeholder="e.g. MEM- or GYM- (leave blank for numbers only)"
+                className="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 text-[11px] text-white/90 placeholder:text-white/30 focus:outline-none focus:border-white/25"
+              />
+              <p className="dm-sans-light-008 text-[10px] text-white/40">Letters, numbers, hyphens and underscores only. Max 10 chars.</p>
+            </div>
+            <div className="space-y-2">
+              <label className="dm-sans-light-008 text-[10px] uppercase tracking-[0.12em] text-white/55">ID Digits</label>
+              <input
+                type="number" min={2} max={6}
+                value={idSettings.id_padding}
+                onChange={(e) => setIdSettings((s) => ({ ...s, id_padding: Number(e.target.value) }))}
+                className="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 text-[11px] text-white/90 focus:outline-none focus:border-white/25"
+              />
+              <p className="dm-sans-light-008 text-[10px] text-white/40">3 = 001 · 4 = 0001. Min 2, max 6.</p>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-3 flex items-center gap-3">
+            <Fingerprint size={13} className="text-white/25 shrink-0" />
+            <span className="dm-sans-light-008 text-[10px] text-white/40 mr-1">Your IDs will look like:</span>
+            <span className="font-mono text-sm text-indigo-300 tracking-widest">{idPreview || "—"}</span>
+          </div>
+
+          {idError && (
+            <div className="rounded-xl border border-red-300/20 bg-red-500/[0.04] px-4 py-3 text-[11px] text-red-200/90 dm-sans-light-008">{idError}</div>
+          )}
+          {idSuccess && (
+            <div className="flex items-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-500/[0.07] px-4 py-3">
+              <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
+              <span className="text-[11px] text-emerald-200/90 dm-sans-light-008">{idSuccess}</span>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={handleSaveIdSettings}
+            disabled={idSaving}
+            className="w-full md:w-auto rounded-xl border border-white/15 bg-white/[0.05] hover:bg-white/[0.09] px-5 py-2.5 text-[13px] text-white/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed tracking-wide flex items-center gap-2"
+          >
+            {idSaving && <Loader2 size={13} className="animate-spin" />}
+            {idSaving ? "Saving..." : "Save ID Format"}
+          </button>
+        </div>
       </div>
     </div>
   );

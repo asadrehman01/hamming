@@ -898,20 +898,30 @@ const AutoMigrationPage = ({ onboarding = false, embedded = false }) => {
     }
   };
   const migrationContent = (
-    <div className="space-y-6">
+    <div className="migration-page-vibe space-y-6">
+      <style>{` 
+.migration-page-vibe { background-color: #ffffff !important; color: #0d0d0d; min-height: 100vh; }
+.migration-page-vibe h1, .migration-page-vibe h2, .migration-page-vibe h3, .migration-page-vibe .migration-header-title { font-family: 'Playfair Display', serif; font-weight: 400; color: #0d0d0d; letter-spacing: 0.02em; }
+.migration-page-vibe .migration-subtle { color: #666666; }
+.migration-page-vibe [class*="text-white/"] { color: #666666 !important; }
+.migration-page-vibe [class*="text-white"] { color: #0d0d0d !important; }
+.migration-page-vibe [class*="bg-[#151921]"], .migration-page-vibe [class*="bg-white/[0.02]"], .migration-page-vibe [class*="bg-white/[0.04]"], .migration-page-vibe [class*="bg-white/[0.05]"], .migration-page-vibe [class*="bg-black/20"] { background-color: #fbfbfb !important; }
+.migration-page-vibe [class*="border-white"] { border-color: #e6e6e6 !important; }
+.migration-page-vibe button { border-color: #e0e0e0 !important; }
+`}</style>
         {showDecisionModal && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm px-3 sm:px-4 animate-in fade-in duration-300"
           >
             <div
-              className="bg-[#151921] border border-white/10 w-full max-w-xl shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden rounded-2xl p-6 sm:p-8"
+              className="bg-[#fbfbfb] border border-[#e6e6e6] w-full max-w-xl shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden rounded-2xl p-6 sm:p-8"
               role="dialog"
               aria-modal="true"
             >
-              <h2 className="migration-decision-title text-xl sm:text-2xl leading-tight text-white mb-1">
+              <h2 className="migration-header-title migration-decision-title text-xl sm:text-2xl leading-tight text-[#0d0d0d] mb-1">
                 Migration Setup
               </h2>
-              <p className="text-[13px] sm:text-sm text-white/60 leading-relaxed">
+              <p className="text-[13px] sm:text-sm migration-subtle leading-relaxed">
                 Do you want to transfer old data? Choosing "Not right now" will skip data transferring and you will not be redirected to integrations on future logins.
                 <br />
                 You can perform migration later!
@@ -922,7 +932,7 @@ const AutoMigrationPage = ({ onboarding = false, embedded = false }) => {
                   type="button"
                   onClick={handleSkipMigrationChoice}
                   disabled={decisionLoading}
-                  className="flex-1 px-4 py-3 text-[12px] sm:text-[13px] tracking-wide font-medium border border-white/15 rounded-xl text-white/85 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-50"
+                  className="flex-1 px-4 py-3 text-[12px] sm:text-[13px] tracking-wide font-medium border border-[#e0e0e0] rounded-xl text-[#0d0d0d] hover:bg-[#f4f4f4] transition-colors disabled:opacity-50"
                 >
                   {decisionLoading ? "Saving..." : "Not right now"}
                 </button>
@@ -942,45 +952,45 @@ const AutoMigrationPage = ({ onboarding = false, embedded = false }) => {
         {!embedded && (
         <header className="space-y-2">
           {" "}
-          <p className="text-[10px] tracking-[0.25em] font-mono text-white/40">
+          <p className="text-[10px] tracking-[0.25em] font-mono migration-subtle">
             Automatic Data Move
           </p>{" "}
-          <h1 className="text-3xl md:text-4xl font-medium tracking-[0.02em] text-white">
+          <h1 className="migration-header-title text-3xl md:text-4xl font-medium tracking-[0.02em] text-[#0d0d0d]">
             {onboarding
               ? "Welcome Setup: Move Your Data"
               : "Move Your Data Automatically"}
           </h1>{" "}
-          <p className="text-sm text-white/50">
+          <p className="text-sm migration-subtle">
             {" "}
             Upload your data files and we will move everything for you. No
             manual mapping needed.{" "}
           </p>{" "}
-          <div className="border border-white/10 bg-white/[0.02] p-3 space-y-1">
+          <div className="border border-[#e6e6e6] bg-white p-3 space-y-1 rounded-xl shadow-sm">
             {" "}
-            <p className="text-[10px] tracking-[0.12em] font-mono text-white/60">
+            <p className="migration-header-title text-[10px] tracking-[0.12em] text-[#0d0d0d] uppercase">
               Quick Steps
             </p>{" "}
-            <p className="text-xs text-white/55">Step 1: Select your files.</p>{" "}
-            <p className="text-xs text-white/55">
+            <p className="text-xs migration-subtle">Step 1: Select your files.</p>{" "}
+            <p className="text-xs migration-subtle">
               Step 2: Start migration.
             </p>{" "}
-            <p className="text-xs text-white/55">
+            <p className="text-xs migration-subtle">
               Step 3: Wait for completion summary.
             </p>{" "}
           </div>{" "}
         </header>
         )}{" "}
-        <section className="border border-white/10 bg-white/[0.02] p-5 md:p-6 space-y-5">
+        <section className="border border-[#e6e6e6] bg-[#fbfbfb] p-5 md:p-6 space-y-5 rounded-2xl shadow-sm">
           {" "}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {" "}
-            <label className="border border-white/10 p-4 cursor-pointer hover:border-white/20 transition-colors">
+            <label className="border border-[#e6e6e6] p-4 cursor-pointer hover:border-[#d6d6d6] transition-colors rounded-xl bg-white">
               {" "}
-              <p className="text-sm text-white">Member Data File</p>{" "}
-              <p className="text-[10px] text-white/45 mt-1">
+              <p className="migration-header-title text-sm text-[#0d0d0d]">Member Data File</p>{" "}
+              <p className="text-[10px] migration-subtle mt-1">
                 Step 2A: Add your member file here.
               </p>{" "}
-              <p className="text-[10px] text-white/40 tracking-[0.15em] mt-1">
+              <p className="text-[10px] text-[#666666] tracking-[0.15em] mt-1">
                 {" "}
                 {customerFile ? customerFile.name : "Select file"}{" "}
               </p>{" "}
@@ -991,13 +1001,13 @@ const AutoMigrationPage = ({ onboarding = false, embedded = false }) => {
                 onChange={(e) => setCustomerFile(e.target.files?.[0] || null)}
               />{" "}
             </label>{" "}
-            <label className="border border-white/10 p-4 cursor-pointer hover:border-white/20 transition-colors">
+            <label className="border border-[#e6e6e6] p-4 cursor-pointer hover:border-[#d6d6d6] transition-colors rounded-xl bg-white">
               {" "}
-              <p className="text-sm text-white">Payment Data File</p>{" "}
-              <p className="text-[10px] text-white/45 mt-1">
+              <p className="migration-header-title text-sm text-[#0d0d0d]">Payment Data File</p>{" "}
+              <p className="text-[10px] migration-subtle mt-1">
                 Step 2B: Add your payment file here.
               </p>{" "}
-              <p className="text-[10px] text-white/40 tracking-[0.15em] mt-1">
+              <p className="text-[10px] text-[#666666] tracking-[0.15em] mt-1">
                 {" "}
                 {paymentFile ? paymentFile.name : "Select file"}{" "}
               </p>{" "}
@@ -1011,7 +1021,7 @@ const AutoMigrationPage = ({ onboarding = false, embedded = false }) => {
           </div>{" "}
           {runStatus && (
             <div
-              className={`p-3 border text-xs ${runStatus.type === "success" ? "border-white/20 bg-white/[0.04] text-white/80" : "border-red-500/30 bg-red-500/10 text-red-400"}`}
+              className={`p-3 border text-xs rounded-xl ${runStatus.type === "success" ? "border-[#e6e6e6] bg-white text-[#0d0d0d]" : "border-red-500/30 bg-red-500/10 text-red-400"}`}
             >
               {" "}
               {runStatus.message}{" "}
@@ -1021,74 +1031,74 @@ const AutoMigrationPage = ({ onboarding = false, embedded = false }) => {
             type="button"
             onClick={runAutoMigration}
             disabled={isRunning}
-            className="bg-white text-black px-5 py-2 text-[10px] tracking-[0.2em] font-medium disabled:opacity-50"
+            className="bg-white text-black px-5 py-2 text-[10px] tracking-[0.2em] font-medium border border-[#e6e6e6] rounded-lg disabled:opacity-50"
           >
             {" "}
             {isRunning ? "Starting Migration..." : "Start Automatic Move"}{" "}
           </button>{" "}
-          <p className="text-[10px] text-white/45">
+          <p className="text-[10px] migration-subtle">
             This now runs directly on this page to ensure all rows are processed consistently.
           </p>{" "}
         </section>{" "}
         {summary && (
-          <section className="border border-white/10 bg-white/[0.02] p-5 md:p-6">
+          <section className="border border-[#e6e6e6] bg-[#fbfbfb] p-5 md:p-6 rounded-2xl shadow-sm">
             {" "}
-            <p className="text-[10px] tracking-[0.2em] font-mono text-white/40 mb-4">
+            <p className="migration-header-title text-[10px] tracking-[0.2em] text-[#0d0d0d] uppercase mb-4">
               Move Summary
             </p>{" "}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {" "}
-              <div className="border border-white/10 p-3">
+              <div className="border border-[#e6e6e6] p-3 rounded-xl bg-white">
                 {" "}
-                <p className="text-[9px] tracking-[0.15em] text-white/30">
+                <p className="text-[9px] tracking-[0.15em] migration-subtle uppercase">
                   Members Found
                 </p>{" "}
-                <p className="text-lg text-white mt-1">
+                <p className="text-lg text-[#0d0d0d] mt-1">
                   {summary.customersParsed}
                 </p>{" "}
               </div>{" "}
-              <div className="border border-white/10 p-3">
+              <div className="border border-[#e6e6e6] p-3 rounded-xl bg-white">
                 {" "}
-                <p className="text-[9px] tracking-[0.15em] text-white/30">
+                <p className="text-[9px] tracking-[0.15em] migration-subtle uppercase">
                   Members Moved
                 </p>{" "}
-                <p className="text-lg text-white mt-1">
+                <p className="text-lg text-[#0d0d0d] mt-1">
                   {summary.customersInserted + summary.customersUpdated}
                 </p>{" "}
               </div>{" "}
-              <div className="border border-white/10 p-3">
+              <div className="border border-[#e6e6e6] p-3 rounded-xl bg-white">
                 {" "}
-                <p className="text-[9px] tracking-[0.15em] text-white/30">
+                <p className="text-[9px] tracking-[0.15em] migration-subtle uppercase">
                   Members Not Moved
                 </p>{" "}
                 <p className="text-lg text-red-400 mt-1">
                   {summary.customersFailed}
                 </p>{" "}
               </div>{" "}
-              <div className="border border-white/10 p-3">
+              <div className="border border-[#e6e6e6] p-3 rounded-xl bg-white">
                 {" "}
-                <p className="text-[9px] tracking-[0.15em] text-white/30">
+                <p className="text-[9px] tracking-[0.15em] migration-subtle uppercase">
                   Payments Found
                 </p>{" "}
-                <p className="text-lg text-white mt-1">
+                <p className="text-lg text-[#0d0d0d] mt-1">
                   {summary.paymentsParsed}
                 </p>{" "}
               </div>{" "}
-              <div className="border border-white/10 p-3">
+              <div className="border border-[#e6e6e6] p-3 rounded-xl bg-white">
                 {" "}
-                <p className="text-[9px] tracking-[0.15em] text-white/30">
+                <p className="text-[9px] tracking-[0.15em] migration-subtle uppercase">
                   Payments Moved
                 </p>{" "}
-                <p className="text-lg text-white mt-1">
+                <p className="text-lg text-[#0d0d0d] mt-1">
                   {summary.paymentsInserted}
                 </p>{" "}
               </div>{" "}
-              <div className="border border-white/10 p-3">
+              <div className="border border-[#e6e6e6] p-3 rounded-xl bg-white">
                 {" "}
-                <p className="text-[9px] tracking-[0.15em] text-white/30">
+                <p className="text-[9px] tracking-[0.15em] migration-subtle uppercase">
                   Revenue Moved
                 </p>{" "}
-                <p className="text-lg text-white mt-1">
+                <p className="text-lg text-[#0d0d0d] mt-1">
                   ₹{summary.importedRevenue.toLocaleString()}
                 </p>{" "}
               </div>{" "}
@@ -1099,7 +1109,7 @@ const AutoMigrationPage = ({ onboarding = false, embedded = false }) => {
   );
   if (embedded) return migrationContent;
   return (
-    <div className="app-page native-buttons-page p-6 md:p-10 integrations-typography">
+    <div className="app-page migration-page-vibe native-buttons-page p-6 md:p-10 integrations-typography">
       <div className="w-full max-w-[1200px] mx-auto">{migrationContent}</div>
     </div>
   );

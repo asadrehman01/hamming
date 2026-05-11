@@ -917,7 +917,104 @@ const RevenuePage = () => {
   };
   if (loading) {
     return (
-      <div className="app-page p-4 md:p-10">
+      <div
+        className="app-page revenue-page-vibe p-4 md:p-10"
+        style={{
+          "--app-theme-page-bg": "#ffffff",
+          "--app-theme-card-bg": "#fbfbfb",
+          "--app-theme-card-bg-alt": "#f4f4f4",
+          color: "#0d0d0d",
+        }}
+      >
+        <style>{`
+          @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap");
+          .revenue-page-vibe {
+            background: #ffffff !important;
+            color: #0d0d0d !important;
+            font-family: "DM Sans", system-ui, sans-serif;
+            min-height: 100vh;
+          }
+          .revenue-page-vibe .revenue-header-title {
+            font-family: "Playfair Display", Georgia, serif;
+          }
+          .revenue-page-vibe .revenue-card {
+            background: #fbfbfb;
+            border-color: #e6e6e6;
+            box-shadow: none;
+          }
+          .revenue-page-vibe .revenue-card:hover {
+            background: #f4f4f4;
+          }
+          .revenue-page-vibe .revenue-chip {
+            background: #ffffff;
+            border-color: #e0e0e0;
+            color: #0d0d0d;
+          }
+          .revenue-page-vibe .revenue-subtle {
+            color: #8a8a8a;
+          }
+          .revenue-page-vibe .revenue-muted {
+            color: #666666;
+          }
+          .revenue-page-vibe div[class*="bg-\[#151921\]"],
+          .revenue-page-vibe div[class*="bg-\[#151920\]"],
+          .revenue-page-vibe div[class*="bg-\[#0a0c10\]"],
+          .revenue-page-vibe div[class*="bg-white/\[0.02\]"],
+          .revenue-page-vibe div[class*="bg-white/\[0.04\]"],
+          .revenue-page-vibe div[class*="bg-white/\[0.05\]"],
+          .revenue-page-vibe div[class*="bg-black/20"] {
+            background: #fbfbfb !important;
+            border-color: #e6e6e6 !important;
+            box-shadow: none !important;
+          }
+          .revenue-page-vibe div[class*="bg-\[#151921\]"]:hover,
+          .revenue-page-vibe div[class*="bg-\[#151920\]"]:hover,
+          .revenue-page-vibe div[class*="bg-\[#0a0c10\]"]:hover,
+          .revenue-page-vibe div[class*="bg-white/\[0.02\]"]:hover,
+          .revenue-page-vibe div[class*="bg-white/\[0.04\]"]:hover,
+          .revenue-page-vibe div[class*="bg-white/\[0.05\]"]:hover,
+          .revenue-page-vibe div[class*="bg-black/20"]:hover {
+            background: #f4f4f4 !important;
+            border-color: #d0d0d0 !important;
+          }
+          .revenue-page-vibe div[class*="bg-\[#151921\]"] p,
+          .revenue-page-vibe div[class*="bg-\[#151920\]"] p,
+          .revenue-page-vibe div[class*="bg-\[#0a0c10\]"] p,
+          .revenue-page-vibe div[class*="bg-white/\[0.02\]"] p,
+          .revenue-page-vibe div[class*="bg-white/\[0.04\]"] p,
+          .revenue-page-vibe div[class*="bg-white/\[0.05\]"] p,
+          .revenue-page-vibe div[class*="bg-black/20"] p {
+            color: #0d0d0d !important;
+          }
+          .revenue-page-vibe div[class*="bg-\[#151921\]"] p[class*="text-white/40"],
+          .revenue-page-vibe div[class*="bg-\[#151920\]"] p[class*="text-white/40"],
+          .revenue-page-vibe div[class*="bg-\[#0a0c10\]"] p[class*="text-white/40"],
+          .revenue-page-vibe div[class*="bg-white/\[0.02\]"] p[class*="text-white/40"],
+          .revenue-page-vibe div[class*="bg-white/\[0.04\]"] p[class*="text-white/40"],
+          .revenue-page-vibe div[class*="bg-white/\[0.05\]"] p[class*="text-white/40"],
+          .revenue-page-vibe div[class*="bg-black/20"] p[class*="text-white/40"] {
+            color: #8a8a8a !important;
+          }
+          .revenue-page-vibe div[class*="bg-\[#151921\]"] div[class*="bg-white"],
+          .revenue-page-vibe div[class*="bg-\[#151920\]"] div[class*="bg-white"],
+          .revenue-page-vibe div[class*="bg-\[#0a0c10\]"] div[class*="bg-white"],
+          .revenue-page-vibe div[class*="bg-white/\[0.02\]"] div[class*="bg-white"],
+          .revenue-page-vibe div[class*="bg-white/\[0.04\]"] div[class*="bg-white"],
+          .revenue-page-vibe div[class*="bg-white/\[0.05\]"] div[class*="bg-white"],
+          .revenue-page-vibe div[class*="bg-black/20"] div[class*="bg-white"] {
+            background: #f0f0f0 !important;
+            border-color: #e0e0e0 !important;
+          }
+          .revenue-page-vibe [class*="text-white/"] {
+            color: #8a8a8a !important;
+          }
+          .revenue-page-vibe [class*="text-white"] {
+            color: #0d0d0d !important;
+          }
+          .revenue-page-vibe button {
+            border-color: #e0e0e0 !important;
+          }
+        `}</style>
         <div className="mb-8 p-6 border border-white/10 bg-white/5 text-white/70 text-xs tracking-[0.08em] font-light dm-sans-copy animate-pulse">
           Loading revenue data...
         </div>
@@ -927,7 +1024,67 @@ const RevenuePage = () => {
 
   if (fetchError) {
     return (
-      <div className="app-page p-4 md:p-10">
+      <div
+        className="app-page revenue-page-vibe p-4 md:p-10"
+        style={{
+          "--app-theme-page-bg": "#ffffff",
+          "--app-theme-card-bg": "#fbfbfb",
+          "--app-theme-card-bg-alt": "#f4f4f4",
+          color: "#0d0d0d",
+        }}
+      >
+        <style>{`
+          @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap");
+          .revenue-page-vibe {
+            background: #ffffff !important;
+            color: #0d0d0d !important;
+            font-family: "DM Sans", system-ui, sans-serif;
+            min-height: 100vh;
+          }
+          .revenue-page-vibe .revenue-header-title {
+            font-family: "Playfair Display", Georgia, serif;
+          }
+          .revenue-page-vibe .revenue-card {
+            background: #fbfbfb;
+            border-color: #e6e6e6;
+          }
+          .revenue-page-vibe .revenue-card:hover {
+            background: #f4f4f4;
+          }
+          .revenue-page-vibe .revenue-chip {
+            background: #ffffff;
+            border-color: #e0e0e0;
+            color: #0d0d0d;
+          }
+          .revenue-page-vibe .revenue-subtle {
+            color: #8a8a8a;
+          }
+          .revenue-page-vibe .revenue-muted {
+            color: #666666;
+          }
+          .revenue-page-vibe [class*="text-white/"] {
+            color: #666666 !important;
+          }
+          .revenue-page-vibe [class*="text-white"] {
+            color: #0d0d0d !important;
+          }
+          .revenue-page-vibe [class*="bg-[#151921]"],
+          .revenue-page-vibe [class*="bg-[#151920]"],
+          .revenue-page-vibe [class*="bg-[#0a0c10]"],
+          .revenue-page-vibe [class*="bg-white/[0.02]"],
+          .revenue-page-vibe [class*="bg-white/[0.04]"],
+          .revenue-page-vibe [class*="bg-white/[0.05]"],
+          .revenue-page-vibe [class*="bg-black/20"] {
+            background-color: #fbfbfb !important;
+            border-color: #e6e6e6 !important;
+          }
+          .revenue-page-vibe [class*="border-white"] {
+            border-color: #e6e6e6 !important;
+          }
+          .revenue-page-vibe button {
+            border-color: #e0e0e0 !important;
+          }
+        `}</style>
         <div className="mb-8 p-4 border bg-red-500/10 border-red-500/20 text-red-500 text-xs tracking-[0.08em] font-light dm-sans-copy">
           {fetchError}
         </div>
@@ -936,16 +1093,113 @@ const RevenuePage = () => {
   }
 
   return (
-    <div className="app-page p-4 md:p-10">
+    <div
+      className="app-page revenue-page-vibe p-4 md:p-10"
+      style={{
+        "--app-theme-page-bg": "#ffffff",
+        "--app-theme-card-bg": "#fbfbfb",
+        "--app-theme-card-bg-alt": "#f4f4f4",
+        color: "#0d0d0d",
+      }}
+    >
+      <style>{`
+        @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap");
+        .revenue-page-vibe {
+          background: #ffffff !important;
+          color: #0d0d0d !important;
+          font-family: "DM Sans", system-ui, sans-serif;
+          min-height: 100vh;
+        }
+          .revenue-page-vibe .revenue-header-title {
+            font-family: "Playfair Display", Georgia, serif;
+          }
+          .revenue-page-vibe .revenue-card {
+            background: #fbfbfb;
+            border-color: #e6e6e6;
+            box-shadow: none;
+          }
+          .revenue-page-vibe .revenue-card:hover {
+            background: #f4f4f4;
+          }
+          .revenue-page-vibe .revenue-chip {
+            background: #ffffff;
+            border-color: #e0e0e0;
+            color: #0d0d0d;
+          }
+          .revenue-page-vibe .revenue-subtle {
+            color: #8a8a8a;
+          }
+          .revenue-page-vibe .revenue-muted {
+            color: #666666;
+          }
+          .revenue-page-vibe div[class*="bg-\[#151921\]"],
+          .revenue-page-vibe div[class*="bg-\[#151920\]"],
+          .revenue-page-vibe div[class*="bg-\[#0a0c10\]"],
+          .revenue-page-vibe div[class*="bg-white/\[0.02\]"],
+          .revenue-page-vibe div[class*="bg-white/\[0.04\]"],
+          .revenue-page-vibe div[class*="bg-white/\[0.05\]"],
+          .revenue-page-vibe div[class*="bg-black/20"] {
+            background: #fbfbfb !important;
+            border-color: #e6e6e6 !important;
+            box-shadow: none !important;
+          }
+          .revenue-page-vibe div[class*="bg-\[#151921\]"]:hover,
+          .revenue-page-vibe div[class*="bg-\[#151920\]"]:hover,
+          .revenue-page-vibe div[class*="bg-\[#0a0c10\]"]:hover,
+          .revenue-page-vibe div[class*="bg-white/\[0.02\]"]:hover,
+          .revenue-page-vibe div[class*="bg-white/\[0.04\]"]:hover,
+          .revenue-page-vibe div[class*="bg-white/\[0.05\]"]:hover,
+          .revenue-page-vibe div[class*="bg-black/20"]:hover {
+            background: #f4f4f4 !important;
+            border-color: #d0d0d0 !important;
+          }
+          .revenue-page-vibe div[class*="bg-\[#151921\]"] p,
+          .revenue-page-vibe div[class*="bg-\[#151920\]"] p,
+          .revenue-page-vibe div[class*="bg-\[#0a0c10\]"] p,
+          .revenue-page-vibe div[class*="bg-white/\[0.02\]"] p,
+          .revenue-page-vibe div[class*="bg-white/\[0.04\]"] p,
+          .revenue-page-vibe div[class*="bg-white/\[0.05\]"] p,
+          .revenue-page-vibe div[class*="bg-black/20"] p {
+            color: #0d0d0d !important;
+          }
+          .revenue-page-vibe div[class*="bg-\[#151921\]"] p[class*="text-white/40"],
+          .revenue-page-vibe div[class*="bg-\[#151920\]"] p[class*="text-white/40"],
+          .revenue-page-vibe div[class*="bg-\[#0a0c10\]"] p[class*="text-white/40"],
+          .revenue-page-vibe div[class*="bg-white/\[0.02\]"] p[class*="text-white/40"],
+          .revenue-page-vibe div[class*="bg-white/\[0.04\]"] p[class*="text-white/40"],
+          .revenue-page-vibe div[class*="bg-white/\[0.05\]"] p[class*="text-white/40"],
+          .revenue-page-vibe div[class*="bg-black/20"] p[class*="text-white/40"] {
+            color: #8a8a8a !important;
+          }
+          .revenue-page-vibe div[class*="bg-\[#151921\]"] div[class*="bg-white"],
+          .revenue-page-vibe div[class*="bg-\[#151920\]"] div[class*="bg-white"],
+          .revenue-page-vibe div[class*="bg-\[#0a0c10\]"] div[class*="bg-white"],
+          .revenue-page-vibe div[class*="bg-white/\[0.02\]"] div[class*="bg-white"],
+          .revenue-page-vibe div[class*="bg-white/\[0.04\]"] div[class*="bg-white"],
+          .revenue-page-vibe div[class*="bg-white/\[0.05\]"] div[class*="bg-white"],
+          .revenue-page-vibe div[class*="bg-black/20"] div[class*="bg-white"] {
+            background: #f0f0f0 !important;
+            border-color: #e0e0e0 !important;
+          }
+          .revenue-page-vibe [class*="text-white/"] {
+            color: #8a8a8a !important;
+          }
+          .revenue-page-vibe [class*="text-white"] {
+            color: #0d0d0d !important;
+          }
+          .revenue-page-vibe button {
+            border-color: #e0e0e0 !important;
+          }
+      `}</style>
       {" "}
       <header className="mb-8 md:mb-12 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6">
         {" "}
         <div>
           {" "}
-          <p className="text-xs tracking-[0.08em] text-white/40 font-light dm-sans-copy mb-2">
+          <p className="revenue-subtle text-xs tracking-[0.08em] font-light dm-sans-copy mb-2">
             Financial Engine
           </p>{" "}
-          <h1 className="text-4xl md:text-5xl font-medium tracking-tighter">
+          <h1 className="revenue-header-title text-4xl md:text-5xl font-medium tracking-tighter">
             Revenue <span className="text-white/20">Analytics</span>
           </h1>{" "}
         </div>{" "}
@@ -953,7 +1207,7 @@ const RevenuePage = () => {
           {" "}
           <button
             onClick={handleReportClick}
-            className="flex-1 sm:flex-none px-4 md:px-6 py-3 bg-white text-black border border-white/10 rounded-xl text-xs tracking-[0.05em] font-light dm-sans-copy hover:bg-white/90 transition-colors text-center"
+            className="revenue-chip flex-1 sm:flex-none px-4 md:px-6 py-3 bg-white text-black border border-white/10 rounded-xl text-xs tracking-[0.05em] font-light dm-sans-copy hover:bg-white/90 transition-colors text-center"
           >
             {" "}
             Report{" "}
@@ -996,7 +1250,7 @@ const RevenuePage = () => {
         ].map((item, i) => (
           <div
             key={i}
-            className="bg-[#151921] border border-white/5 p-8 rounded-2xl shadow-2xl shadow-black/40 group hover:-translate-y-1 transition-all"
+            className="revenue-card bg-[#151921] border border-white/5 p-8 rounded-2xl shadow-2xl shadow-black/40 group hover:-translate-y-1 transition-all"
           >
             {" "}
             <div className="flex justify-between items-start mb-6">
@@ -1020,7 +1274,7 @@ const RevenuePage = () => {
                 </div>
               )}{" "}
             </div>{" "}
-            <p className="text-xs tracking-[0.08em] text-white/40 font-light dm-sans-copy mb-1">
+            <p className="revenue-muted text-xs tracking-[0.08em] font-light dm-sans-copy mb-1">
               {item.label}
             </p>{" "}
             <h3 className="text-2xl font-medium tracking-tight">
@@ -1034,39 +1288,39 @@ const RevenuePage = () => {
         reconciliation.importedRevenue > 0) && (
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           {" "}
-          <div className="border border-white/10 bg-white/[0.02] p-6 rounded-lg">
+          <div className="revenue-card border border-white/10 bg-white/[0.02] p-6 rounded-lg">
             {" "}
-            <p className="text-xs tracking-[0.08em] font-light dm-sans-copy text-white/40 mb-2">
+            <p className="revenue-muted text-xs tracking-[0.08em] font-light dm-sans-copy mb-2">
               Payments Imported
             </p>{" "}
             <p className="text-3xl text-white font-medium">
               {reconciliation.paymentsImported}
             </p>{" "}
-            <p className="text-xs tracking-[0.08em] font-light dm-sans-copy text-white/30 mt-2">
+            <p className="revenue-subtle text-xs tracking-[0.08em] font-light dm-sans-copy mt-2">
               via CSV migration
             </p>{" "}
           </div>{" "}
-          <div className="border border-white/10 bg-white/[0.02] p-6 rounded-lg">
+          <div className="revenue-card border border-white/10 bg-white/[0.02] p-6 rounded-lg">
             {" "}
-            <p className="text-xs tracking-[0.08em] font-light dm-sans-copy text-white/40 mb-2">
+            <p className="revenue-muted text-xs tracking-[0.08em] font-light dm-sans-copy mb-2">
               Imported Revenue
             </p>{" "}
             <p className="text-3xl text-white font-medium">
               ₹{reconciliation.importedRevenue.toLocaleString()}
             </p>{" "}
-            <p className="text-xs tracking-[0.08em] font-light dm-sans-copy text-white/30 mt-2">
+            <p className="revenue-subtle text-xs tracking-[0.08em] font-light dm-sans-copy mt-2">
               completed payments
             </p>{" "}
           </div>{" "}
-          <div className="border border-white/10 bg-white/[0.02] p-6 rounded-lg">
+          <div className="revenue-card border border-white/10 bg-white/[0.02] p-6 rounded-lg">
             {" "}
-            <p className="text-xs tracking-[0.08em] font-light dm-sans-copy text-white/40 mb-2">
+            <p className="revenue-muted text-xs tracking-[0.08em] font-light dm-sans-copy mb-2">
               Legacy Revenue
             </p>{" "}
             <p className="text-3xl text-amber-400 font-medium">
               ₹{reconciliation.legacyRevenue.toLocaleString()}
             </p>{" "}
-            <p className="text-xs tracking-[0.08em] font-light dm-sans-copy text-white/30 mt-2">
+            <p className="revenue-subtle text-xs tracking-[0.08em] font-light dm-sans-copy mt-2">
               pre-import historical
             </p>{" "}
           </div>{" "}
@@ -1075,16 +1329,13 @@ const RevenuePage = () => {
       <div className="pb-10">
         {" "}
         {/* Main Polygraph Chart */}{" "}
-        <div className="bg-[#151921] border border-white/10 p-6 md:p-10 rounded-2xl md:rounded-[2rem] shadow-2xl shadow-black/30">
+        <div className="revenue-card bg-[#151921] border border-white/10 p-6 md:p-10 rounded-2xl md:rounded-[2rem] shadow-lg shadow-black/5">
           {" "}
           <div className="flex justify-between items-center mb-8">
             {" "}
             <div>
               {" "}
-              <h3
-                className="text-xl font-normal tracking-[0.02em]"
-                style={{ fontFamily: "DM Sans, sans-serif" }}
-              >
+              <h3 className="revenue-header-title text-xl font-normal tracking-[0.02em]">
                 Growth Polygraph
               </h3>{" "}
               <p className="text-xs tracking-[0.08em] text-white/40 font-light dm-sans-copy">
@@ -1111,19 +1362,19 @@ const RevenuePage = () => {
                     {" "}
                     <stop
                       offset="5%"
-                      stopColor="#ffffff"
-                      stopOpacity={0.22}
+                      stopColor="#0d0d0d"
+                      stopOpacity={0.18}
                     />{" "}
                     <stop
                       offset="95%"
-                      stopColor="#ffffff"
+                      stopColor="#0d0d0d"
                       stopOpacity={0}
                     />{" "}
                   </linearGradient>{" "}
                 </defs>{" "}
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="#ffffff12"
+                  stroke="#d9d9d9"
                   vertical={false}
                 />{" "}
                 <XAxis
@@ -1131,7 +1382,7 @@ const RevenuePage = () => {
                   axisLine={false}
                   tickLine={false}
                   tick={{
-                    fill: "#ffffff80",
+                    fill: "#666666",
                     fontSize: 10,
                     fontWeight: 500,
                   }}
@@ -1141,7 +1392,7 @@ const RevenuePage = () => {
                   axisLine={false}
                   tickLine={false}
                   tick={{
-                    fill: "#ffffff80",
+                    fill: "#666666",
                     fontSize: 10,
                     fontWeight: 500,
                   }}
@@ -1149,17 +1400,18 @@ const RevenuePage = () => {
                 />{" "}
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "#151921",
-                    border: "1px solid rgba(255,255,255,0.2)",
+                    backgroundColor: "#ffffff",
+                    border: "1px solid rgba(0,0,0,0.08)",
                     borderRadius: "1rem",
                   }}
-                  itemStyle={{ color: "#fff", fontSize: "12px" }}
-                  cursor={{ stroke: "#ffffff", strokeWidth: 1 }}
+                  itemStyle={{ color: "#0d0d0d", fontSize: "12px" }}
+                  labelStyle={{ color: "#666666" }}
+                  cursor={{ stroke: "#0d0d0d", strokeWidth: 1 }}
                 />{" "}
                 <Area
                   type="monotone"
                   dataKey="revenue"
-                  stroke="#ffffff"
+                  stroke="#0d0d0d"
                   strokeWidth={2.5}
                   fillOpacity={1}
                   fill="url(#colorRevenue)"
@@ -1171,16 +1423,13 @@ const RevenuePage = () => {
         </div>{" "}
       </div>{" "}
       {/* Expenses Ledger */}{" "}
-      <section className="bg-[#151921] border border-white/5 p-6 md:p-10 rounded-2xl shadow-2xl shadow-black/40 mb-10">
+      <section className="revenue-card bg-[#151921] border border-white/5 p-6 md:p-10 rounded-2xl shadow-lg shadow-black/5 mb-10">
         {" "}
         <div className="flex justify-between items-center mb-8">
           {" "}
           <div>
             {" "}
-            <h3
-              className="text-xl font-normal tracking-[0.02em] text-white"
-              style={{ fontFamily: "DM Sans, sans-serif" }}
-            >
+            <h3 className="revenue-header-title text-xl font-normal tracking-[0.02em] text-white">
               Operating Expenses
             </h3>{" "}
             <p className="text-xs tracking-[0.08em] text-white/40 font-light dm-sans-copy">
@@ -1423,15 +1672,12 @@ const RevenuePage = () => {
 
       <section
         ref={summariesSectionRef}
-        className="bg-[#151921] border border-white/5 p-6 md:p-10 rounded-2xl shadow-2xl shadow-black/40 mb-10"
+        className="revenue-card bg-[#151921] border border-white/5 p-6 md:p-10 rounded-2xl shadow-lg shadow-black/5 mb-10"
       >
         {" "}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 mb-8">
           <div>
-            <h3
-              className="text-xl font-normal tracking-[0.02em] text-white"
-              style={{ fontFamily: "DM Sans, sans-serif" }}
-            >
+            <h3 className="revenue-header-title text-xl font-normal tracking-[0.02em] text-white">
               Monthly Revenue Summaries
             </h3>
             <p className="text-xs tracking-[0.08em] text-white/40 font-light dm-sans-copy">
@@ -1513,16 +1759,13 @@ const RevenuePage = () => {
         />
       </section>{" "}
       {/* Comparison Bar Diagram */}{" "}
-      <section className="bg-[#151921] border border-white/5 p-6 md:p-10 rounded-2xl shadow-2xl shadow-black/40 mb-10">
+      <section className="revenue-card bg-[#151921] border border-white/5 p-6 md:p-10 rounded-2xl shadow-lg shadow-black/5 mb-10">
         {" "}
         <div className="flex justify-between items-center mb-10">
           {" "}
           <div>
             {" "}
-            <h3
-              className="text-xl font-normal tracking-[0.02em]"
-              style={{ fontFamily: "DM Sans, sans-serif" }}
-            >
+            <h3 className="revenue-header-title text-xl font-normal tracking-[0.02em]">
               Income Distribution
             </h3>{" "}
             <p className="text-xs tracking-[0.08em] text-white/40 font-light dm-sans-copy">
@@ -1538,27 +1781,27 @@ const RevenuePage = () => {
               {" "}
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke="#ffffff08"
+                stroke="#d9d9d9"
                 vertical={false}
               />{" "}
               <XAxis
                 dataKey="name"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#ffffff30", fontSize: 10 }}
+                tick={{ fill: "#666666", fontSize: 10 }}
               />{" "}
               <YAxis hide />{" "}
               <Tooltip
-                cursor={{ fill: "rgba(255,255,255,0.03)" }}
+                cursor={{ fill: "rgba(0,0,0,0.03)" }}
                 contentStyle={{
-                  backgroundColor: "#151921",
-                  border: "none",
+                  backgroundColor: "#ffffff",
+                  border: "1px solid rgba(0,0,0,0.08)",
                   borderRadius: "1rem",
                 }}
               />{" "}
               <Bar
                 dataKey="value"
-                fill="#ffffff80"
+                fill="#0d0d0d"
                 radius={[10, 10, 0, 0]}
               />{" "}
             </BarChart>{" "}
