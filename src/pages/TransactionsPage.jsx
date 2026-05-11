@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { getUserWithRetry } from "../lib/authUser";
 import Papa from "papaparse";
@@ -11,7 +10,6 @@ import {
 } from "../lib/importJobs";
 import { toMonthStartDateString } from "../lib/financeDates";
 const TransactionsPage = () => {
-  const navigate = useNavigate();
   const normalizeName = (value) =>
     String(value || "")
       .trim()
@@ -550,122 +548,163 @@ const TransactionsPage = () => {
     }
   };
   return (
-    <div className="app-page transactions-typography p-8 md:p-12 lg:p-24 overflow-x-auto">
-      {" "}
+    <div
+      className="app-page transactions-page-vibe transactions-typography p-8 md:p-12 lg:p-24 overflow-x-auto"
+      style={{
+        "--app-theme-page-bg": "#ffffff",
+        "--app-theme-card-bg": "#fbfbfb",
+        "--app-theme-card-bg-alt": "#f4f4f4",
+        color: "#0d0d0d",
+      }}
+    >
+      <style>{`
+        @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap");
+        .transactions-page-vibe {
+          background: #ffffff !important;
+          color: #0d0d0d !important;
+          font-family: "DM Sans", system-ui, sans-serif;
+          min-height: 100vh;
+        }
+        .transactions-page-vibe .transactions-header-title {
+          font-family: "Playfair Display", Georgia, serif;
+        }
+        .transactions-page-vibe .transactions-card {
+          background: #fbfbfb !important;
+          border-color: #e6e6e6 !important;
+        }
+        .transactions-page-vibe .transactions-card-alt {
+          background: #ffffff !important;
+          border-color: #e6e6e6 !important;
+        }
+        .transactions-page-vibe .transactions-subtle {
+          color: #8a8a8a !important;
+        }
+        .transactions-page-vibe .transactions-muted {
+          color: #666666 !important;
+        }
+        .transactions-page-vibe [class*="bg-white/"] {
+          background: #fbfbfb !important;
+        }
+        .transactions-page-vibe [class*="text-white/"] {
+          color: #8a8a8a !important;
+        }
+        .transactions-page-vibe [class*="bg-\\[#0B0E14\\]"] {
+          background: #ffffff !important;
+        }
+        .transactions-page-vibe .text-white {
+          color: #0d0d0d !important;
+        }
+        .transactions-page-vibe [class*="border-white/"] {
+          border-color: #e6e6e6 !important;
+        }
+        .transactions-page-vibe input,
+        .transactions-page-vibe select {
+          background: #ffffff !important;
+          color: #0d0d0d !important;
+          border-color: #e0e0e0 !important;
+        }
+        .transactions-page-vibe input::placeholder {
+          color: #a0a0a0 !important;
+        }
+        .transactions-page-vibe option {
+          background: #ffffff;
+          color: #0d0d0d;
+        }
+      `}</style>
+
       <div className="w-full max-w-[1200px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-1000">
-        {" "}
         <header className="mb-8 md:mb-12">
-          {" "}
-          <p className="text-[10px] tracking-[0.2em] text-white/40 font-mono mb-2">
+          <p className="text-[10px] tracking-[0.08em] text-[#8a8a8a] font-light mb-2">
             Payment Ledger
-          </p>{" "}
-          <h1 className="text-4xl md:text-5xl font-medium tracking-tighter">
-            Transaction <span className="text-white/20">History</span>
-          </h1>{" "}
-        </header>{" "}
-        <div className="mb-10 border border-white/10 bg-white/[0.02] p-6 md:p-8 space-y-6">
-          {" "}
+          </p>
+          <h1 className="transactions-header-title text-4xl md:text-5xl font-medium tracking-tighter text-[#0d0d0d]">
+            Transaction <span className="transactions-subtle">History</span>
+          </h1>
+        </header>
+
+        <div className="transactions-card mb-10 border border-white/10 p-6 md:p-8 space-y-6 rounded-2xl">
           <div className="flex items-center justify-between gap-4">
-            {" "}
-            <h3 className="transactions-form-heading text-lg md:text-xl text-white tracking-tight ">
+            <h3 className="transactions-form-heading text-lg md:text-xl text-[#0d0d0d] tracking-tight">
               Transactions
-            </h3>{" "}
-            <span className="text-[9px] tracking-[0.2em] font-mono text-white/40">
+            </h3>
+            <span className="text-[9px] tracking-[0.08em] font-light transactions-subtle">
               Cash / UPI
-            </span>{" "}
-          </div>{" "}
-          <div className="border-t border-white/5 pt-6">
-            {" "}
-            <p className="text-[10px] tracking-[0.2em] font-mono text-white/40">
+            </span>
+          </div>
+
+          <div className="border-t border-[#e6e6e6] pt-6">
+            <p className="text-[10px] tracking-[0.08em] font-light transactions-subtle mb-4">
               Data Import Moved To Auto Migration
-            </p>{" "}
-            <p className="text-xs text-white/50 mt-1">
-              To import old payment files, use Auto Migration for the full
-              guided flow.
-            </p>{" "}
+            </p>
+            <p className="text-xs transactions-muted mb-4">
+              To import old payment files, use Auto Migration for the full guided flow.
+            </p>
             <button
               type="button"
               onClick={() => navigate("/auto-migration")}
-              className="mt-3 bg-white text-black px-5 py-2 text-[10px] tracking-[0.2em] font-medium mb-6"
+              className="mt-1 bg-white text-[#0d0d0d] border border-[#e0e0e0] px-5 py-2 text-[10px] tracking-[0.08em] font-medium mb-6 rounded-xl hover:bg-[#f4f4f4] hover:border-[#d0d0d0] transition-colors"
             >
-              {" "}
-              Open Auto Migration{" "}
-            </button>{" "}
-          </div>{" "}
-          {/* Manual Entry Section */}{" "}
-          <div className="border-t border-white/5 pt-6">
-            {" "}
-            <p className="text-[10px] tracking-[0.2em] font-mono text-white/40 mb-4">
+              Open Auto Migration
+            </button>
+          </div>
+
+          <div className="border-t border-[#e6e6e6] pt-6">
+            <p className="text-[10px] tracking-[0.08em] font-light transactions-subtle mb-4">
               Add Manual Transaction
-            </p>{" "}
-            <p className="text-xs text-white/50 mb-4">
-              Manual steps: choose mode and status, add amount, add sender name,
-              then save.
-            </p>{" "}
+            </p>
+            <p className="text-xs transactions-muted mb-4">
+              Manual steps: choose mode and status, add amount, add sender name, then save.
+            </p>
             {statusMessage && (
               <div
-                className={`p-3 border text-xs tracking-wide ${statusMessage.type === "success" ? "border-emerald-500/30 text-emerald-400 bg-emerald-500/10" : "border-red-500/30 text-red-400 bg-red-500/10"} transition-all duration-500 ease-out ${isStatusVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1"}`}
+                className={`p-3 border text-xs tracking-wide ${statusMessage.type === "success" ? "border-emerald-200 text-emerald-700 bg-emerald-50" : "border-red-200 text-red-700 bg-red-50"} transition-all duration-500 ease-out ${isStatusVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1"}`}
               >
-                {" "}
-                {statusMessage.message}{" "}
+                {statusMessage.message}
               </div>
-            )}{" "}
-          </div>{" "}
+            )}
+          </div>
+
           <form
             onSubmit={handleManualTransaction}
             className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5"
           >
-            {" "}
             <div className="space-y-2">
-              {" "}
-              <label className="text-[10px] tracking-[0.2em] font-mono text-white/40">
+              <label className="text-[10px] tracking-[0.08em] font-light transactions-subtle">
                 Payment Mode
-              </label>{" "}
+              </label>
               <select
                 value={formData.payment_mode}
                 onChange={(e) =>
                   setFormData({ ...formData, payment_mode: e.target.value })
                 }
-                className="w-full bg-white/5 border border-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:border-white/30"
+                className="w-full bg-white border border-[#e0e0e0] px-4 py-3 text-sm text-[#0d0d0d] focus:outline-none focus:border-black/30 rounded-xl"
               >
-                {" "}
-                <option value="cash" className="bg-[#0B0E14]">
-                  Cash
-                </option>{" "}
-                <option value="upi" className="bg-[#0B0E14]">
-                  UPI
-                </option>{" "}
-              </select>{" "}
-            </div>{" "}
+                <option value="cash">Cash</option>
+                <option value="upi">UPI</option>
+              </select>
+            </div>
+
             <div className="space-y-2">
-              {" "}
-              <label className="text-[10px] tracking-[0.2em] font-mono text-white/40">
+              <label className="text-[10px] tracking-[0.08em] font-light transactions-subtle">
                 Status
-              </label>{" "}
+              </label>
               <select
                 value={formData.status}
                 onChange={(e) =>
                   setFormData({ ...formData, status: e.target.value })
                 }
-                className="w-full bg-white/5 border border-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:border-white/30"
+                className="w-full bg-white border border-[#e0e0e0] px-4 py-3 text-sm text-[#0d0d0d] focus:outline-none focus:border-black/30 rounded-xl"
               >
-                {" "}
-                <option value="completed" className="bg-[#0B0E14]">
-                  Completed
-                </option>{" "}
-                <option value="pending" className="bg-[#0B0E14]">
-                  Pending
-                </option>{" "}
-                <option value="failed" className="bg-[#0B0E14]">
-                  Failed
-                </option>{" "}
-              </select>{" "}
-            </div>{" "}
+                <option value="completed">Completed</option>
+                <option value="pending">Pending</option>
+                <option value="failed">Failed</option>
+              </select>
+            </div>
+
             <div className="space-y-2">
-              {" "}
-              <label className="text-[10px] tracking-[0.2em] font-mono text-white/40">
+              <label className="text-[10px] tracking-[0.08em] font-light transactions-subtle">
                 Amount
-              </label>{" "}
+              </label>
               <input
                 type="number"
                 min="0"
@@ -675,17 +714,16 @@ const TransactionsPage = () => {
                   setFormData({ ...formData, amount: e.target.value })
                 }
                 placeholder="e.g. 1499"
-                className="w-full bg-white/5 border border-white/10 px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30"
+                className="w-full bg-white border border-[#e0e0e0] px-4 py-3 text-sm text-[#0d0d0d] placeholder:text-[#a0a0a0] focus:outline-none focus:border-black/30 rounded-xl"
                 required
-              />{" "}
-            </div>{" "}
+              />
+            </div>
+
             <div className="space-y-2">
-              {" "}
-              <label className="text-[10px] tracking-[0.2em] font-mono text-white/40">
+              <label className="text-[10px] tracking-[0.08em] font-light transactions-subtle">
                 Sender Name
-              </label>{" "}
+              </label>
               <div className="relative">
-                {" "}
                 <input
                   type="text"
                   value={formData.sender_name}
@@ -702,14 +740,13 @@ const TransactionsPage = () => {
                     }, 120);
                   }}
                   placeholder="Name of sender"
-                  className="w-full bg-white/5 border border-white/10 px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30"
+                  className="w-full bg-white border border-[#e0e0e0] px-4 py-3 text-sm text-[#0d0d0d] placeholder:text-[#a0a0a0] focus:outline-none focus:border-black/30 rounded-xl"
                   required
-                />{" "}
+                />
                 {showSenderMatches &&
                   formData.sender_name.trim() &&
                   senderMatches.length > 0 && (
-                    <div className="absolute z-20 mt-1 w-full bg-[#0B0E14] border border-white/10 max-h-44 overflow-y-auto">
-                      {" "}
+                    <div className="absolute z-20 mt-2 w-full bg-white border border-[#e0e0e0] max-h-44 overflow-y-auto rounded-xl shadow-lg">
                       {senderMatches.map((customer) => {
                         const fullName =
                           `${customer.first_name || ""} ${customer.last_name || ""}`.trim();
@@ -724,35 +761,33 @@ const TransactionsPage = () => {
                               }
                               handleSelectSender(customer);
                             }}
-                            className="native-inline-btn dropdown-item-btn w-full text-left px-4 py-2 text-sm text-white/80 hover:bg-white/10 transition-colors"
+                            className="native-inline-btn dropdown-item-btn w-full text-left px-4 py-2 text-sm text-[#0d0d0d] hover:bg-[#f4f4f4] transition-colors"
                           >
-                            {" "}
-                            {fullName}{" "}
+                            {fullName}
                           </button>
                         );
-                      })}{" "}
+                      })}
                     </div>
-                  )}{" "}
-              </div>{" "}
+                  )}
+              </div>
               {formData.sender_name.trim() && senderMatches.length === 0 && (
-                <p className="text-[10px] text-amber-400 tracking-[0.2em] font-mono">
+                <p className="text-[10px] text-amber-600 tracking-[0.08em] font-light">
                   match not found
                 </p>
-              )}{" "}
+              )}
               {selectedCustomerId && (
-                <p className="text-[10px] text-emerald-400 tracking-[0.2em] font-mono">
+                <p className="text-[10px] text-emerald-600 tracking-[0.08em] font-light">
                   customer matched
                 </p>
-              )}{" "}
-            </div>{" "}
+              )}
+            </div>
+
             {formData.payment_mode === "upi" && (
               <>
-                {" "}
                 <div className="space-y-2">
-                  {" "}
-                  <label className="text-[10px] tracking-[0.2em] font-mono text-white/40">
+                  <label className="text-[10px] tracking-[0.08em] font-light transactions-subtle">
                     Account Name
-                  </label>{" "}
+                  </label>
                   <input
                     type="text"
                     value={formData.sender_account_name}
@@ -763,15 +798,14 @@ const TransactionsPage = () => {
                       })
                     }
                     placeholder="UPI account name"
-                    className="w-full bg-white/5 border border-white/10 px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30"
+                    className="w-full bg-white border border-[#e0e0e0] px-4 py-3 text-sm text-[#0d0d0d] placeholder:text-[#a0a0a0] focus:outline-none focus:border-black/30 rounded-xl"
                     required
-                  />{" "}
-                </div>{" "}
+                  />
+                </div>
                 <div className="space-y-2">
-                  {" "}
-                  <label className="text-[10px] tracking-[0.2em] font-mono text-white/40">
+                  <label className="text-[10px] tracking-[0.08em] font-light transactions-subtle">
                     Transaction ID
-                  </label>{" "}
+                  </label>
                   <input
                     type="text"
                     value={formData.source_transaction_id}
@@ -782,58 +816,53 @@ const TransactionsPage = () => {
                       })
                     }
                     placeholder="UPI transaction reference"
-                    className="w-full bg-white/5 border border-white/10 px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30"
+                    className="w-full bg-white border border-[#e0e0e0] px-4 py-3 text-sm text-[#0d0d0d] placeholder:text-[#a0a0a0] focus:outline-none focus:border-black/30 rounded-xl"
                     required
-                  />{" "}
-                </div>{" "}
+                  />
+                </div>
               </>
-            )}{" "}
+            )}
+
             <div className="md:col-span-2 pt-2">
-              {" "}
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full md:w-auto bg-white text-black font-medium px-8 py-3 text-[10px] tracking-[0.2em] font-mono hover:bg-white/90 transition-colors disabled:opacity-50"
+                className="w-full md:w-auto bg-white text-[#0d0d0d] border border-[#e0e0e0] font-medium px-8 py-3 text-[10px] tracking-[0.08em] font-light rounded-xl hover:bg-[#f4f4f4] hover:border-[#d0d0d0] transition-colors disabled:opacity-50"
               >
-                {" "}
-                {saving ? "Saving..." : "Add Transaction"}{" "}
-              </button>{" "}
-            </div>{" "}
-          </form>{" "}
-        </div>{" "}
-        <div className="border border-white/10 overflow-hidden">
-          {" "}
+                {saving ? "Saving..." : "Add Transaction"}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div className="transactions-card-alt border border-white/10 overflow-hidden rounded-2xl">
           <table className="w-full text-left border-collapse">
-            {" "}
-            <thead>
-              {" "}
-              <tr className="bg-white/5 border-b border-white/10">
-                {" "}
-                <th className="p-6 text-[10px] tracking-[0.2em] font-mono text-white/40">
+            <thead className="bg-[#f7f7f7]">
+              <tr className="border-b border-[#e6e6e6]">
+                <th className="p-6 text-[10px] tracking-[0.08em] font-light transactions-subtle">
                   Transaction ID
-                </th>{" "}
-                <th className="p-6 text-[10px] tracking-[0.2em] font-mono text-white/40">
+                </th>
+                <th className="p-6 text-[10px] tracking-[0.08em] font-light transactions-subtle">
                   Sender / Customer
-                </th>{" "}
-                <th className="p-6 text-[10px] tracking-[0.2em] font-mono text-white/40">
+                </th>
+                <th className="p-6 text-[10px] tracking-[0.08em] font-light transactions-subtle">
                   Mode
-                </th>{" "}
-                <th className="p-6 text-[10px] tracking-[0.2em] font-mono text-white/40">
+                </th>
+                <th className="p-6 text-[10px] tracking-[0.08em] font-light transactions-subtle">
                   Account / Ref
-                </th>{" "}
-                <th className="p-6 text-[10px] tracking-[0.2em] font-mono text-white/40">
+                </th>
+                <th className="p-6 text-[10px] tracking-[0.08em] font-light transactions-subtle">
                   Amount
-                </th>{" "}
-                <th className="p-6 text-[10px] tracking-[0.2em] font-mono text-white/40">
+                </th>
+                <th className="p-6 text-[10px] tracking-[0.08em] font-light transactions-subtle">
                   Date
-                </th>{" "}
-                <th className="p-6 text-[10px] tracking-[0.2em] font-mono text-white/40 text-right">
+                </th>
+                <th className="p-6 text-[10px] tracking-[0.08em] font-light transactions-subtle text-right">
                   Status
-                </th>{" "}
-              </tr>{" "}
-            </thead>{" "}
+                </th>
+              </tr>
+            </thead>
             <tbody>
-              {" "}
               {transactions.map((tx) => (
                 (() => {
                   const rawStatus = String(tx.status || "completed").toLowerCase();
@@ -850,10 +879,10 @@ const TransactionsPage = () => {
                       : rawStatus;
                   const statusClass =
                     adjustedStatus === "completed"
-                      ? "text-emerald-500 bg-emerald-500/10 border-emerald-500/20"
+                      ? "text-emerald-600 bg-emerald-50 border-emerald-200"
                       : adjustedStatus === "inactive"
-                        ? "text-red-400 bg-red-500/10 border-red-500/20"
-                        : "text-amber-500 bg-amber-500/10 border-amber-500/20";
+                        ? "text-red-600 bg-red-50 border-red-200"
+                        : "text-amber-600 bg-amber-50 border-amber-200";
                   const statusLabel = adjustedStatus.charAt(0).toUpperCase() + adjustedStatus.slice(1);
                   const matchLabel = resolvedCustomer
                     ? `Matched: ${resolvedCustomer.first_name || ""} ${resolvedCustomer.last_name || ""}`.trim()
@@ -861,106 +890,83 @@ const TransactionsPage = () => {
                       ? "Matched customer record"
                       : "No matching customer";
                   return (
-                <tr
-                  key={tx.id}
-                  className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group"
-                >
-                  {" "}
-                  <td className="p-6">
-                    {" "}
-                    <span className="text-[10px] text-white/40 font-mono tracking-[0.2em] ">
-                      {" "}
-                      #Tx-{tx.id.substring(0, 8)}{" "}
-                    </span>{" "}
-                  </td>{" "}
-                  <td className="p-6">
-                    {" "}
-                    <div className="flex flex-col">
-                      {" "}
-                      <span className="text-sm font-medium tracking-tight text-white/40">
-                        {" "}
-                        {tx.sender_name ||
-                          (tx.subscriptions?.customers
-                            ? `${tx.subscriptions.customers.first_name} ${tx.subscriptions.customers.last_name}`
-                            : "N/A")}{" "}
-                      </span>{" "}
-                        <span className="text-[9px] text-white/20 font-mono tracking-[0.2em] mt-1">
-                          {matchLabel}
+                    <tr key={tx.id} className="border-b border-[#e6e6e6] hover:bg-[#f9f9f9] transition-colors group">
+                      <td className="p-6">
+                        <span className="text-[10px] text-[#8a8a8a] font-light tracking-[0.08em]">
+                          #Tx-{tx.id.substring(0, 8)}
                         </span>
-                      <span className="text-[9px] text-white/20 font-mono tracking-[0.2em] mt-1">
-                        {" "}
-                        Plan: {tx.subscriptions?.plan_name || "Individual"}{" "}
-                      </span>{" "}
-                    </div>{" "}
-                  </td>{" "}
-                  <td className="p-6 text-[10px] text-white/40 font-mono tracking-[0.2em]">
-                    {" "}
-                    {tx.payment_mode || "N/A"}{" "}
-                  </td>{" "}
-                  <td className="p-6">
-                    {" "}
-                    <div className="flex flex-col">
-                      {" "}
-                      <span className="text-[10px] text-white/40 font-mono tracking-[0.2em] ">
-                        {" "}
-                        {tx.sender_account_name || "-"}{" "}
-                      </span>{" "}
-                      <span className="text-[9px] text-white/20 font-mono tracking-[0.2em] mt-1">
-                        {" "}
-                        {tx.source_transaction_id || "-"}{" "}
-                      </span>{" "}
-                    </div>{" "}
-                  </td>{" "}
-                  <td className="p-6">
-                    {" "}
-                    <span className="text-sm font-medium text-white/40 tracking-widest">
-                      {" "}
-                      ₹{tx.amount || "0"}{" "}
-                    </span>{" "}
-                  </td>{" "}
-                  <td className="p-6 text-sm text-white/40 font-mono tracking-[0.2em]">
-                    {" "}
-                    {tx.created_at && !Number.isNaN(new Date(tx.created_at).getTime())
-                      ? new Date(tx.created_at).toLocaleDateString("en-GB")
-                      : "-"}{" "}
-                  </td>{" "}
-                  <td className="p-6 text-right">
-                    {" "}
-                    <span
-                      className={`text-[9px] tracking-[0.2em] font-mono font-medium px-3 py-1 border ${statusClass}`}
-                    >
-                      {" "}
-                      {statusLabel}{" "}
-                    </span>{" "}
-                  </td>{" "}
-                </tr>
+                      </td>
+                      <td className="p-6">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium tracking-tight text-[#0d0d0d]">
+                            {tx.sender_name ||
+                              (tx.subscriptions?.customers
+                                ? `${tx.subscriptions.customers.first_name} ${tx.subscriptions.customers.last_name}`
+                                : "N/A")}
+                          </span>
+                          <span className="text-[9px] text-[#8a8a8a] font-light tracking-[0.08em] mt-1">
+                            {matchLabel}
+                          </span>
+                          <span className="text-[9px] text-[#8a8a8a] font-light tracking-[0.08em] mt-1">
+                            Plan: {tx.subscriptions?.plan_name || "Individual"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="p-6 text-[10px] text-[#8a8a8a] font-light tracking-[0.08em]">
+                        {tx.payment_mode || "N/A"}
+                      </td>
+                      <td className="p-6">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-[#8a8a8a] font-light tracking-[0.08em]">
+                            {tx.sender_account_name || "-"}
+                          </span>
+                          <span className="text-[9px] text-[#8a8a8a] font-light tracking-[0.08em] mt-1">
+                            {tx.source_transaction_id || "-"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="p-6">
+                        <span className="text-sm font-medium text-[#0d0d0d] tracking-widest">
+                          ₹{tx.amount || "0"}
+                        </span>
+                      </td>
+                      <td className="p-6 text-sm text-[#8a8a8a] font-light tracking-[0.08em]">
+                        {tx.created_at && !Number.isNaN(new Date(tx.created_at).getTime())
+                          ? new Date(tx.created_at).toLocaleDateString("en-GB")
+                          : "-"}
+                      </td>
+                      <td className="p-6 text-right">
+                        <span className={`text-[9px] tracking-[0.08em] font-medium px-3 py-1 border rounded-full ${statusClass}`}>
+                          {statusLabel}
+                        </span>
+                      </td>
+                    </tr>
                   );
                 })()
-              ))}{" "}
-            </tbody>{" "}
-          </table>{" "}
+              ))}
+            </tbody>
+          </table>
+
           {loading && (
             <div className="p-24 text-center">
-              {" "}
-              <span className="text-[10px] tracking-[0.2em] text-white/20 animate-pulse font-mono">
+              <span className="text-[10px] tracking-[0.08em] text-[#8a8a8a] animate-pulse font-light">
                 Downloading Ledger...
-              </span>{" "}
+              </span>
             </div>
-          )}{" "}
+          )}
+
           {!loading && transactions.length === 0 && (
-            <div className="p-24 text-center text-white/40 flex flex-col items-center gap-4">
-              {" "}
-              <span className="text-[10px] tracking-[0.2em] font-mono">
+            <div className="p-24 text-center text-[#8a8a8a] flex flex-col items-center gap-4">
+              <span className="text-[10px] tracking-[0.08em] font-light">
                 No Recent Transactions Found
-              </span>{" "}
-              <span className="text-[9px] tracking-[0.2em] font-mono">
-                Transactions will appear here once applications are processed
-                and paid.
-              </span>{" "}
+              </span>
+              <span className="text-[9px] tracking-[0.08em] font-light">
+                Transactions will appear here once applications are processed and paid.
+              </span>
             </div>
-          )}{" "}
-        </div>{" "}
-      </div>{" "}
+          )}
+        </div>
+      </div>
     </div>
   );
 };

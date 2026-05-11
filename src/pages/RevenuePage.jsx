@@ -917,105 +917,13 @@ const RevenuePage = () => {
   };
   if (loading) {
     return (
-      <div
-        className="app-page revenue-page-vibe p-4 md:p-10"
-        style={{
-          "--app-theme-page-bg": "#ffffff",
-          "--app-theme-card-bg": "#fbfbfb",
-          "--app-theme-card-bg-alt": "#f4f4f4",
-          color: "#0d0d0d",
-        }}
-      >
-        <style>{`
-          @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap");
-          .revenue-page-vibe {
-            background: #ffffff !important;
-            color: #0d0d0d !important;
-            font-family: "DM Sans", system-ui, sans-serif;
-            min-height: 100vh;
-          }
-          .revenue-page-vibe .revenue-header-title {
-            font-family: "Playfair Display", Georgia, serif;
-          }
-          .revenue-page-vibe .revenue-card {
-            background: #fbfbfb;
-            border-color: #e6e6e6;
-            box-shadow: none;
-          }
-          .revenue-page-vibe .revenue-card:hover {
-            background: #f4f4f4;
-          }
-          .revenue-page-vibe .revenue-chip {
-            background: #ffffff;
-            border-color: #e0e0e0;
-            color: #0d0d0d;
-          }
-          .revenue-page-vibe .revenue-subtle {
-            color: #8a8a8a;
-          }
-          .revenue-page-vibe .revenue-muted {
-            color: #666666;
-          }
-          .revenue-page-vibe div[class*="bg-\[#151921\]"],
-          .revenue-page-vibe div[class*="bg-\[#151920\]"],
-          .revenue-page-vibe div[class*="bg-\[#0a0c10\]"],
-          .revenue-page-vibe div[class*="bg-white/\[0.02\]"],
-          .revenue-page-vibe div[class*="bg-white/\[0.04\]"],
-          .revenue-page-vibe div[class*="bg-white/\[0.05\]"],
-          .revenue-page-vibe div[class*="bg-black/20"] {
-            background: #fbfbfb !important;
-            border-color: #e6e6e6 !important;
-            box-shadow: none !important;
-          }
-          .revenue-page-vibe div[class*="bg-\[#151921\]"]:hover,
-          .revenue-page-vibe div[class*="bg-\[#151920\]"]:hover,
-          .revenue-page-vibe div[class*="bg-\[#0a0c10\]"]:hover,
-          .revenue-page-vibe div[class*="bg-white/\[0.02\]"]:hover,
-          .revenue-page-vibe div[class*="bg-white/\[0.04\]"]:hover,
-          .revenue-page-vibe div[class*="bg-white/\[0.05\]"]:hover,
-          .revenue-page-vibe div[class*="bg-black/20"]:hover {
-            background: #f4f4f4 !important;
-            border-color: #d0d0d0 !important;
-          }
-          .revenue-page-vibe div[class*="bg-\[#151921\]"] p,
-          .revenue-page-vibe div[class*="bg-\[#151920\]"] p,
-          .revenue-page-vibe div[class*="bg-\[#0a0c10\]"] p,
-          .revenue-page-vibe div[class*="bg-white/\[0.02\]"] p,
-          .revenue-page-vibe div[class*="bg-white/\[0.04\]"] p,
-          .revenue-page-vibe div[class*="bg-white/\[0.05\]"] p,
-          .revenue-page-vibe div[class*="bg-black/20"] p {
-            color: #0d0d0d !important;
-          }
-          .revenue-page-vibe div[class*="bg-\[#151921\]"] p[class*="text-white/40"],
-          .revenue-page-vibe div[class*="bg-\[#151920\]"] p[class*="text-white/40"],
-          .revenue-page-vibe div[class*="bg-\[#0a0c10\]"] p[class*="text-white/40"],
-          .revenue-page-vibe div[class*="bg-white/\[0.02\]"] p[class*="text-white/40"],
-          .revenue-page-vibe div[class*="bg-white/\[0.04\]"] p[class*="text-white/40"],
-          .revenue-page-vibe div[class*="bg-white/\[0.05\]"] p[class*="text-white/40"],
-          .revenue-page-vibe div[class*="bg-black/20"] p[class*="text-white/40"] {
-            color: #8a8a8a !important;
-          }
-          .revenue-page-vibe div[class*="bg-\[#151921\]"] div[class*="bg-white"],
-          .revenue-page-vibe div[class*="bg-\[#151920\]"] div[class*="bg-white"],
-          .revenue-page-vibe div[class*="bg-\[#0a0c10\]"] div[class*="bg-white"],
-          .revenue-page-vibe div[class*="bg-white/\[0.02\]"] div[class*="bg-white"],
-          .revenue-page-vibe div[class*="bg-white/\[0.04\]"] div[class*="bg-white"],
-          .revenue-page-vibe div[class*="bg-white/\[0.05\]"] div[class*="bg-white"],
-          .revenue-page-vibe div[class*="bg-black/20"] div[class*="bg-white"] {
-            background: #f0f0f0 !important;
-            border-color: #e0e0e0 !important;
-          }
-          .revenue-page-vibe [class*="text-white/"] {
-            color: #8a8a8a !important;
-          }
-          .revenue-page-vibe [class*="text-white"] {
-            color: #0d0d0d !important;
-          }
-          .revenue-page-vibe button {
-            border-color: #e0e0e0 !important;
-          }
-        `}</style>
-        <div className="mb-8 p-6 border border-white/10 bg-white/5 text-white/70 text-xs tracking-[0.08em] font-light dm-sans-copy animate-pulse">
+      <div className="app-page revenue-page-vibe p-4 md:p-10">
+        <style>{` 
+.revenue-page-vibe { background-color: #ffffff !important; color: #0d0d0d; min-height: 100vh; }
+.revenue-header-title { font-family: 'Playfair Display', serif; font-weight: 400; color: #0d0d0d; letter-spacing: 0.02em; }
+.communications-subtle { color: #666666; }
+`}</style>
+        <div className="mb-8 p-6 border border-[#e6e6e6] bg-[#fbfbfb] text-[#666666] text-xs tracking-[0.08em] font-light dm-sans-copy animate-pulse">
           Loading revenue data...
         </div>
       </div>
@@ -1023,205 +931,51 @@ const RevenuePage = () => {
   }
 
   if (fetchError) {
-    return (
-      <div
-        className="app-page revenue-page-vibe p-4 md:p-10"
-        style={{
-          "--app-theme-page-bg": "#ffffff",
-          "--app-theme-card-bg": "#fbfbfb",
-          "--app-theme-card-bg-alt": "#f4f4f4",
-          color: "#0d0d0d",
-        }}
-      >
-        <style>{`
-          @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap");
-          .revenue-page-vibe {
-            background: #ffffff !important;
-            color: #0d0d0d !important;
-            font-family: "DM Sans", system-ui, sans-serif;
-            min-height: 100vh;
-          }
-          .revenue-page-vibe .revenue-header-title {
-            font-family: "Playfair Display", Georgia, serif;
-          }
-          .revenue-page-vibe .revenue-card {
-            background: #fbfbfb;
-            border-color: #e6e6e6;
-          }
-          .revenue-page-vibe .revenue-card:hover {
-            background: #f4f4f4;
-          }
-          .revenue-page-vibe .revenue-chip {
-            background: #ffffff;
-            border-color: #e0e0e0;
-            color: #0d0d0d;
-          }
-          .revenue-page-vibe .revenue-subtle {
-            color: #8a8a8a;
-          }
-          .revenue-page-vibe .revenue-muted {
-            color: #666666;
-          }
-          .revenue-page-vibe [class*="text-white/"] {
-            color: #666666 !important;
-          }
-          .revenue-page-vibe [class*="text-white"] {
-            color: #0d0d0d !important;
-          }
-          .revenue-page-vibe [class*="bg-[#151921]"],
-          .revenue-page-vibe [class*="bg-[#151920]"],
-          .revenue-page-vibe [class*="bg-[#0a0c10]"],
-          .revenue-page-vibe [class*="bg-white/[0.02]"],
-          .revenue-page-vibe [class*="bg-white/[0.04]"],
-          .revenue-page-vibe [class*="bg-white/[0.05]"],
-          .revenue-page-vibe [class*="bg-black/20"] {
-            background-color: #fbfbfb !important;
-            border-color: #e6e6e6 !important;
-          }
-          .revenue-page-vibe [class*="border-white"] {
-            border-color: #e6e6e6 !important;
-          }
-          .revenue-page-vibe button {
-            border-color: #e0e0e0 !important;
-          }
-        `}</style>
-        <div className="mb-8 p-4 border bg-red-500/10 border-red-500/20 text-red-500 text-xs tracking-[0.08em] font-light dm-sans-copy">
-          {fetchError}
+      return (
+        <div className="app-page revenue-page-vibe p-4 md:p-10">
+          <style>{` 
+          .revenue-page-vibe { background-color: #ffffff !important; color: #0d0d0d; min-height: 100vh; }
+          .revenue-header-title { font-family: 'Playfair Display', serif; font-weight: 400; color: #0d0d0d; letter-spacing: 0.02em; }
+          .communications-subtle { color: #666666; }
+          `}</style>
+          <div className="mb-8 p-4 border bg-red-500/10 border-red-500/20 text-red-500 text-xs tracking-[0.08em] font-light dm-sans-copy">
+            {fetchError}
+          </div>
         </div>
-      </div>
-    );
+      );
   }
 
   return (
-    <div
-      className="app-page revenue-page-vibe p-4 md:p-10"
-      style={{
-        "--app-theme-page-bg": "#ffffff",
-        "--app-theme-card-bg": "#fbfbfb",
-        "--app-theme-card-bg-alt": "#f4f4f4",
-        color: "#0d0d0d",
-      }}
-    >
-      <style>{`
-        @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap");
-        .revenue-page-vibe {
-          background: #ffffff !important;
-          color: #0d0d0d !important;
-          font-family: "DM Sans", system-ui, sans-serif;
-          min-height: 100vh;
-        }
-          .revenue-page-vibe .revenue-header-title {
-            font-family: "Playfair Display", Georgia, serif;
-          }
-          .revenue-page-vibe .revenue-card {
-            background: #fbfbfb;
-            border-color: #e6e6e6;
-            box-shadow: none;
-          }
-          .revenue-page-vibe .revenue-card:hover {
-            background: #f4f4f4;
-          }
-          .revenue-page-vibe .revenue-chip {
-            background: #ffffff;
-            border-color: #e0e0e0;
-            color: #0d0d0d;
-          }
-          .revenue-page-vibe .revenue-subtle {
-            color: #8a8a8a;
-          }
-          .revenue-page-vibe .revenue-muted {
-            color: #666666;
-          }
-          .revenue-page-vibe div[class*="bg-\[#151921\]"],
-          .revenue-page-vibe div[class*="bg-\[#151920\]"],
-          .revenue-page-vibe div[class*="bg-\[#0a0c10\]"],
-          .revenue-page-vibe div[class*="bg-white/\[0.02\]"],
-          .revenue-page-vibe div[class*="bg-white/\[0.04\]"],
-          .revenue-page-vibe div[class*="bg-white/\[0.05\]"],
-          .revenue-page-vibe div[class*="bg-black/20"] {
-            background: #fbfbfb !important;
-            border-color: #e6e6e6 !important;
-            box-shadow: none !important;
-          }
-          .revenue-page-vibe div[class*="bg-\[#151921\]"]:hover,
-          .revenue-page-vibe div[class*="bg-\[#151920\]"]:hover,
-          .revenue-page-vibe div[class*="bg-\[#0a0c10\]"]:hover,
-          .revenue-page-vibe div[class*="bg-white/\[0.02\]"]:hover,
-          .revenue-page-vibe div[class*="bg-white/\[0.04\]"]:hover,
-          .revenue-page-vibe div[class*="bg-white/\[0.05\]"]:hover,
-          .revenue-page-vibe div[class*="bg-black/20"]:hover {
-            background: #f4f4f4 !important;
-            border-color: #d0d0d0 !important;
-          }
-          .revenue-page-vibe div[class*="bg-\[#151921\]"] p,
-          .revenue-page-vibe div[class*="bg-\[#151920\]"] p,
-          .revenue-page-vibe div[class*="bg-\[#0a0c10\]"] p,
-          .revenue-page-vibe div[class*="bg-white/\[0.02\]"] p,
-          .revenue-page-vibe div[class*="bg-white/\[0.04\]"] p,
-          .revenue-page-vibe div[class*="bg-white/\[0.05\]"] p,
-          .revenue-page-vibe div[class*="bg-black/20"] p {
-            color: #0d0d0d !important;
-          }
-          .revenue-page-vibe div[class*="bg-\[#151921\]"] p[class*="text-white/40"],
-          .revenue-page-vibe div[class*="bg-\[#151920\]"] p[class*="text-white/40"],
-          .revenue-page-vibe div[class*="bg-\[#0a0c10\]"] p[class*="text-white/40"],
-          .revenue-page-vibe div[class*="bg-white/\[0.02\]"] p[class*="text-white/40"],
-          .revenue-page-vibe div[class*="bg-white/\[0.04\]"] p[class*="text-white/40"],
-          .revenue-page-vibe div[class*="bg-white/\[0.05\]"] p[class*="text-white/40"],
-          .revenue-page-vibe div[class*="bg-black/20"] p[class*="text-white/40"] {
-            color: #8a8a8a !important;
-          }
-          .revenue-page-vibe div[class*="bg-\[#151921\]"] div[class*="bg-white"],
-          .revenue-page-vibe div[class*="bg-\[#151920\]"] div[class*="bg-white"],
-          .revenue-page-vibe div[class*="bg-\[#0a0c10\]"] div[class*="bg-white"],
-          .revenue-page-vibe div[class*="bg-white/\[0.02\]"] div[class*="bg-white"],
-          .revenue-page-vibe div[class*="bg-white/\[0.04\]"] div[class*="bg-white"],
-          .revenue-page-vibe div[class*="bg-white/\[0.05\]"] div[class*="bg-white"],
-          .revenue-page-vibe div[class*="bg-black/20"] div[class*="bg-white"] {
-            background: #f0f0f0 !important;
-            border-color: #e0e0e0 !important;
-          }
-          .revenue-page-vibe [class*="text-white/"] {
-            color: #8a8a8a !important;
-          }
-          .revenue-page-vibe [class*="text-white"] {
-            color: #0d0d0d !important;
-          }
-          .revenue-page-vibe button {
-            border-color: #e0e0e0 !important;
-          }
-      `}</style>
-      {" "}
+    <div className="app-page revenue-page-vibe p-4 md:p-10">
+      <style>{` 
+.revenue-page-vibe { background-color: #ffffff !important; color: #0d0d0d; min-height: 100vh; }
+.revenue-header-title { font-family: 'Playfair Display', serif; font-weight: 400; color: #0d0d0d; letter-spacing: 0.02em; }
+.communications-subtle { color: #666666; }
+.revenue-page-vibe .revenue-panel { background: #fbfbfb; border-color: #e6e6e6; color: #0d0d0d; }
+.revenue-page-vibe .revenue-panel-muted { color: #666666; }
+.revenue-page-vibe .revenue-chart-bg { background: #fbfbfb; border-color: #e6e6e6; }
+.revenue-page-vibe .revenue-input-dark { background: #ffffff; border-color: #e0e0e0; color: #0d0d0d; }
+.revenue-page-vibe .revenue-input-dark::placeholder { color: #a0a0a0; }
+`}</style>
       <header className="mb-8 md:mb-12 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6">
-        {" "}
         <div>
-          {" "}
-          <p className="revenue-subtle text-xs tracking-[0.08em] font-light dm-sans-copy mb-2">
-            Financial Engine
-          </p>{" "}
-          <h1 className="revenue-header-title text-4xl md:text-5xl font-medium tracking-tighter">
-            Revenue <span className="text-white/20">Analytics</span>
-          </h1>{" "}
-        </div>{" "}
+          <p className="text-xs tracking-[0.08em] communications-subtle font-light dm-sans-copy mb-2">Financial Engine</p>
+          <h1 className="revenue-header-title text-4xl md:text-5xl font-medium tracking-tighter">Revenue <span className="communications-subtle">Analytics</span></h1>
+        </div>
         <div className="flex gap-4 w-full sm:w-auto">
-          {" "}
           <button
             onClick={handleReportClick}
-            className="revenue-chip flex-1 sm:flex-none px-4 md:px-6 py-3 bg-white text-black border border-white/10 rounded-xl text-xs tracking-[0.05em] font-light dm-sans-copy hover:bg-white/90 transition-colors text-center"
+            className="flex-1 sm:flex-none px-4 md:px-6 py-3 bg-white text-black border border-[#e6e6e6] rounded-xl text-xs tracking-[0.05em] font-light dm-sans-copy hover:bg-[#f4f4f4] transition-colors text-center"
           >
-            {" "}
-            Report{" "}
-          </button>{" "}
-        </div>{" "}
+            Report
+          </button>
+        </div>
       </header>
       {expenseError && (
-        <div className="mb-8 p-4 border bg-red-500/10 border-red-500/20 text-red-500 text-xs tracking-[0.08em] font-light dm-sans-copy">
-          {expenseError}
-        </div>
+        <div className="mb-8 p-4 border bg-red-500/10 border-red-500/20 text-red-500 text-xs tracking-[0.08em] font-light dm-sans-copy">{expenseError}</div>
       )}
       {/* Metrics Grid */}
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        {" "}
         {[
           {
             label: "Total Revenue",
@@ -1248,79 +1002,59 @@ const RevenuePage = () => {
             trend: null,
           },
         ].map((item, i) => (
-          <div
-            key={i}
-            className="revenue-card bg-[#151921] border border-white/5 p-8 rounded-2xl shadow-2xl shadow-black/40 group hover:-translate-y-1 transition-all"
-          >
-            {" "}
+          <div key={i} className="bg-[#fbfbfb] border border-[#e6e6e6] p-8 rounded-2xl shadow-sm group hover:-translate-y-1 transition-all">
             <div className="flex justify-between items-start mb-6">
-              {" "}
-              <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-white/40 group-hover:text-white transition-colors">
-                {" "}
-                {item.icon}{" "}
-              </div>{" "}
+              <div className="w-10 h-10 bg-[#f4f4f4] rounded-xl flex items-center justify-center text-[#666666] group-hover:text-[#333333] transition-colors">{item.icon}</div>
               {item.trend !== null && (
-                <div
-                  className={`flex items-center gap-1 text-[10px] font-bold font-mono ${item.trend >= 0 ? "text-white/80" : "text-red-400"}`}
-                >
-                  {" "}
-                  {item.trend >= 0 ? (
-                    <ArrowUpRight size={12} />
-                  ) : (
-                    <ArrowDownRight size={12} />
-                  )}{" "}
-                  {item.trend > 0 ? "+" : ""}
-                  {item.trend.toFixed(1)}%{" "}
+                <div className={`flex items-center gap-1 text-[10px] font-bold font-mono ${item.trend >= 0 ? "text-[#0d0d0d]" : "text-red-400"}`}>
+                  {item.trend >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                  {item.trend > 0 ? "+" : ""}{item.trend.toFixed(1)}%
                 </div>
-              )}{" "}
-            </div>{" "}
-            <p className="revenue-muted text-xs tracking-[0.08em] font-light dm-sans-copy mb-1">
-              {item.label}
-            </p>{" "}
-            <h3 className="text-2xl font-medium tracking-tight">
-              {item.value}
-            </h3>{" "}
+              )}
+            </div>
+            <p className="text-xs tracking-[0.08em] communications-subtle font-light dm-sans-copy mb-1">{item.label}</p>
+            <h3 className="text-2xl font-medium tracking-tight text-[#0d0d0d]">{item.value}</h3>
           </div>
-        ))}{" "}
-      </section>{" "}
+        ))}
+      </section>
       {/* Migration Reconciliation Cards */}{" "}
       {(reconciliation.paymentsImported > 0 ||
         reconciliation.importedRevenue > 0) && (
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           {" "}
-          <div className="revenue-card border border-white/10 bg-white/[0.02] p-6 rounded-lg">
+          <div className="revenue-panel border border-[#e6e6e6] bg-[#fbfbfb] p-6 rounded-lg">
             {" "}
-            <p className="revenue-muted text-xs tracking-[0.08em] font-light dm-sans-copy mb-2">
+            <p className="text-xs tracking-[0.08em] font-light dm-sans-copy revenue-panel-muted mb-2">
               Payments Imported
             </p>{" "}
-            <p className="text-3xl text-white font-medium">
+            <p className="text-3xl text-[#0d0d0d] font-medium">
               {reconciliation.paymentsImported}
             </p>{" "}
-            <p className="revenue-subtle text-xs tracking-[0.08em] font-light dm-sans-copy mt-2">
+            <p className="text-xs tracking-[0.08em] font-light dm-sans-copy revenue-panel-muted mt-2">
               via CSV migration
             </p>{" "}
           </div>{" "}
-          <div className="revenue-card border border-white/10 bg-white/[0.02] p-6 rounded-lg">
+          <div className="revenue-panel border border-[#e6e6e6] bg-[#fbfbfb] p-6 rounded-lg">
             {" "}
-            <p className="revenue-muted text-xs tracking-[0.08em] font-light dm-sans-copy mb-2">
+            <p className="text-xs tracking-[0.08em] font-light dm-sans-copy revenue-panel-muted mb-2">
               Imported Revenue
             </p>{" "}
-            <p className="text-3xl text-white font-medium">
+            <p className="text-3xl text-[#0d0d0d] font-medium">
               ₹{reconciliation.importedRevenue.toLocaleString()}
             </p>{" "}
-            <p className="revenue-subtle text-xs tracking-[0.08em] font-light dm-sans-copy mt-2">
+            <p className="text-xs tracking-[0.08em] font-light dm-sans-copy revenue-panel-muted mt-2">
               completed payments
             </p>{" "}
           </div>{" "}
-          <div className="revenue-card border border-white/10 bg-white/[0.02] p-6 rounded-lg">
+          <div className="revenue-panel border border-[#e6e6e6] bg-[#fbfbfb] p-6 rounded-lg">
             {" "}
-            <p className="revenue-muted text-xs tracking-[0.08em] font-light dm-sans-copy mb-2">
+            <p className="text-xs tracking-[0.08em] font-light dm-sans-copy revenue-panel-muted mb-2">
               Legacy Revenue
             </p>{" "}
-            <p className="text-3xl text-amber-400 font-medium">
+            <p className="text-3xl text-[#b7791f] font-medium">
               ₹{reconciliation.legacyRevenue.toLocaleString()}
             </p>{" "}
-            <p className="revenue-subtle text-xs tracking-[0.08em] font-light dm-sans-copy mt-2">
+            <p className="text-xs tracking-[0.08em] font-light dm-sans-copy revenue-panel-muted mt-2">
               pre-import historical
             </p>{" "}
           </div>{" "}
@@ -1329,7 +1063,7 @@ const RevenuePage = () => {
       <div className="pb-10">
         {" "}
         {/* Main Polygraph Chart */}{" "}
-        <div className="revenue-card bg-[#151921] border border-white/10 p-6 md:p-10 rounded-2xl md:rounded-[2rem] shadow-lg shadow-black/5">
+        <div className="revenue-chart-bg border border-[#e6e6e6] p-6 md:p-10 rounded-2xl md:rounded-[2rem] shadow-sm">
           {" "}
           <div className="flex justify-between items-center mb-8">
             {" "}
@@ -1338,16 +1072,15 @@ const RevenuePage = () => {
               <h3 className="revenue-header-title text-xl font-normal tracking-[0.02em]">
                 Growth Polygraph
               </h3>{" "}
-              <p className="text-xs tracking-[0.08em] text-white/40 font-light dm-sans-copy">
+              <p className="text-xs tracking-[0.08em] revenue-panel-muted font-light dm-sans-copy">
                 Monthly Revenue Streams
               </p>{" "}
             </div>{" "}
             <div className="flex gap-2">
-              {" "}
-              <div className="w-2.5 h-2.5 bg-white rounded-full" />{" "}
-              <span className="text-xs font-light tracking-[0.08em] text-white/60 dm-sans-copy">
+              <div className="w-2.5 h-2.5 bg-[#0d0d0d] rounded-full" />
+              <span className="text-xs font-light tracking-[0.08em] revenue-panel-muted dm-sans-copy">
                 Income Projection
-              </span>{" "}
+              </span>
             </div>{" "}
           </div>{" "}
           <div className="h-[350px] w-full">
@@ -1363,7 +1096,7 @@ const RevenuePage = () => {
                     <stop
                       offset="5%"
                       stopColor="#0d0d0d"
-                      stopOpacity={0.18}
+                      stopOpacity={0.12}
                     />{" "}
                     <stop
                       offset="95%"
@@ -1374,7 +1107,7 @@ const RevenuePage = () => {
                 </defs>{" "}
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="#d9d9d9"
+                  stroke="#e5e7eb"
                   vertical={false}
                 />{" "}
                 <XAxis
@@ -1401,11 +1134,10 @@ const RevenuePage = () => {
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#ffffff",
-                    border: "1px solid rgba(0,0,0,0.08)",
+                    border: "1px solid #e6e6e6",
                     borderRadius: "1rem",
                   }}
                   itemStyle={{ color: "#0d0d0d", fontSize: "12px" }}
-                  labelStyle={{ color: "#666666" }}
                   cursor={{ stroke: "#0d0d0d", strokeWidth: 1 }}
                 />{" "}
                 <Area
@@ -1423,16 +1155,16 @@ const RevenuePage = () => {
         </div>{" "}
       </div>{" "}
       {/* Expenses Ledger */}{" "}
-      <section className="revenue-card bg-[#151921] border border-white/5 p-6 md:p-10 rounded-2xl shadow-lg shadow-black/5 mb-10">
+      <section className="revenue-chart-bg border border-[#e6e6e6] p-6 md:p-10 rounded-2xl shadow-sm mb-10">
         {" "}
         <div className="flex justify-between items-center mb-8">
           {" "}
           <div>
             {" "}
-            <h3 className="revenue-header-title text-xl font-normal tracking-[0.02em] text-white">
+            <h3 className="revenue-header-title text-xl font-normal tracking-[0.02em] text-[#0d0d0d]">
               Operating Expenses
             </h3>{" "}
-            <p className="text-xs tracking-[0.08em] text-white/40 font-light dm-sans-copy">
+            <p className="text-xs tracking-[0.08em] revenue-panel-muted font-light dm-sans-copy">
               {" "}
               {expenseMonth.toLocaleString("default", {
                 month: "long",
@@ -1441,16 +1173,16 @@ const RevenuePage = () => {
               Tracker{" "}
             </p>{" "}
           </div>{" "}
-          <div className="flex items-center gap-2 bg-[#0a0c10] border border-white/5 rounded-lg p-2">
+          <div className="flex items-center gap-2 bg-white border border-[#e6e6e6] rounded-lg p-2">
             {" "}
-            <Calendar size={16} className="text-white/40" />{" "}
+            <Calendar size={16} className="text-[#666666]" />{" "}
             <select
               value={`${expenseMonth.getFullYear()}-${String(expenseMonth.getMonth()).padStart(2, "0")}`}
               onChange={(e) => {
                 const [year, month] = e.target.value.split("-");
                 setExpenseMonth(new Date(parseInt(year), parseInt(month), 1));
               }}
-              className="bg-[#0a0c10] border border-white/10 px-3 py-1 text-xs font-light tracking-[0.08em] dm-sans-copy text-white focus:outline-none focus:border-white/30 cursor-pointer hover:bg-white/5 transition-colors rounded"
+              className="bg-white border border-[#e0e0e0] px-3 py-1 text-xs font-light tracking-[0.08em] dm-sans-copy text-[#0d0d0d] focus:outline-none focus:border-black/20 cursor-pointer hover:bg-[#f4f4f4] transition-colors rounded"
             >
               {" "}
               {Array.from({ length: 24 }).map((_, i) => {
@@ -1467,7 +1199,7 @@ const RevenuePage = () => {
                   <option
                     key={value}
                     value={value}
-                    className="bg-[#0a0c10] text-white"
+                    className="bg-white text-[#0d0d0d]"
                   >
                     {" "}
                     {label}{" "}
@@ -1484,18 +1216,18 @@ const RevenuePage = () => {
             {categories.map((cat) => (
               <div
                 key={cat.id}
-                className="flex items-center gap-4 bg-[#0a0c10] p-4 rounded-xl border border-white/5"
+                className="flex items-center gap-4 bg-white p-4 rounded-xl border border-[#e6e6e6]"
               >
                 {" "}
                 <div
-                  className="w-1/3 text-xs font-light tracking-[0.08em] text-white/80"
+                  className="w-1/3 text-xs font-light tracking-[0.08em] text-[#0d0d0d]"
                   style={{ fontFamily: "Inter, sans-serif", fontWeight: 500 }}
                 >
                   {cat.name}
                 </div>{" "}
                 <div className="relative flex-1">
                   {" "}
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 font-mono">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#666666] font-mono">
                     ₹
                   </span>{" "}
                   <input
@@ -1509,7 +1241,7 @@ const RevenuePage = () => {
                       })
                     }
                     placeholder="0.00"
-                    className="w-full bg-white/5 border border-white/10 rounded-lg pl-8 pr-4 py-2 focus:outline-none focus:border-red-400/50 transition-colors text-white font-mono"
+                    className="revenue-input-dark w-full rounded-lg pl-8 pr-4 py-2 focus:outline-none focus:border-red-400/50 transition-colors text-[#0d0d0d] font-mono"
                   />{" "}
                 </div>{" "}
                 <button
@@ -1517,7 +1249,7 @@ const RevenuePage = () => {
                   onClick={() => requestRemoveCategory(cat)}
                   disabled={removingCategoryId === cat.id}
                   aria-label={`Delete ${cat.name} field`}
-                  className="native-inline-btn p-1.5 rounded-md border border-white/10 text-white/45 hover:text-red-300 hover:border-red-300/30 transition-colors disabled:opacity-50"
+                  className="native-inline-btn p-1.5 rounded-md border border-[#e6e6e6] text-[#666666] hover:text-red-500 hover:border-red-300/30 transition-colors disabled:opacity-50"
                 >
                   <X size={14} />
                 </button>
@@ -1528,7 +1260,7 @@ const RevenuePage = () => {
               <button
                 onClick={handleSaveExpenses}
                 disabled={savingExpenses}
-                className="bg-white text-black font-light tracking-[0.05em] dm-sans-copy px-8 py-3 rounded-xl text-xs hover:bg-white/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+                className="bg-white text-black font-light tracking-[0.05em] dm-sans-copy px-8 py-3 rounded-xl text-xs hover:bg-[#f4f4f4] border border-[#e6e6e6] transition-colors disabled:opacity-50 flex items-center gap-2"
               >
                 {" "}
                 {savingExpenses ? "Saving..." : "Save Ledger"}{" "}
@@ -1536,10 +1268,10 @@ const RevenuePage = () => {
             </div>{" "}
             <form
               onSubmit={handleAddCategory}
-              className="bg-[#0a0c10] border border-white/5 p-2 rounded-xl w-fit"
+              className="bg-white border border-[#e6e6e6] p-2 rounded-xl w-fit"
             >
               {" "}
-              <p className="text-xs font-light tracking-[0.08em] dm-sans-copy text-white/40 mb-3">
+              <p className="text-xs font-light tracking-[0.08em] dm-sans-copy revenue-panel-muted mb-3">
                 Add Custom Category
               </p>{" "}
               <div className="flex gap-2">
@@ -1549,11 +1281,11 @@ const RevenuePage = () => {
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
                   placeholder="e.g. Marketing"
-                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs font-light tracking-[0.08em] dm-sans-copy text-white focus:outline-none focus:border-emerald-500/50"
+                  className="flex-1 bg-white border border-[#e0e0e0] rounded-lg px-3 py-2 text-xs font-light tracking-[0.08em] dm-sans-copy text-[#0d0d0d] focus:outline-none focus:border-emerald-500/50"
                 />{" "}
                 <button
                   type="submit"
-                  className="bg-white/10 hover:bg-white/20 px-3 rounded-lg text-white transition-colors"
+                  className="bg-[#f4f4f4] hover:bg-[#ececec] px-3 rounded-lg text-[#0d0d0d] transition-colors"
                 >
                   {" "}
                   <Plus size={14} />{" "}
@@ -1563,19 +1295,19 @@ const RevenuePage = () => {
           </div>{" "}
           <div className="space-y-6">
             {" "}
-            <div className="bg-[#0a0c10] border border-white/5 p-6 rounded-xl space-y-6">
+            <div className="bg-white border border-[#e6e6e6] p-6 rounded-xl space-y-6 shadow-sm">
               {" "}
               <div className="grid grid-cols-2 gap-6">
                 {" "}
                 <div>
                   {" "}
                   <h4
-                    className="text-xs tracking-[0.08em] text-white/40 mb-1"
+                    className="text-xs tracking-[0.08em] revenue-panel-muted mb-1"
                     style={{ fontFamily: "Inter, sans-serif", fontWeight: 500 }}
                   >
                     Selected Month Revenue
                   </h4>{" "}
-                  <p className="text-3xl font-bold text-white tracking-tight">
+                  <p className="text-3xl font-bold text-[#0d0d0d] tracking-tight">
                     ₹
                     {(
                       revenueData[expenseMonth.getMonth()]?.revenue || 0
@@ -1585,20 +1317,20 @@ const RevenuePage = () => {
                 <div>
                   {" "}
                   <h4
-                    className="text-xs tracking-[0.08em] text-white/40 mb-1"
+                    className="text-xs tracking-[0.08em] revenue-panel-muted mb-1"
                     style={{ fontFamily: "Inter, sans-serif", fontWeight: 500 }}
                   >
                     Total Expenses
                   </h4>{" "}
-                  <p className="text-3xl font-bold text-red-400 tracking-tight">
+                  <p className="text-3xl font-bold text-red-500 tracking-tight">
                     ₹{expenseTotal.toLocaleString()}
                   </p>{" "}
                 </div>{" "}
               </div>{" "}
-              <div className="pt-6 border-t border-white/5">
+              <div className="pt-6 border-t border-[#e6e6e6]">
                 {" "}
                 <h4
-                  className="text-xs tracking-[0.08em] text-white/40 mb-1"
+                  className="text-xs tracking-[0.08em] revenue-panel-muted mb-1"
                   style={{ fontFamily: "Inter, sans-serif", fontWeight: 500 }}
                 >
                   Net Profit (
@@ -1607,7 +1339,7 @@ const RevenuePage = () => {
                   })}
                   )
                 </h4>{" "}
-                <p className="text-2xl font-bold text-white tracking-tight">
+                <p className="text-2xl font-bold text-[#0d0d0d] tracking-tight">
                   {" "}
                   ₹
                   {(
@@ -1616,10 +1348,10 @@ const RevenuePage = () => {
                   ).toLocaleString()}{" "}
                 </p>{" "}
               </div>{" "}
-              <div className="pt-6 border-t border-white/5">
+              <div className="pt-6 border-t border-[#e6e6e6]">
                 {" "}
                 <h4
-                  className="text-xs tracking-[0.08em] text-white/40 mb-3"
+                  className="text-xs tracking-[0.08em] revenue-panel-muted mb-3"
                   style={{ fontFamily: "Inter, sans-serif", fontWeight: 500 }}
                 >
                   Annual Overview ({expenseMonth.getFullYear()})
@@ -1627,24 +1359,24 @@ const RevenuePage = () => {
                 <div className="flex justify-between items-center mb-2">
                   {" "}
                   <span
-                    className="text-xs text-white/40 tracking-[0.08em]"
+                    className="text-xs revenue-panel-muted tracking-[0.08em]"
                     style={{ fontFamily: "Inter, sans-serif", fontWeight: 500 }}
                   >
                     YTD Expenses
                   </span>{" "}
-                  <span className="text-sm font-bold text-red-400">
+                  <span className="text-sm font-bold text-red-500">
                     ₹{annualExpenseTotal.toLocaleString()}
                   </span>{" "}
                 </div>{" "}
                 <div className="flex justify-between items-center">
                   {" "}
                   <span
-                    className="text-xs text-white/40 tracking-[0.08em]"
+                    className="text-xs revenue-panel-muted tracking-[0.08em]"
                     style={{ fontFamily: "Inter, sans-serif", fontWeight: 500 }}
                   >
                     YTD Net Profit
                   </span>{" "}
-                  <span className="text-sm font-bold text-white">
+                  <span className="text-sm font-bold text-[#0d0d0d]">
                     {" "}
                     ₹
                     {(
@@ -1672,32 +1404,29 @@ const RevenuePage = () => {
 
       <section
         ref={summariesSectionRef}
-        className="revenue-card bg-[#151921] border border-white/5 p-6 md:p-10 rounded-2xl shadow-lg shadow-black/5 mb-10"
+        className="revenue-chart-bg border border-[#e6e6e6] p-6 md:p-10 rounded-2xl shadow-sm mb-10"
       >
         {" "}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 mb-8">
           <div>
-            <h3 className="revenue-header-title text-xl font-normal tracking-[0.02em] text-white">
+            <h3 className="revenue-header-title text-xl font-normal tracking-[0.02em] text-[#0d0d0d]">
               Monthly Revenue Summaries
             </h3>
-            <p className="text-xs tracking-[0.08em] text-white/40 font-light dm-sans-copy">
-              Generate and review month-wise totals for revenue, subscriptions, expenses, and net profit
-            </p>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-            <div className="flex items-center gap-2 bg-[#0a0c10] border border-white/10 rounded-lg px-3 py-2">
-              <Calendar size={14} className="text-white/50" />
+            <div className="flex items-center gap-2 bg-white border border-[#e6e6e6] rounded-lg px-3 py-2">
+              <Calendar size={14} className="text-[#666666]" />
               <select
                 value={`${selectedSummaryMonth.getFullYear()}-${String(selectedSummaryMonth.getMonth() + 1).padStart(2, "0")}`}
                 onChange={(e) => {
                   const [year, month] = e.target.value.split("-");
                   setSelectedSummaryMonth(new Date(Number(year), Number(month) - 1, 1));
                 }}
-                className="bg-transparent text-white text-xs tracking-[0.08em] font-light dm-sans-copy focus:outline-none app-scrollbar"
+                className="bg-transparent text-[#0d0d0d] text-xs tracking-[0.08em] font-light dm-sans-copy focus:outline-none app-scrollbar"
               >
                 {summaryMonthOptions.map((option) => (
-                  <option key={option.value} value={option.value} className="bg-[#0a0c10] text-white">
+                  <option key={option.value} value={option.value} className="bg-white text-[#0d0d0d]">
                     {option.label}
                   </option>
                 ))}
@@ -1707,7 +1436,7 @@ const RevenuePage = () => {
             <button
               onClick={() => generateMonthlySummary(selectedSummaryMonth)}
               disabled={generatingForMonth}
-              className="px-6 py-3 bg-white text-black rounded-xl text-xs tracking-[0.05em] font-light dm-sans-copy hover:bg-white/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="px-6 py-3 bg-white text-black rounded-xl text-xs tracking-[0.05em] font-light dm-sans-copy hover:bg-[#f4f4f4] border border-[#e6e6e6] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <RotateCw size={14} className={generatingForMonth ? "animate-spin" : ""} />
               {generatingForMonth ? "Generating..." : "Generate"}
@@ -1724,7 +1453,7 @@ const RevenuePage = () => {
         {loadingSummaries ? (
           <MonthlySummaryCard isLoading />
         ) : monthlySummaries.length === 0 ? (
-          <div className="bg-[#0a0c10] border border-white/10 rounded-xl p-6 text-center text-white/40 text-xs tracking-[0.08em]">
+          <div className="bg-white border border-[#e6e6e6] rounded-xl p-6 text-center text-[#666666] text-xs tracking-[0.08em]">
             No monthly summaries yet. Choose a month and click Generate.
           </div>
         ) : (
@@ -1759,16 +1488,18 @@ const RevenuePage = () => {
         />
       </section>{" "}
       {/* Comparison Bar Diagram */}{" "}
-      <section className="revenue-card bg-[#151921] border border-white/5 p-6 md:p-10 rounded-2xl shadow-lg shadow-black/5 mb-10">
+      <section className="revenue-chart-bg border border-[#e6e6e6] p-6 md:p-10 rounded-2xl shadow-sm mb-10">
         {" "}
         <div className="flex justify-between items-center mb-10">
           {" "}
           <div>
             {" "}
-            <h3 className="revenue-header-title text-xl font-normal tracking-[0.02em]">
+            <h3
+              className="revenue-header-title text-xl font-normal tracking-[0.02em] text-[#0d0d0d]"
+            >
               Income Distribution
             </h3>{" "}
-            <p className="text-xs tracking-[0.08em] text-white/40 font-light dm-sans-copy">
+            <p className="text-xs tracking-[0.08em] revenue-panel-muted font-light dm-sans-copy">
               Comparison by Membership Level
             </p>{" "}
           </div>{" "}
@@ -1777,11 +1508,11 @@ const RevenuePage = () => {
           {" "}
           <ResponsiveContainer width="100%" height="100%">
             {" "}
-            <BarChart data={durationStats}>
+              <BarChart data={durationStats}>
               {" "}
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke="#d9d9d9"
+                stroke="#e5e7eb"
                 vertical={false}
               />{" "}
               <XAxis
@@ -1792,10 +1523,10 @@ const RevenuePage = () => {
               />{" "}
               <YAxis hide />{" "}
               <Tooltip
-                cursor={{ fill: "rgba(0,0,0,0.03)" }}
+                cursor={{ fill: "rgba(17,24,39,0.03)" }}
                 contentStyle={{
                   backgroundColor: "#ffffff",
-                  border: "1px solid rgba(0,0,0,0.08)",
+                  border: "1px solid #e6e6e6",
                   borderRadius: "1rem",
                 }}
               />{" "}

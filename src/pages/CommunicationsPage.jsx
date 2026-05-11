@@ -332,21 +332,42 @@ const CommunicationsPage = () => {
     }
   };
   return (
-    <div className="app-page flex-1 p-8 overflow-auto bg-[#0a0c10] text-white">
+    <div className="app-page communications-page-vibe flex-1 p-8 overflow-auto">
       {" "}
       <div className="max-w-5xl mx-auto">
         {" "}
+        <style>{`
+          .communications-page-vibe {
+            background-color: #ffffff !important;
+            color: #0d0d0d;
+            min-height: 100vh;
+          }
+          .communications-header-title {
+            font-family: 'Playfair Display', serif;
+            font-weight: 400;
+            color: #0d0d0d;
+          }
+          .communications-subtle {
+            color: #666666;
+          }
+          .communications-send-btn {
+            @apply !bg-white !text-[#0d0d0d] !border !border-[#e0e0e0] rounded-xl;
+          }
+          .communications-send-btn:hover {
+            @apply !bg-[#f4f4f4] !border-[#d0d0d0];
+          }
+        `}</style>
         <header className="mb-12 space-y-6">
           {" "}
           <div>
             {" "}
-            <p className="text-[10px] tracking-[0.08em] text-white/40 dm-sans-light-008 mb-2">
+            <p className="text-[10px] tracking-[0.08em] communications-subtle dm-sans-light-008 mb-2">
               Communication engine
             </p>{" "}
-            <h1 className="text-4xl md:text-5xl font-medium tracking-tighter text-white">
+            <h1 className="communications-header-title text-4xl md:text-5xl font-medium tracking-tighter text-[#0d0d0d]">
               Communications
             </h1>{" "}
-            <p className="text-[10px] text-white/40 mt-2 font-mono tracking-widest">
+            <p className="text-[10px] communications-subtle mt-2 font-mono tracking-widest">
               Broadcast & Automation center
             </p>{" "}
           </div>{" "}
@@ -365,8 +386,8 @@ const CommunicationsPage = () => {
                 }}
                 className={`px-4 md:px-6 py-3 rounded-xl text-xs tracking-[0.05em] font-light dm-sans-copy whitespace-nowrap transition-colors border ${
                   isActive
-                    ? "bg-[#151921] text-white border-white/10"
-                    : "bg-white/90 text-black border-white/90 hover:bg-white"
+                    ? "bg-white text-[#0d0d0d] border-[#e0e0e0]"
+                    : "bg-[#fbfbfb] text-[#666666] border-[#e0e0e0] hover:bg-[#f4f4f4]"
                 }`}
               >
                 {label}
@@ -377,8 +398,8 @@ const CommunicationsPage = () => {
         <div
           className="tab-panel flex-1 relative z-[5]"
           style={{
-            backgroundColor: "#0a0c10",
-            border: "1.5px solid rgba(255,255,255,0.1)",
+            backgroundColor: "#ffffff",
+            border: "1.5px solid #e6e6e6",
             borderRadius: "12px",
             padding: "28px",
             minHeight: "220px",
@@ -386,7 +407,7 @@ const CommunicationsPage = () => {
         >
         {status && (
           <div
-            className={`mb-8 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 ${status.type === "success" ? "bg-white/5 text-white/80 border border-white/20" : "bg-red-500/10 text-red-400 border border-red-500/20"}`}
+            className={`mb-8 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 ${status.type === "success" ? "bg-white text-[#0d0d0d] border border-[#e0e0e0]" : "bg-red-500/10 text-red-400 border border-red-500/20"}`}
           >
             {" "}
             {status.type === "success" ? (
@@ -402,63 +423,63 @@ const CommunicationsPage = () => {
             {" "}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 mb-6 max-w-[860px]">
               {" "}
-              <div className="bg-[#151920] border border-white/10 px-4 py-3.5 rounded-xl transition-colors">
+              <div className="bg-[#fbfbfb] border border-[#e6e6e6] px-4 py-3.5 rounded-xl transition-colors">
                 {" "}
                 <div className="flex items-start justify-between gap-3">
                   {" "}
                   <div>
-                    <p className="text-[13px] tracking-[0.02em] text-white/65 font-light">
+                    <p className="text-[13px] tracking-[0.02em] text-[#666666] font-light">
                       Total reach
                     </p>
-                    <p className="mt-1 text-[34px] leading-none font-light text-white tracking-tight">
+                    <p className="mt-1 text-[34px] leading-none font-light text-[#0d0d0d] tracking-tight">
                       {statsLoading || !stats ? "--" : stats.total}
                     </p>
                   </div>{" "}
-                  <div className="w-12 h-12 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-center">
-                    <Users className="w-5 h-5 text-white/65" />
+                  <div className="w-12 h-12 rounded-xl bg-white border border-[#e0e0e0] flex items-center justify-center">
+                    <Users className="w-5 h-5 text-[#666666]" />
                   </div>
                 </div>
-                <p className="mt-2 text-[10px] tracking-[0.08em] text-white/40 dm-sans-light-008">
+                <p className="mt-2 text-[10px] tracking-[0.08em] communications-subtle dm-sans-light-008">
                   Contacts in system
                 </p>
               </div>{" "}
-              <div className="bg-[#151920] border border-white/10 px-4 py-3.5 rounded-xl transition-colors">
+              <div className="bg-[#fbfbfb] border border-[#e6e6e6] px-4 py-3.5 rounded-xl transition-colors">
                 {" "}
                 <div className="flex items-start justify-between gap-3">
                   {" "}
                   <div>
-                    <p className="text-[13px] tracking-[0.02em] text-white/65 font-light">
+                    <p className="text-[13px] tracking-[0.02em] text-[#666666] font-light">
                       Active members
                     </p>
-                    <p className="mt-1 text-[34px] leading-none font-light text-white tracking-tight">
+                    <p className="mt-1 text-[34px] leading-none font-light text-[#0d0d0d] tracking-tight">
                       {statsLoading || !stats ? "--" : stats.active}
                     </p>
                   </div>{" "}
-                  <div className="w-12 h-12 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-center">
-                    <CheckCircle2 className="w-5 h-5 text-white/65" />
+                  <div className="w-12 h-12 rounded-xl bg-white border border-[#e0e0e0] flex items-center justify-center">
+                    <CheckCircle2 className="w-5 h-5 text-[#666666]" />
                   </div>
                 </div>
-                <p className="mt-2 text-[10px] tracking-[0.08em] text-white/40 dm-sans-light-008">
+                <p className="mt-2 text-[10px] tracking-[0.08em] communications-subtle dm-sans-light-008">
                   Eligible for broadcast
                 </p>
               </div>{" "}
-              <div className="bg-[#151920] border border-white/10 px-4 py-3.5 rounded-xl transition-colors">
+              <div className="bg-[#fbfbfb] border border-[#e6e6e6] px-4 py-3.5 rounded-xl transition-colors">
                 {" "}
                 <div className="flex items-start justify-between gap-3">
                   {" "}
                   <div>
-                    <p className="text-[13px] tracking-[0.02em] text-white/65 font-light">
+                    <p className="text-[13px] tracking-[0.02em] text-[#666666] font-light">
                       Expired plans
                     </p>
-                    <p className="mt-1 text-[34px] leading-none font-light text-white tracking-tight">
+                    <p className="mt-1 text-[34px] leading-none font-light text-[#0d0d0d] tracking-tight">
                       {statsLoading || !stats ? "--" : stats.expired}
                     </p>
                   </div>{" "}
-                  <div className="w-12 h-12 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-center">
-                    <AlertCircle className="w-5 h-5 text-white/65" />
+                  <div className="w-12 h-12 rounded-xl bg-white border border-[#e0e0e0] flex items-center justify-center">
+                    <AlertCircle className="w-5 h-5 text-[#666666]" />
                   </div>
                 </div>{" "}
-                <p className="mt-2 text-[10px] tracking-[0.08em] text-white/40 dm-sans-light-008">
+                <p className="mt-2 text-[10px] tracking-[0.08em] communications-subtle dm-sans-light-008">
                   Re-engagement pool
                 </p>
               </div>{" "}
@@ -469,19 +490,19 @@ const CommunicationsPage = () => {
                 {" "}
                 <form
                   onSubmit={handleSend}
-                  className="border border-white/10 bg-[#1A1A1A] rounded-2xl p-5 sm:p-8 space-y-6"
+                  className="border border-[#e6e6e6] bg-[#fbfbfb] rounded-2xl p-5 sm:p-8 space-y-6"
                 >
                   {" "}
-                  <div className="flex items-center gap-3 pb-5 border-b border-white/10">
+                  <div className="flex items-center gap-3 pb-5 border-b border-[#e6e6e6]">
                     {" "}
-                    <Mail className="w-5 h-5 text-white" />{" "}
-                    <h2 className="text-xl sm:text-2xl tracking-tight text-white font-light dm-sans-copy normal-case">
+                    <Mail className="w-5 h-5 text-[#0d0d0d]" />{" "}
+                    <h2 className="communications-header-title text-xl sm:text-2xl tracking-tight text-[#0d0d0d] font-light normal-case" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
                       New broadcast
                     </h2>{" "}
                   </div>{" "}
                   <div className="space-y-2">
                     {" "}
-                    <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
+                    <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 communications-subtle">
                       Recipient group
                     </label>{" "}
                     <div className="flex flex-wrap gap-2"> 
@@ -494,8 +515,8 @@ const CommunicationsPage = () => {
                             onClick={() => setRecipientGroup(group)}
                             className={`px-4 md:px-5 py-2.5 rounded-xl text-xs tracking-[0.05em] font-light dm-sans-copy whitespace-nowrap transition-colors border ${
                               isActiveGroup
-                                ? "bg-[#151921] text-white border-white/10"
-                                : "bg-white/90 text-black border-white/90 hover:bg-white"
+                                ? "bg-white text-[#0d0d0d] border-[#e0e0e0]"
+                                : "bg-[#fbfbfb] text-[#666666] border-[#e0e0e0] hover:bg-[#f4f4f4]"
                             }`}
                           >
                             {group.charAt(0) + group.slice(1).toLowerCase()}
@@ -506,7 +527,7 @@ const CommunicationsPage = () => {
                   </div>{" "}
                   <div className="space-y-2">
                     {" "}
-                    <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
+                    <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 communications-subtle">
                       Subject line
                     </label>{" "}
                     <input
@@ -515,12 +536,12 @@ const CommunicationsPage = () => {
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
                       placeholder="e.g., Special Offer for Renewals!"
-                      className="w-full bg-transparent border-b border-white/15 py-2 text-sm text-white placeholder:text-white/25 outline-none dm-sans-light-008"
+                      className="w-full bg-transparent border-b border-[#e0e0e0] py-2 text-sm text-[#0d0d0d] placeholder:text-[#a0a0a0] outline-none dm-sans-light-008"
                     />{" "}
                   </div>{" "}
                   <div className="space-y-2">
                     {" "}
-                    <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 text-white/40">
+                    <label className="text-[10px] tracking-[0.08em] dm-sans-light-008 communications-subtle">
                       Message content
                     </label>{" "}
                     <textarea
@@ -530,14 +551,14 @@ const CommunicationsPage = () => {
                       onChange={(e) => setMessage(e.target.value)}
                       onInput={autoResizeTextarea}
                       placeholder="Type your message here..."
-                      className="w-full bg-transparent border-b border-white/15 py-2 text-sm text-white placeholder:text-white/25 outline-none overflow-hidden leading-relaxed dm-sans-light-008"
+                      className="w-full bg-transparent border-b border-[#e0e0e0] py-2 text-sm text-[#0d0d0d] placeholder:text-[#a0a0a0] outline-none overflow-hidden leading-relaxed dm-sans-light-008"
                       style={{ minHeight: "84px" }}
                     />{" "}
                   </div>{" "}
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-white text-black py-4 text-[10px] tracking-[0.08em] dm-sans-light-008 font-medium disabled:opacity-40"
+                    className="broadcast-send-btn communications-send-btn w-full py-4 text-[10px] tracking-[0.08em] dm-sans-light-008 font-medium disabled:opacity-40"
                   >
                     {loading ? "Sending..." : "Send Broadcast"}
                   </button>{" "}
@@ -545,25 +566,25 @@ const CommunicationsPage = () => {
               </div>{" "}
               <div className="space-y-8">
                 {" "}
-                <div className="bg-[#1B1B1D] border border-white/5 p-6 rounded-2xl hover:border-emerald-500/20 transition-colors">
+                <div className="bg-[#fbfbfb] border border-[#e6e6e6] p-6 rounded-2xl hover:border-emerald-500/20 transition-colors">
                   {" "}
-                  <div className="flex items-center gap-3 mb-4 text-[#A1A1A3] text-[10px] tracking-[0.08em] dm-sans-light-008">
+                  <div className="flex items-center gap-3 mb-4 communications-subtle text-[10px] tracking-[0.08em] dm-sans-light-008">
                     {" "}
-                    <History className="w-4 h-4 text-white" />{" "}
-                    <h3 className="font-light tracking-[0.08em] dm-sans-light-008">Mailing Tips</h3>{" "}
+                    <History className="w-4 h-4 text-[#0d0d0d]" />{" "}
+                    <h3 className="communications-header-title font-light tracking-[0.08em] dm-sans-light-008" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600, fontSize: "1.125rem" }}>Mailing Tips</h3>{" "}
                   </div>{" "}
-                  <ul className="space-y-4 text-xs text-[#A1A1A3] leading-relaxed dm-sans-light-008 tracking-[0.08em]">
+                  <ul className="space-y-4 text-xs communications-subtle leading-relaxed dm-sans-light-008 tracking-[0.08em]">
                     {" "}
                     <li className="flex gap-3">
-                      <div className="w-1.5 h-1.5 rounded-full bg-white mt-1.5 flex-shrink-0" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#0d0d0d] mt-1.5 flex-shrink-0" />
                       Keep subjects short and exciting to improve open rates.
                     </li>{" "}
                     <li className="flex gap-3">
-                      <div className="w-1.5 h-1.5 rounded-full bg-white mt-1.5 flex-shrink-0" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#0d0d0d] mt-1.5 flex-shrink-0" />
                       Personalize messages using the member's first name.
                     </li>{" "}
                     <li className="flex gap-3">
-                      <div className="w-1.5 h-1.5 rounded-full bg-white mt-1.5 flex-shrink-0" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#0d0d0d] mt-1.5 flex-shrink-0" />
                       Always include a clear call-to-action (CTA).
                     </li>{" "}
                   </ul>{" "}
@@ -580,25 +601,25 @@ const CommunicationsPage = () => {
                 {" "}
                 <form
                   onSubmit={handleSaveTemplate}
-                  className="p-5 rounded-2xl space-y-4"
+                  className="p-5 rounded-2xl space-y-4 bg-[#fbfbfb] border border-[#e6e6e6]"
                 >
                   {" "}
                   <div
-                    className="flex items-center gap-1.5 pb-2 border-b border-white/5 text-white tracking-[0.01em] font-light"
+                    className="flex items-center gap-1.5 pb-2 border-b border-[#e6e6e6] text-[#0d0d0d] tracking-[0.01em] font-light"
                     style={{ fontFamily: "DM Sans, sans-serif" }}
                   >
                     {" "}
-                    <AlertCircle className="w-5 h-5 text-white" />{" "}
+                    <AlertCircle className="w-5 h-5 text-[#0d0d0d]" />{" "}
                     <h2
-                      className="text-xl font-light tracking-[0.01em] text-white h-7"
-                      style={{ fontFamily: "DM Sans, sans-serif" }}
+                      className="communications-header-title text-xl font-light tracking-[0.01em] text-[#0d0d0d] h-7"
+                      style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}
                     >
                       Expiry reminders
                     </h2>{" "}
                   </div>{" "}
                   <div className="space-y-1.5">
                     {" "}
-                    <label className="text-xs font-light tracking-[0.08em] text-white/40">
+                    <label className="text-xs font-light tracking-[0.08em] communications-subtle">
                       Email subject
                     </label>{" "}
                     <input
@@ -608,17 +629,17 @@ const CommunicationsPage = () => {
                       onChange={(e) =>
                         setTemplate({ ...template, subject: e.target.value })
                       }
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-500/50 transition-colors text-white text-sm"
+                      className="w-full bg-white border border-[#e0e0e0] rounded-xl px-4 py-2.5 focus:outline-none focus:border-black/20 transition-colors text-[#0d0d0d] text-sm"
                     />{" "}
                   </div>{" "}
                   <div className="space-y-1.5">
                     {" "}
                     <div className="flex justify-between items-center">
                       {" "}
-                      <label className="text-xs font-light tracking-[0.08em] text-white/40">
+                      <label className="text-xs font-light tracking-[0.08em] communications-subtle">
                         Message body
                       </label>{" "}
-                      <span className="text-[10px] text-white/60 font-mono italic">
+                      <span className="text-[10px] communications-subtle font-mono italic">
                         Use {"{first_name}"}
                       </span>{" "}
                     </div>{" "}
@@ -629,13 +650,13 @@ const CommunicationsPage = () => {
                       onChange={(e) =>
                         setTemplate({ ...template, body_text: e.target.value })
                       }
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-500/50 transition-colors resize-none text-white text-sm font-serif leading-relaxed"
+                      className="w-full bg-white border border-[#e0e0e0] rounded-xl px-4 py-2.5 focus:outline-none focus:border-black/20 transition-colors resize-none text-[#0d0d0d] text-sm font-serif leading-relaxed"
                     />{" "}
                   </div>{" "}
                   <button
                     type="submit"
                     disabled={savingTemplate}
-                    className="broadcast-send-btn"
+                    className="broadcast-send-btn communications-send-btn"
                   >
                     <span className="broadcast-send-btn__label">
                       {savingTemplate ? "Saving..." : "Save template"}
@@ -652,12 +673,12 @@ const CommunicationsPage = () => {
                     </span>
                   </button>{" "}
                 </form>{" "}
-                <div className="p-5 rounded-2xl group bg-white/8 border border-white/10 transition-colors">
+                <div className="p-5 rounded-2xl group bg-[#fbfbfb] border border-[#e6e6e6] transition-colors">
                   {" "}
-                  <h3 className="text-sm font-medium mb-3 text-white tracking-widest">
+                  <h3 className="communications-header-title text-sm font-medium mb-3 text-[#0d0d0d] tracking-widest" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}>
                     How it works
                   </h3>{" "}
-                  <div className="space-y-3 text-xs text-white/50 leading-relaxed font-sans">
+                  <div className="space-y-2 text-xs communications-subtle leading-relaxed font-sans">
                     {" "}
                     <p>
                       Every night at <strong>00:01 AM</strong>, our server scans
@@ -670,7 +691,7 @@ const CommunicationsPage = () => {
                     </p>{" "}
                     <p>
                       Use placeholders like{" "}
-                      <code className="text-white/60">{"{first_name}"}</code>{" "}
+                      <code className="text-[#666666]">{"{first_name}"}</code>{" "}
                       to personalize.
                     </p>{" "}
                   </div>{" "}
@@ -678,17 +699,17 @@ const CommunicationsPage = () => {
               </div>{" "}
               <div>
                 {" "}
-                <div className="p-5 rounded-2xl space-y-4">
+                <div className="p-5 rounded-2xl space-y-4 bg-[#fbfbfb] border border-[#e6e6e6]">
                   {" "}
                   <div
-                    className="flex items-center gap-1.5 pb-2 border-b border-white/5 text-white tracking-[0.01em] font-light"
+                    className="flex items-center gap-1.5 pb-2 border-b border-[#e6e6e6] text-[#0d0d0d] tracking-[0.01em] font-light"
                     style={{ fontFamily: "DM Sans, sans-serif" }}
                   >
                     {" "}
-                    <AlertCircle className="w-5 h-5 text-white" />{" "}
+                    <AlertCircle className="w-5 h-5 text-[#0d0d0d]" />{" "}
                     <h2
-                      className="text-xl font-light tracking-[0.01em] text-white h-7"
-                      style={{ fontFamily: "DM Sans, sans-serif" }}
+                      className="communications-header-title text-xl font-light tracking-[0.01em] text-[#0d0d0d] h-7"
+                      style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600 }}
                     >
                       Google review auto-sender
                     </h2>{" "}
@@ -700,7 +721,7 @@ const CommunicationsPage = () => {
                     {" "}
                     <div className="space-y-1.5">
                       {" "}
-                      <label className="text-xs font-light tracking-[0.08em] text-white/40">
+                      <label className="text-xs font-light tracking-[0.08em] communications-subtle">
                         Email subject
                       </label>{" "}
                       <input
@@ -713,17 +734,17 @@ const CommunicationsPage = () => {
                             subject: e.target.value,
                           })
                         }
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-500/50 transition-colors text-white text-sm"
+                        className="w-full bg-white border border-[#e0e0e0] rounded-xl px-4 py-2.5 focus:outline-none focus:border-black/20 transition-colors text-[#0d0d0d] text-sm"
                       />{" "}
                     </div>{" "}
                     <div className="space-y-1.5">
                       {" "}
                       <div className="flex justify-between items-center">
                         {" "}
-                        <label className="text-xs font-light tracking-[0.08em] text-white/40">
+                        <label className="text-xs font-light tracking-[0.08em] communications-subtle">
                           Message body
                         </label>{" "}
-                        <span className="text-[10px] text-white/60 font-mono italic">
+                        <span className="text-[10px] communications-subtle font-mono italic">
                           Use {"{first_name}"} / {"{review_link}"}
                         </span>{" "}
                       </div>{" "}
@@ -737,13 +758,13 @@ const CommunicationsPage = () => {
                             body_text: e.target.value,
                           })
                         }
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-500/50 transition-colors resize-none text-white text-sm font-serif leading-relaxed"
+                        className="w-full bg-white border border-[#e0e0e0] rounded-xl px-4 py-2.5 focus:outline-none focus:border-black/20 transition-colors resize-none text-[#0d0d0d] text-sm font-serif leading-relaxed"
                       />{" "}
                     </div>{" "}
                     <button
                       type="submit"
                       disabled={savingReviewTemplate}
-                      className="broadcast-send-btn"
+                      className="broadcast-send-btn communications-send-btn"
                     >
                       <span className="broadcast-send-btn__label">
                         {savingReviewTemplate ? "Saving..." : "Save template"}
@@ -760,13 +781,13 @@ const CommunicationsPage = () => {
                       </span>
                     </button>{" "}
                   </form>{" "}
-                  <div className="pt-4 border-t border-white/5 bg-white/8 rounded-xl p-4 -mx-5 px-5 mt-10">
+                  <div className="pt-4 border-t border-[#e6e6e6] bg-[#f6f6f6] rounded-xl p-4 -mx-5 px-5 mt-10">
                     {" "}
-                    <p className="text-xs text-white/40 mb-3 leading-relaxed font-sans">
+                    <p className="text-xs communications-subtle mb-3 leading-relaxed font-sans">
                       {" "}
                       New members will instantly receive this request upon
                       registration if you've added your{" "}
-                      <span className="text-white">
+                      <span className="text-[#0d0d0d]">
                         Google Link in Billing - Gym Information
                       </span>
                       . <br />
@@ -778,7 +799,7 @@ const CommunicationsPage = () => {
                       type="button"
                       onClick={handleBroadcastReviews}
                       disabled={broadcastingReview}
-                      className="broadcast-send-btn broadcast-send-btn--wide"
+                      className="broadcast-send-btn broadcast-send-btn--wide communications-send-btn"
                     >
                       <span className="broadcast-send-btn__label">
                         {broadcastingReview

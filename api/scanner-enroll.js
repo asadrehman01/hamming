@@ -24,7 +24,13 @@ const parseBody = (req) => {
 };
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  // Restrict CORS origins via allowlist
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS || "").split(",").map(o => o.trim()).filter(Boolean);
+  const requestOrigin = req.headers?.origin || "";
+  if (allowedOrigins.length && !allowedOrigins.includes(requestOrigin)) {
+    return res.status(403).json({ error: "Forbidden: origin not allowed" });
+  }
+  res.setHeader("Access-Control-Allow-Origin", requestOrigin);
   res.setHeader("Access-Control-Allow-Methods", "POST, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -58,22 +64,34 @@ export default async function handler(req, res) {
       const deviceUserId = String(body?.device_user_id ?? "").trim();
       if (!deviceUserId) return res.status(400).json({ success: false, error: "device_user_id is required." });
 
-      await adminClient.from("scanner_member_map")
+      const { error: delErr } = await adminClient.from("scanner_member_map")
         .delete()
         .eq("user_id", user.id)
         .eq("device_user_id", deviceUserId);
 
+      if (delErr) {
+        console.error("[scanner-enroll] DELETE scanner_member_map failed:", delErr.message);
+      }
+
       // Reset attendance_logs back to unmatched
-      await adminClient.from("attendance_logs")
+      const { error: logErr } = await adminClient.from("attendance_logs")
         .update({ customer_id: null, matched: false, status: "unknown" })
         .eq("user_id", user.id)
         .eq("device_user_id", deviceUserId);
 
+      if (logErr) {
+        console.error("[scanner-enroll] DELETE attendance_logs update failed:", logErr.message);
+      }
+
       // Restore unmatched_scans reviewed flag
-      await adminClient.from("unmatched_scans")
+      const { error: unmErr } = await adminClient.from("unmatched_scans")
         .update({ reviewed: false })
         .eq("user_id", user.id)
         .eq("device_user_id", deviceUserId);
+
+      if (unmErr) {
+        console.error("[scanner-enroll] DELETE unmatched_scans update failed:", unmErr.message);
+      }
 
       return res.status(200).json({ success: true });
     }
@@ -102,11 +120,12 @@ export default async function handler(req, res) {
     const membershipEnd = customer?.membership_end_date ?? null;
 
     // 3. Load all historical attendance_logs for this device UID
+    //    Fixed: use device_user_id (correct column) instead of scanner_uid
     const { data: logs } = await adminClient
       .from("attendance_logs")
       .select("id, scanned_at")
       .eq("user_id", user.id)
-      .eq("scanner_uid", deviceUserId);
+      .eq("device_user_id", deviceUserId);
 
     // 4. Retroactive backfill with correct subscription status per scan
     let backfilled = 0;
@@ -124,24 +143,33 @@ export default async function handler(req, res) {
       // Batch update in chunks of 100
       for (let i = 0; i < updates.length; i += 100) {
         const chunk = updates.slice(i, i + 100);
-        const { data: updated } = await adminClient
+        const { data: updated, error: chunkErr } = await adminClient
           .from("attendance_logs")
           .upsert(chunk)
           .select("id");
-        backfilled += (updated ?? []).length;
+
+        if (chunkErr) {
+          console.error(`[scanner-enroll] Backfill chunk ${i} failed:`, chunkErr.message);
+        } else {
+          backfilled += (updated ?? []).length;
+        }
       }
     }
 
     // 5. Mark unmatched_scans as reviewed
-    await adminClient.from("unmatched_scans")
+    const { error: reviewErr } = await adminClient.from("unmatched_scans")
       .update({ reviewed: true })
       .eq("user_id", user.id)
       .eq("device_user_id", deviceUserId);
+
+    if (reviewErr) {
+      console.error("[scanner-enroll] Mark reviewed failed:", reviewErr.message);
+    }
 
     return res.status(200).json({ success: true, backfilled, device_user_id: deviceUserId, customer_id: customerId });
 
   } catch (err) {
     console.error("[scanner-enroll] Error:", err);
-    return res.status(500).json({ success: false, error: err.message ?? "Unexpected server error" });
+    return res.status(500).json({ success: false, error: "Internal server error" });
   }
 }

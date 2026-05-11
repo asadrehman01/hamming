@@ -6,11 +6,6 @@
  * by comparing the numeric portion of device_user_id to the numeric suffix
  * of each customer's gym_member_id.
  *
- * Examples that match:
- *   device_user_id = "7"    ↔ gym_member_id = "MEM-007" (both numeric = 7)
- *   device_user_id = "42"   ↔ gym_member_id = "GYM-042" (both numeric = 42)
- *   device_user_id = "007"  ↔ gym_member_id = "007"     (both numeric = 7)
- *
  * Returns:
  *   { auto_mapped, still_unmatched, mappings: [{ device_user_id, matched_to_name, matched_to_gym_member_id }] }
  */
@@ -19,7 +14,12 @@ import { getEnv } from "../_env.js";
 import { applyMemberMapping, extractNumericFromMemberId } from "./_scannerMapHelper.js";
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS || "").split(",").map(o => o.trim()).filter(Boolean);
+  const requestOrigin = req.headers?.origin || "";
+  if (allowedOrigins.length && !allowedOrigins.includes(requestOrigin)) {
+    return res.status(403).json({ error: "Forbidden: origin not allowed" });
+  }
+  res.setHeader("Access-Control-Allow-Origin", requestOrigin);
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -69,20 +69,17 @@ export default async function handler(req, res) {
 
     if (ce) throw ce;
 
-    // Build numeric-value → customer lookup (one customer per numeric value)
-    // If two customers share the same numeric suffix, we skip both (ambiguous).
-    const numericMap = new Map(); // numericValue → customer
-    const ambiguous  = new Set(); // numeric values with collisions
+    const numericMap = new Map(); 
+    const ambiguous  = new Set(); 
     for (const c of customers ?? []) {
       const n = extractNumericFromMemberId(c.gym_member_id);
       if (n === null) continue;
       if (numericMap.has(n)) {
-        ambiguous.add(n); // collision — don't auto-map
+        ambiguous.add(n); 
       } else {
         numericMap.set(n, c);
       }
     }
-    // Remove ambiguous entries
     for (const n of ambiguous) numericMap.delete(n);
 
     // ── 3. Also check existing scanner_member_map to skip already-mapped IDs ──
@@ -99,7 +96,7 @@ export default async function handler(req, res) {
     let   stillUnmatched = 0;
 
     for (const deviceId of deviceIds) {
-      if (alreadyMapped.has(deviceId)) continue; // already in scanner_member_map
+      if (alreadyMapped.has(deviceId)) continue; 
 
       const numeric   = parseInt(deviceId, 10);
       const customer  = !isNaN(numeric) ? numericMap.get(numeric) : null;
@@ -132,7 +129,7 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
-    console.error("[scanner/auto-map]", err);
-    return res.status(500).json({ error: err.message ?? "Server error" });
+    console.error("[api/scanner/auto-map] Error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 }

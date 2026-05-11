@@ -89,7 +89,23 @@ export async function previewGymMemberId(userId, adminClient) {
  *   formatMemberId("GYM-", 1000, 3) → "GYM-1000"  (no truncation)
  */
 export function formatMemberId(format, counter, padding) {
-  const n = String(Math.max(1, Math.floor(counter)));
-  const padded = n.length >= padding ? n : n.padStart(padding, "0");
-  return String(format ?? "") + padded;
+  let c = Number(counter);
+  if (!Number.isFinite(c) || isNaN(c)) {
+    c = 1;
+  } else {
+    c = Math.max(1, Math.floor(c));
+  }
+
+  let p = Number(padding);
+  if (!Number.isFinite(p) || isNaN(p)) {
+    p = 0;
+  } else {
+    p = Math.max(0, Math.floor(p));
+  }
+
+  const f = String(format ?? "");
+  const n = String(c);
+  const padded = n.padStart(p, "0");
+  return f + padded;
 }
+

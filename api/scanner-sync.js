@@ -27,7 +27,13 @@ const parseBody = (req) => {
 };
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  // Restrict CORS origins via allowlist
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS || "").split(",").map(o => o.trim()).filter(Boolean);
+  const requestOrigin = req.headers?.origin || "";
+  if (allowedOrigins.length && !allowedOrigins.includes(requestOrigin)) {
+    return res.status(403).json({ error: "Forbidden: origin not allowed" });
+  }
+  res.setHeader("Access-Control-Allow-Origin", requestOrigin);
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -67,6 +73,7 @@ export default async function handler(req, res) {
       .maybeSingle();
 
     if (settingsError) {
+      console.error("[scanner-sync] Failed to load scanner settings:", settingsError.message);
       return res.status(500).json({ success: false, error: "Failed to load scanner settings." });
     }
 
@@ -74,6 +81,11 @@ export default async function handler(req, res) {
     const body = parseBody(req);
     const overrideIp   = String(body?.ip_address ?? "").trim();
     const overridePort = body?.port ? Number(body.port) : null;
+
+    // Validate port if provided
+    if (overridePort !== null && (!Number.isFinite(overridePort) || overridePort < 1 || overridePort > 65535)) {
+      return res.status(400).json({ success: false, error: "Invalid port number. Must be 1-65535." });
+    }
 
     const effectiveScanner = {
       ...(scannerRow ?? {}),
@@ -109,6 +121,6 @@ export default async function handler(req, res) {
 
   } catch (err) {
     console.error("[scanner-sync] Unhandled error:", err);
-    return res.status(500).json({ success: false, error: "An unexpected server error occurred." });
+    return res.status(500).json({ success: false, error: "Internal server error" });
   }
 }

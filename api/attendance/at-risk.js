@@ -8,7 +8,14 @@ import { createClient } from "@supabase/supabase-js";
 import { getEnv } from "../_env.js";
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+// Restrict CORS origins to an allowlist defined in environment variables
+  // Restrict CORS origins to an allowlist defined via environment variable ALLOWED_ORIGINS (comma-separated)
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS || "").split(",").map(o => o.trim()).filter(Boolean);
+  const requestOrigin = req.headers?.origin || "";
+  if (allowedOrigins.length && !allowedOrigins.includes(requestOrigin)) {
+    return res.status(403).json({ error: "Forbidden: origin not allowed" });
+  }
+  res.setHeader("Access-Control-Allow-Origin", requestOrigin);
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -26,7 +33,12 @@ export default async function handler(req, res) {
     const { data: { user }, error: ae } = await createClient(supabaseUrl, supabaseAnonKey).auth.getUser(t);
     if (ae || !user?.id) return res.status(401).json({ error: "Unauthorized" });
 
-    const days = Math.max(1, Number(req.query?.days ?? 14));
+    const raw = req.query?.days;
+    let days = 14;
+    if (raw !== undefined) {
+      const parsed = Number(raw);
+      if (Number.isFinite(parsed) && parsed >= 1) days = Math.floor(parsed);
+    }
     const thresholdDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
     const today = new Date();
     today.setHours(23, 59, 59, 999);
@@ -91,6 +103,6 @@ export default async function handler(req, res) {
       members: atRisk,
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message ?? "Server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 }

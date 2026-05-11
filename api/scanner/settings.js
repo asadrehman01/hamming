@@ -16,7 +16,12 @@ const body = (req) => {
 };
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS || "").split(",").map(o => o.trim()).filter(Boolean);
+  const requestOrigin = req.headers?.origin || "";
+  if (allowedOrigins.length && !allowedOrigins.includes(requestOrigin)) {
+    return res.status(403).json({ error: "Forbidden: origin not allowed" });
+  }
+  res.setHeader("Access-Control-Allow-Origin", requestOrigin);
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -38,7 +43,7 @@ export default async function handler(req, res) {
     if (req.method === "GET") {
       const { data, error } = await admin
         .from("scanner_settings")
-        .select("id, brand, ip_address, port, enabled, sync_interval_minutes, last_synced_at, failed_attempts, last_failed_at")
+        .select("id, brand, ip_address, port, enabled, sync_interval_minutes, last_synced_at, failed_attempts, last_failed_at, last_sync_time")
         .eq("user_id", user.id)
         .maybeSingle();
       if (error) throw error;
@@ -68,6 +73,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ success: true, settings: data });
   } catch (err) {
-    return res.status(500).json({ error: err.message ?? "Server error" });
+    console.error("[api/scanner/settings] Error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 }

@@ -3,19 +3,18 @@
  * POST /api/scanner/map-member
  *
  * Body: { device_user_id: string, customer_id: string }
- *
- * 1. Creates a scanner_member_map row
- * 2. Updates customers.scanner_id
- * 3. Marks unmatched_scans as reviewed
- * 4. Retroactively logs historical attendance_logs (status per scan timestamp)
- * 5. Returns how many scans were retroactively logged
  */
 import { createClient } from "@supabase/supabase-js";
 import { getEnv } from "../_env.js";
 import { applyMemberMapping } from "./_scannerMapHelper.js";
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS || "").split(",").map(o => o.trim()).filter(Boolean);
+  const requestOrigin = req.headers?.origin || "";
+  if (allowedOrigins.length && !allowedOrigins.includes(requestOrigin)) {
+    return res.status(403).json({ error: "Forbidden: origin not allowed" });
+  }
+  res.setHeader("Access-Control-Allow-Origin", requestOrigin);
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -65,7 +64,7 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
-    console.error("[scanner/map-member]", err);
-    return res.status(500).json({ error: err.message ?? "Server error" });
+    console.error("[api/scanner/map-member] Error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 }

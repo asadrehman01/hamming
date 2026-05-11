@@ -5,6 +5,7 @@ import { getUserWithRetry } from "../lib/authUser";
 import { isMigrationOnboardingCompleted } from "../lib/migrationOnboarding";
 import { Mail, AtSign, Link as LinkIcon, Fingerprint, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 import { fetchIdSettings, saveIdSettings, previewMemberId } from "../lib/backendApi";
+import ScannerIntegrationSection from "../components/ScannerIntegrationSection";
 
 const DEFAULT_BILLING_VALUES = {
   receipt_enabled: true,
@@ -346,8 +347,20 @@ const BillingPage = () => {
 
   if (loading) {
     return (
-      <div className="app-page p-4 md:p-10">
-        <div className="p-6 border border-white/10 bg-white/5 text-white/70 text-xs tracking-[0.08em] font-light dm-sans-copy animate-pulse">
+      <div className="app-page billing-page-vibe p-4 md:p-10">
+        <style>{` 
+.billing-page-vibe { background-color: #ffffff !important; color: #0d0d0d; min-height: 100vh; }
+.billing-page-vibe h1, .billing-page-vibe h2, .billing-page-vibe h3 { font-family: 'Playfair Display', serif; font-weight: 400; color: #0d0d0d; letter-spacing: 0.02em; }
+.billing-page-vibe [class*="text-white/"] { color: #666666 !important; }
+.billing-page-vibe [class*="text-white"] { color: #0d0d0d !important; }
+.billing-page-vibe [class*="bg-[#151921]"], .billing-page-vibe [class*="bg-black/20"], .billing-page-vibe [class*="bg-white/5"], .billing-page-vibe [class*="bg-white/10"], .billing-page-vibe [class*="bg-white/[0.05]"], .billing-page-vibe [class*="bg-white/[0.04]"], .billing-page-vibe [class*="bg-white/[0.02]"] { background-color: #fbfbfb !important; }
+.billing-page-vibe [class*="border-white"] { border-color: #e6e6e6 !important; }
+.billing-page-vibe input, .billing-page-vibe select, .billing-page-vibe textarea { background-color: #ffffff !important; color: #0d0d0d !important; border-color: #e0e0e0 !important; }
+.billing-page-vibe input::placeholder, .billing-page-vibe textarea::placeholder { color: #a0a0a0 !important; }
+.billing-page-vibe button { background-color: #ffffff !important; color: #0d0d0d !important; border-color: #e0e0e0 !important; }
+.billing-page-vibe button:hover { background-color: #f4f4f4 !important; }
+`}</style>
+        <div className="p-6 border border-[#e6e6e6] bg-[#fbfbfb] text-[#666666] text-xs tracking-[0.08em] font-light dm-sans-copy animate-pulse">
           Loading billing settings...
         </div>
       </div>
@@ -355,16 +368,28 @@ const BillingPage = () => {
   }
 
   return (
-    <div className="app-page p-4 md:px-10 md:pt-10">
+    <div className="app-page billing-page-vibe p-4 md:px-10 md:pt-10">
+      <style>{` 
+.billing-page-vibe { background-color: #ffffff !important; color: #0d0d0d; min-height: 100vh; }
+.billing-page-vibe h1, .billing-page-vibe h2, .billing-page-vibe h3 { font-family: 'Playfair Display', serif; font-weight: 400; color: #0d0d0d; letter-spacing: 0.02em; }
+.billing-page-vibe [class*="text-white/"] { color: #666666 !important; }
+.billing-page-vibe [class*="text-white"] { color: #0d0d0d !important; }
+.billing-page-vibe [class*="bg-[#151921]"], .billing-page-vibe [class*="bg-black/20"], .billing-page-vibe [class*="bg-white/5"], .billing-page-vibe [class*="bg-white/10"], .billing-page-vibe [class*="bg-white/[0.05]"], .billing-page-vibe [class*="bg-white/[0.04]"], .billing-page-vibe [class*="bg-white/[0.02]"] { background-color: #fbfbfb !important; }
+.billing-page-vibe [class*="border-white"] { border-color: #e6e6e6 !important; }
+.billing-page-vibe input, .billing-page-vibe select, .billing-page-vibe textarea { background-color: #ffffff !important; color: #0d0d0d !important; border-color: #e0e0e0 !important; }
+.billing-page-vibe input::placeholder, .billing-page-vibe textarea::placeholder { color: #a0a0a0 !important; }
+.billing-page-vibe button { background-color: #ffffff !important; color: #0d0d0d !important; border-color: #e0e0e0 !important; }
+.billing-page-vibe button:hover { background-color: #f4f4f4 !important; }
+`}</style>
       <div className="w-full max-w-4xl mx-auto space-y-6">
         <header className="space-y-2">
           <p className="text-xs tracking-[0.2em] text-white/45 dm-sans-light-008">
             Billing
           </p>
-          <h1 className="text-4xl md:text-5xl font-medium tracking-tighter text-white">
+          <h1 className="billing-header-title text-4xl md:text-5xl font-medium tracking-tighter text-white">
             Receipt Settings
           </h1>
-          <p className="text-sm text-white/55 dm-sans-light-008">
+          <p className="text-[13px] leading-snug text-white/55 dm-sans-light-008">
             Configure your gym receipt template and control whether receipts are sent automatically for new applications created inside this app.
           </p>
         </header>
@@ -513,7 +538,7 @@ const BillingPage = () => {
             </div>
 
             <div className="space-y-3 md:col-span-2">
-              <p className="text-[20px] md:text-[24px] tracking-tight text-white" style={{ fontFamily: "Helvetica, Arial, sans-serif" }}>
+              <p className="billing-header-title text-[20px] md:text-[24px] tracking-tight text-white">
                 Gym Information
               </p>
               <p className="dm-sans-light-008 text-[10px] text-white/45">
@@ -589,7 +614,7 @@ const BillingPage = () => {
         <div className="rounded-2xl border border-white/10 bg-[#151921] p-5 md:px-7 md:pt-7 pb-7 space-y-5 mt-4">
           <div className="flex items-center gap-2 pb-1 border-b border-white/[0.06]">
             <Fingerprint size={15} className="text-indigo-400" />
-            <h2 className="dm-sans-light-008 text-[11px] uppercase tracking-[0.12em] text-white/75">Member ID Format</h2>
+            <h2 className="billing-header-title text-[13px] md:text-[15px] uppercase tracking-[0.12em] text-white/75">Member ID Format</h2>
           </div>
 
           {hasExistingMembers && (
@@ -652,6 +677,10 @@ const BillingPage = () => {
             {idSaving ? "Saving..." : "Save ID Format"}
           </button>
         </div>
+
+        {/* ── Scanner Integration ────────────────────────────────────── */}
+        <ScannerIntegrationSection />
+
       </div>
     </div>
   );

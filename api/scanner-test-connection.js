@@ -3,13 +3,8 @@ import { createRequire } from "node:module";
 import { createClient } from "@supabase/supabase-js";
 import { getEnv } from "./_env.js";
 
-// node-zklib ships as CommonJS — use createRequire to import it from ESM.
 const require = createRequire(import.meta.url);
 const ZKLib = require("node-zklib");
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
 
 const getBearerToken = (req) => {
   const header = req.headers?.authorization || req.headers?.Authorization || "";
@@ -25,11 +20,6 @@ const parseBody = (req) => {
   return req.body;
 };
 
-/**
- * Low-level TCP probe — just checks that the port is open.
- * Returns true if the connection was established within `timeoutMs`.
- * Never throws.
- */
 const tcpProbe = (ip, port, timeoutMs = 5000) =>
   new Promise((resolve) => {
     const socket = new net.Socket();
@@ -49,20 +39,12 @@ const tcpProbe = (ip, port, timeoutMs = 5000) =>
     socket.connect(port, ip);
   });
 
-/**
- * ZKTeco-specific handshake via node-zklib.
- * Returns { device_name, serial_number } on success.
- * Throws a clean Error on failure.
- */
 const zkHandshake = async (ip, port, timeoutMs = 5000) => {
-  // node-zklib constructor: (ip, port, timeout_ms, inport)
-  // inport = 0 lets the OS pick a free local port.
   const zk = new ZKLib(ip, port, timeoutMs, 0);
 
   try {
     await zk.createSocket();
   } catch (err) {
-    // Normalise common socket errors into user-friendly messages.
     const msg = String(err?.message || err || "");
     if (/ECONNREFUSED/i.test(msg)) throw new Error("Connection refused — check the IP and port.");
     if (/ETIMEDOUT|timed out|timeout/i.test(msg)) throw new Error("Device unreachable — connection timed out.");
@@ -76,11 +58,9 @@ const zkHandshake = async (ip, port, timeoutMs = 5000) => {
     info = await zk.getInfo();
   } catch (err) {
     const msg = String(err?.message || err || "");
-    // Connected but wrong device / auth issue
     if (/auth|password|invalid/i.test(msg)) throw new Error("Authentication failed — wrong device credentials.");
     throw new Error(`Handshake failed: ${msg || "Device did not respond to info request"}`);
   } finally {
-    // Always release the socket — ignore disconnect errors.
     try { await zk.disconnect(); } catch { /* noop */ }
   }
 
@@ -93,13 +73,13 @@ const zkHandshake = async (ip, port, timeoutMs = 5000) => {
   };
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Handler
-// ─────────────────────────────────────────────────────────────────────────────
-
 export default async function handler(req, res) {
-  // CORS pre-flight
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS || "").split(",").map(o => o.trim()).filter(Boolean);
+  const requestOrigin = req.headers?.origin || "";
+  if (allowedOrigins.length && !allowedOrigins.includes(requestOrigin)) {
+    return res.status(403).json({ error: "Forbidden: origin not allowed" });
+  }
+  res.setHeader("Access-Control-Allow-Origin", requestOrigin);
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -109,7 +89,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // ── Auth ──────────────────────────────────────────────────────────────
     const supabaseUrl = getEnv("SUPABASE_URL", "VITE_SUPABASE_URL");
     const supabaseAnonKey = getEnv("SUPABASE_ANON_KEY", "VITE_SUPABASE_ANON_KEY");
 
@@ -128,7 +107,6 @@ export default async function handler(req, res) {
       return res.status(401).json({ success: false, error: "Unauthorized" });
     }
 
-    // ── Input validation ──────────────────────────────────────────────────
     const body = parseBody(req);
     const ip = String(body?.ip ?? "").trim();
     const port = Number(body?.port ?? 4370);
@@ -146,8 +124,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: `Unsupported brand: ${brand}. Only 'zkteco' is supported.` });
     }
 
-    // ── Layer 1: Raw TCP probe ─────────────────────────────────────────────
-    // Fast check before we attempt the full ZK handshake.
     const portOpen = await tcpProbe(ip, port, 5000);
     if (!portOpen) {
       return res.status(200).json({
@@ -156,7 +132,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // ── Layer 2: ZKTeco handshake ──────────────────────────────────────────
     let deviceInfo;
     try {
       deviceInfo = await zkHandshake(ip, port, 5000);
@@ -177,11 +152,10 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
-    // Top-level safety net — never let an unhandled error crash the function.
-    console.error("[scanner-test-connection] Unhandled error:", err);
+    console.error("[api/scanner-test-connection] Error:", err);
     return res.status(500).json({
       success: false,
-      error: "An unexpected server error occurred. Please try again.",
+      error: "Internal server error",
     });
   }
 }

@@ -72,13 +72,18 @@ async function connectAndFetch(ip, port, since) {
     try { await zk.disconnect(); } catch { /* noop */ }
   }
 
-  // STEP 3 — Filter to only records newer than `since` (client-side dedup layer 1)
+  // STEP 3 — Filter out records with invalid timestamps and optionally normalize
+  records = records.filter((r) => {
+    const t = new Date(r.timestamp);
+    if (isNaN(t.getTime())) return false;
+    r.timestamp = t; // Normalize to Date object for safe toISOString() later
+    return true;
+  });
+
+  // STEP 4 — Filter to only records newer than `since` (client-side dedup layer 1)
   if (since) {
     const sinceTs = new Date(since).getTime();
-    records = records.filter((r) => {
-      const t = r.timestamp instanceof Date ? r.timestamp : new Date(r.timestamp);
-      return !isNaN(t.getTime()) && t.getTime() > sinceTs;
-    });
+    records = records.filter((r) => r.timestamp.getTime() > sinceTs);
   }
 
   return records;
@@ -90,16 +95,20 @@ async function connectAndFetch(ip, port, since) {
 async function handleFailure(adminClient, scanner, errorMsg, syncedAt) {
   const newCount = (scanner.failed_attempts ?? 0) + 1;
 
-  await adminClient
+  const { error: updateError } = await adminClient
     .from("scanner_settings")
     .update({ failed_attempts: newCount, last_failed_at: syncedAt })
     .eq("id", scanner.id);
+
+  if (updateError) {
+    console.error(`[handleFailure] Failed to update scanner_settings for scanner ${scanner.id}:`, updateError.message, { syncedAt, errorMsg });
+  }
 
   if (newCount >= FAILURE_NOTIFY_THRESHOLD) {
     const minutes = newCount * (scanner.sync_interval_minutes ?? 15);
 
     // Avoid duplicate notifications: only insert if no unread failure notification in last hour
-    const { data: recent } = await adminClient
+    const { data: recent, error: selectError } = await adminClient
       .from("scanner_notifications")
       .select("id")
       .eq("user_id", scanner.user_id)
@@ -108,14 +117,22 @@ async function handleFailure(adminClient, scanner, errorMsg, syncedAt) {
       .gte("created_at", new Date(Date.now() - 60 * 60 * 1000).toISOString())
       .limit(1);
 
+    if (selectError) {
+      console.error(`[handleFailure] Failed to select scanner_notifications for user ${scanner.user_id}:`, selectError.message, { scannerId: scanner.id });
+    }
+
     if (!recent?.length) {
-      await adminClient.from("scanner_notifications").insert({
+      const { error: insertError } = await adminClient.from("scanner_notifications").insert({
         user_id: scanner.user_id,
         type: "connection_failure",
         title: "Scanner Unreachable",
         message: `Your scanner at ${scanner.ip_address} has been unreachable for ${minutes} minutes. Please check that the device is powered on and connected to the network.`,
         metadata: { ip: scanner.ip_address, port: scanner.port, failed_attempts: newCount, last_error: errorMsg },
       });
+
+      if (insertError) {
+        console.error(`[handleFailure] Failed to insert notification for user ${scanner.user_id}:`, insertError.message, { scannerId: scanner.id });
+      }
     }
   }
 }
@@ -162,22 +179,34 @@ export async function pollSingleScanner(adminClient, scanner) {
   }
 
   // ── Step 4: Build member map (device_user_id → customer_id) ───────────────
-  const { data: memberMaps } = await adminClient
+  const { data: memberMaps, error: mapError } = await adminClient
     .from("scanner_member_map")
     .select("device_user_id, customer_id")
     .eq("user_id", scanner.user_id);
 
+  if (mapError) {
+    result.error = `Failed to load member map: ${mapError.message}`;
+    console.error(`${tag} ${result.error}`);
+    return result;
+  }
+
   const memberMap = new Map((memberMaps ?? []).map((m) => [String(m.device_user_id), m.customer_id]));
 
   // Bulk-load subscription dates for all mapped customers
-  const allCustomerIds = [...new Set(memberMap.values())];
+  const allCustomerIds = [...new Set(memberMap.values())].filter(Boolean);
   const customerSubMap = new Map();
 
   if (allCustomerIds.length > 0) {
-    const { data: custs } = await adminClient
+    const { data: custs, error: custError } = await adminClient
       .from("customers")
       .select("id, membership_end_date")
       .in("id", allCustomerIds);
+
+    if (custError) {
+      result.error = `Failed to load customer data: ${custError.message}`;
+      console.error(`${tag} ${result.error}`);
+      return result;
+    }
 
     for (const c of custs ?? []) {
       customerSubMap.set(c.id, c.membership_end_date ?? null);
@@ -244,30 +273,52 @@ export async function pollSingleScanner(adminClient, scanner) {
   }
 
   // ── Bulk writes — DB-level dedup via unique index ──────────────────────────
+  let writeFailed = false;
+
   if (logsToUpsert.length > 0) {
-    const { data: upserted } = await adminClient
+    const { data: upserted, error: upsertError } = await adminClient
       .from("attendance_logs")
       .upsert(logsToUpsert, { onConflict: "user_id,device_user_id,scanned_at", ignoreDuplicates: true })
       .select("id");
 
-    result.inserted = (upserted ?? []).length;
-    result.skipped  = logsToUpsert.length - result.inserted;
+    if (upsertError) {
+      console.error(`${tag} Failed to upsert attendance_logs:`, upsertError.message);
+      result.error = `Upsert failed: ${upsertError.message}`;
+      writeFailed = true;
+    } else {
+      result.inserted = (upserted ?? []).length;
+      result.skipped  = logsToUpsert.length - result.inserted;
+    }
   }
 
-  if (unmatchedToSave.length > 0) {
-    await adminClient
+  if (!writeFailed && unmatchedToSave.length > 0) {
+    const { error: unmatchedError } = await adminClient
       .from("unmatched_scans")
       .upsert(unmatchedToSave, { onConflict: "user_id,device_user_id,scanned_at", ignoreDuplicates: true });
+
+    if (unmatchedError) {
+      console.error(`${tag} Failed to upsert unmatched_scans:`, unmatchedError.message);
+      result.error = `Unmatched upsert failed: ${unmatchedError.message}`;
+      writeFailed = true;
+    }
   }
 
   // ── Step 7: Update last_synced_at + reset failure counter ─────────────────
-  await adminClient.from("scanner_settings")
-    .update({ last_synced_at: syncedAt, failed_attempts: 0 })
-    .eq("id", scanner.id);
+  if (!writeFailed) {
+    const { error: syncError } = await adminClient.from("scanner_settings")
+      .update({ last_synced_at: syncedAt, failed_attempts: 0 })
+      .eq("id", scanner.id);
+
+    if (syncError) {
+      console.error(`${tag} Failed to update scanner_settings:`, syncError.message);
+      // We don't return here because the data was already inserted
+    }
+  }
 
   console.log(`${tag} Done — inserted: ${result.inserted}, matched: ${result.matched}, unmatched: ${result.unmatched}, expired: ${result.expired}, skipped: ${result.skipped}`);
   return result;
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Run one full poll cycle across ALL enabled scanners

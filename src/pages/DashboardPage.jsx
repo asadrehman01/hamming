@@ -4,7 +4,9 @@ import { supabase } from "../lib/supabaseClient";
 import { getUserWithRetry } from "../lib/authUser";
 import StatCard from "../components/StatCard";
 import MembershipChart from "../components/MembershipChart";
+import AttendanceDashboardCard from "../components/AttendanceDashboardCard";
 import { ACCESS_MODE, getAccessMode } from "../lib/accessControl";
+import { AlertTriangle, X } from "lucide-react";
 
 const MONTHS = [
   "Jan",
@@ -40,6 +42,8 @@ const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [expiredAlerts, setExpiredAlerts] = useState([]);
 
   const handleSearchKeyDown = (event) => {
     if (event.key === "Enter") {
@@ -71,6 +75,7 @@ const DashboardPage = () => {
         if (authError) throw authError;
         const userId = authData?.user?.id;
         if (!userId) throw new Error("User not authenticated");
+        if (active) setCurrentUserId(userId);
 
         const [
           activeRes,
@@ -197,6 +202,50 @@ const DashboardPage = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const channel = supabase
+      .channel("dashboard_expired_alerts")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "attendance_logs",
+          filter: `user_id=eq.${currentUserId}`,
+        },
+        async (payload) => {
+          if (payload.new.status === "expired_member" && payload.new.customer_id) {
+            const { data: cust } = await supabase
+              .from("customers")
+              .select("first_name, last_name, membership_end_date")
+              .eq("id", payload.new.customer_id)
+              .single();
+            if (cust) {
+              setExpiredAlerts((prev) => [
+                ...prev,
+                {
+                  id: payload.new.id,
+                  name: `${cust.first_name} ${cust.last_name}`,
+                  date: cust.membership_end_date,
+                },
+              ]);
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUserId]);
+
+  const dismissAlert = (id) => {
+    setExpiredAlerts((prev) => prev.filter((a) => a.id !== id));
+  };
+
   return (
     <div
       className="app-page dashboard-page-vibe"
@@ -224,6 +273,10 @@ const DashboardPage = () => {
         }
         .dashboard-page-vibe .dashboard-card:hover {
           background: #f4f4f4;
+        }
+        .dashboard-page-vibe .dashboard-quick-actions-card:hover {
+          background: #fbfbfb !important;
+          border-color: #e6e6e6 !important;
         }
         .dashboard-page-vibe .dashboard-chip {
           background: #ffffff;
@@ -253,6 +306,18 @@ const DashboardPage = () => {
         .dashboard-page-vibe div[class*="bg-\\[#151920\\]"] div[class*="bg-white"] {
           background: #f0f0f0 !important;
           border-color: #e0e0e0 !important;
+        }
+        .dashboard-page-vibe button.dashboard-quick-action-btn {
+          background: #ffffff !important;
+          border: 1px solid #e0e0e0 !important;
+          color: #0d0d0d !important;
+          transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+        }
+        .dashboard-page-vibe button.dashboard-quick-action-btn:hover:not(:disabled),
+        .dashboard-page-vibe button.dashboard-quick-action-btn:active:not(:disabled) {
+          background: #f4f4f4 !important;
+          border-color: #d0d0d0 !important;
+          color: #0d0d0d !important;
         }
       `}</style>
 
@@ -287,6 +352,28 @@ const DashboardPage = () => {
         </div>
       ) : (
         <div className="p-4 md:p-10 space-y-6 md:space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+          {/* Expired Member Alerts */}
+          {expiredAlerts.length > 0 && (
+            <div className="space-y-3">
+              {expiredAlerts.map((alert) => (
+                <div key={alert.id} className="bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-xl flex items-start justify-between shadow-sm animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="text-rose-500 mt-0.5 flex-shrink-0" size={20} />
+                    <div>
+                      <p className="font-semibold text-sm">Expired Member Scan Detected</p>
+                      <p className="text-sm mt-0.5">
+                        ⚠️ <strong>{alert.name}</strong> checked in but their subscription expired on <strong>{alert.date ? new Date(alert.date).toLocaleDateString() : "an unknown date"}</strong>. Consider following up.
+                      </p>
+                    </div>
+                  </div>
+                  <button onClick={() => dismissAlert(alert.id)} className="text-rose-400 hover:text-rose-600 transition-colors flex-shrink-0 p-1">
+                    <X size={18} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatCard
               title="Active Members"
@@ -318,7 +405,7 @@ const DashboardPage = () => {
             <div className="order-2 lg:order-2 lg:col-span-2">
               <MembershipChart data={chartData} />
             </div>
-            <div className="dashboard-card order-1 lg:order-1 border p-8 rounded-2xl flex flex-col shadow-lg shadow-black/5">
+            <div className="dashboard-card dashboard-quick-actions-card order-1 lg:order-1 border p-8 rounded-2xl flex flex-col shadow-lg shadow-black/5">
               <h3 className="dashboard-header-title text-lg font-medium text-[#0d0d0d] tracking-tight mb-8">
                 Quick Actions
               </h3>
@@ -343,6 +430,11 @@ const DashboardPage = () => {
                 </button>
               </div>
             </div>
+          </section>
+
+          {/* New Attendance Dashboard Card */}
+          <section className="pb-10">
+            <AttendanceDashboardCard userId={currentUserId} />
           </section>
         </div>
       )}

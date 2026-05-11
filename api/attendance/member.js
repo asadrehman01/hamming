@@ -8,7 +8,13 @@ import { createClient } from "@supabase/supabase-js";
 import { getEnv } from "../_env.js";
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  // Restrict CORS origins via allowlist
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS || "").split(",").map(o => o.trim()).filter(Boolean);
+  const requestOrigin = req.headers?.origin || "";
+  if (allowedOrigins.length && !allowedOrigins.includes(requestOrigin)) {
+    return res.status(403).json({ error: "Forbidden: origin not allowed" });
+  }
+  res.setHeader("Access-Control-Allow-Origin", requestOrigin);
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -29,8 +35,11 @@ export default async function handler(req, res) {
     const customerId = req.query?.id ?? "";
     if (!customerId) return res.status(400).json({ error: "id (customer UUID) is required." });
 
-    const limit  = Math.min(Number(req.query?.limit  ?? 100), 500);
-    const offset = Number(req.query?.offset ?? 0);
+    // Sanitize limit and offset to prevent NaN or negative values
+    const rawLimit = Number(req.query?.limit ?? 100);
+    const limit = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(Math.floor(rawLimit), 500) : 100;
+    const rawOffset = Number(req.query?.offset ?? 0);
+    const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? Math.floor(rawOffset) : 0;
 
     const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
 
@@ -64,6 +73,7 @@ export default async function handler(req, res) {
       logs: logs ?? [],
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message ?? "Server error" });
+    console.error("[member] Internal error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 }

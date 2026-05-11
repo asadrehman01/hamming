@@ -28,15 +28,14 @@ export default function AttendanceDashboardCard({ userId }) {
 
   useEffect(() => {
     if (!userId) return;
+    let isMounted = true;
 
     const loadData = async () => {
       setLoading(true);
       try {
-        // Fetch last 30 days of logs (handle both old and new column names if needed)
+        // Fetch last 30 days of logs
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
         
-        // We select scanned_at or punch_time, device_user_id or scanner_uid, etc.
-        // The DB might have `scanned_at` or `punch_time` depending on migration 013
         const { data: rawLogs, error: logsError } = await supabase
           .from("attendance_logs")
           .select(`
@@ -50,10 +49,11 @@ export default function AttendanceDashboardCard({ userId }) {
           .eq("user_id", userId)
           .or(`scanned_at.gte.${thirtyDaysAgo},punch_time.gte.${thirtyDaysAgo}`)
           .order("scanned_at", { ascending: false })
-          .order("punch_time", { ascending: false }) // gracefully handle both
+          .order("punch_time", { ascending: false })
           .limit(2000);
 
         if (logsError) throw logsError;
+        if (!isMounted) return;
 
         const normalizedLogs = (rawLogs || []).map(l => ({
           ...l,
@@ -62,7 +62,6 @@ export default function AttendanceDashboardCard({ userId }) {
 
         setLogs(normalizedLogs);
 
-        // Filter Today's Checkins
         const now = new Date();
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
         
@@ -72,15 +71,12 @@ export default function AttendanceDashboardCard({ userId }) {
         setTodaysCheckins(today);
 
         // Fetch At-Risk Members
-        // Logic: active customers whose latest scan is > 14 days ago, or no scan in 30 days (but they are active)
         const { data: activeCusts } = await supabase
           .from("active_customers")
           .select("id, first_name, last_name, phone")
           .eq("gym_id", userId);
 
-        if (activeCusts) {
-          const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).getTime();
-          
+        if (activeCusts && isMounted) {
           const lastVisits = {};
           normalizedLogs.forEach(l => {
             if (l.customer_id) {
@@ -97,36 +93,33 @@ export default function AttendanceDashboardCard({ userId }) {
               ? Infinity 
               : Math.floor((Date.now() - lastVisitTs) / (1000 * 60 * 60 * 24));
             
-            return {
-              ...c,
-              lastVisitTs,
-              daysSince
-            };
+            return { ...c, lastVisitTs, daysSince };
           }).filter(c => c.daysSince >= 14)
             .sort((a, b) => b.daysSince - a.daysSince);
 
-          setAtRiskMembers(atRisk.slice(0, 10)); // Top 10 at risk
+          setAtRiskMembers(atRisk.slice(0, 10));
         }
 
       } catch (err) {
         console.error("Failed to load attendance dashboard data", err);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     loadData();
 
-    // Set up Realtime Subscription for live check-ins
+    // Realtime Subscription
     const channel = supabase
       .channel('attendance_dashboard_inserts')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'attendance_logs', filter: `user_id=eq.${userId}` }, async (payload) => {
-        // Fetch customer info
         let customer = null;
         if (payload.new.customer_id) {
            const { data } = await supabase.from('customers').select('id, first_name, last_name, phone, membership_end_date').eq('id', payload.new.customer_id).single();
            customer = data;
         }
+
+        if (!isMounted) return;
 
         const newLog = {
           ...payload.new,
@@ -140,9 +133,11 @@ export default function AttendanceDashboardCard({ userId }) {
       .subscribe();
 
     return () => {
+      isMounted = false;
       supabase.removeChannel(channel);
     };
   }, [userId]);
+
 
   // Compute Heatmap Data (Days vs Hours)
   const heatmapData = useMemo(() => {
@@ -222,17 +217,17 @@ export default function AttendanceDashboardCard({ userId }) {
               <div className="text-center py-6 text-sm text-black/30 italic">No check-ins today yet.</div>
             ) : (
               todaysCheckins.map(log => (
-                <div key={log.id} className="flex items-center justify-between bg-white border border-black/5 p-3 rounded-xl shadow-sm hover:shadow-md transition-all">
+                <div key={log.id} className="flex items-center justify-between bg-white border border-black/5 p-3 rounded-xl shadow-sm hover:shadow-md transition-all" role="listitem">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 border border-black/5 flex items-center justify-center text-xs font-bold text-black/60 shadow-inner">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 border border-black/5 flex items-center justify-center text-xs font-bold text-black/80 shadow-inner" aria-hidden="true">
                       {log.customers?.first_name?.[0] || "?"}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-black/80">{log.customers ? `${log.customers.first_name} ${log.customers.last_name}` : "Unknown Member"}</p>
-                      <p className="text-xs text-black/40">{log.status === "expired_member" ? "Expired" : "Active"}</p>
+                      <p className="text-sm font-medium text-black/90">{log.customers ? `${log.customers.first_name} ${log.customers.last_name}` : "Unknown Member"}</p>
+                      <p className="text-xs text-black/60">{log.status === "expired_member" ? "Expired" : "Active"}</p>
                     </div>
                   </div>
-                  <div className="text-xs font-mono text-black/50 bg-black/5 px-2 py-1 rounded-md">
+                  <div className="text-xs font-mono text-black/60 bg-black/5 px-2 py-1 rounded-md" aria-label={`Check-in time: ${fmtTime(log.timestamp)}`}>
                     {fmtTime(log.timestamp)}
                   </div>
                 </div>
@@ -272,6 +267,8 @@ export default function AttendanceDashboardCard({ userId }) {
                     return (
                       <div 
                         key={`${dIdx}-${h}`} 
+                        role="gridcell"
+                        aria-label={`${count} visits on ${day} at ${h}:00`}
                         title={`${count} visits on ${day} at ${h}:00`}
                         className={`w-5 h-5 mx-[2px] rounded-sm ${bg} transition-colors hover:ring-1 ring-black/20`}
                       />
@@ -296,17 +293,17 @@ export default function AttendanceDashboardCard({ userId }) {
               <div className="text-center py-6 text-sm text-black/30 italic">All active members are visiting regularly!</div>
             ) : (
               atRiskMembers.map(m => (
-                <div key={m.id} className="flex items-center justify-between p-2 hover:bg-black/5 rounded-lg transition-colors group cursor-pointer">
+                <div key={m.id} className="flex items-center justify-between p-2 hover:bg-black/5 rounded-lg transition-colors group cursor-pointer" role="button" tabIndex={0} aria-label={`At-risk member: ${m.first_name} ${m.last_name}, last visit ${m.daysSince === Infinity ? "never" : `${m.daysSince} days ago`}`}>
                   <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                    <div className="w-2 h-2 rounded-full bg-amber-500" aria-hidden="true"></div>
                     <div>
-                      <p className="text-sm font-medium text-black/80">{m.first_name} {m.last_name}</p>
-                      <p className="text-[10px] text-black/40">{m.phone}</p>
+                      <p className="text-sm font-medium text-black/90">{m.first_name} {m.last_name}</p>
+                      <p className="text-[10px] text-black/60">{m.phone}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-bold text-amber-600">{m.daysSince === Infinity ? "Never" : `${m.daysSince}d ago`}</p>
-                    <p className="text-[9px] text-black/40">{m.lastVisitTs ? fmtDate(m.lastVisitTs) : ""}</p>
+                    <p className="text-xs font-bold text-amber-700">{m.daysSince === Infinity ? "Never" : `${m.daysSince}d ago`}</p>
+                    <p className="text-[9px] text-black/60">{m.lastVisitTs ? fmtDate(m.lastVisitTs) : ""}</p>
                   </div>
                 </div>
               ))
