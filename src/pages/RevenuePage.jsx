@@ -593,16 +593,49 @@ const RevenuePage = () => {
         expenseMonth.getMonth(),
         15,
       ).toISOString();
-      const toUpsert = categories.map((category) => ({
-        gym_id: gymId,
-        category_id: category.id,
-        amount: safeAmount(expenseInputs[category.id] || 0),
-        date: ledgerDate,
-      }));
+
+      // First, delete all existing expense entries for these categories in the current month
+      // This ensures old entries don't persist when amounts are cleared
+      const startOfMonth = new Date(
+        expenseMonth.getFullYear(),
+        expenseMonth.getMonth(),
+        1,
+      ).toISOString();
+      const endOfMonth = new Date(
+        expenseMonth.getFullYear(),
+        expenseMonth.getMonth() + 1,
+        0,
+        23,
+        59,
+        59,
+      ).toISOString();
+
+      const categoryIds = categories.map((cat) => cat.id);
+      if (categoryIds.length > 0) {
+        const { error: deleteError } = await supabase
+          .from("expenses")
+          .delete()
+          .eq("gym_id", gymId)
+          .in("category_id", categoryIds)
+          .gte("date", startOfMonth)
+          .lte("date", endOfMonth);
+        if (deleteError) throw deleteError;
+      }
+
+      // Then upsert only entries with non-zero amounts
+      const toUpsert = categories
+        .map((category) => ({
+          gym_id: gymId,
+          category_id: category.id,
+          amount: safeAmount(expenseInputs[category.id] || 0),
+          date: ledgerDate,
+        }))
+        .filter((item) => item.amount > 0); // Only upsert if amount > 0
+
       if (toUpsert.length > 0) {
         const { error } = await supabase
           .from("expenses")
-          .upsert(toUpsert, { onConflict: "gym_id,category_id,date" });
+          .insert(toUpsert);
         if (error) throw error;
       }
       fetchExpensesData();
@@ -642,6 +675,16 @@ const RevenuePage = () => {
     setRemovingCategoryId(categoryToRemove.id);
     try {
       const gymId = await getCurrentGymId();
+      
+      // Delete all ledger entries for this category from all months
+      const { error: deleteEntriesError } = await supabase
+        .from("expenses")
+        .delete()
+        .eq("gym_id", gymId)
+        .eq("category_id", categoryToRemove.id);
+      if (deleteEntriesError) throw deleteEntriesError;
+
+      // Mark the category as inactive
       const { data: updatedRows, error: deleteError } = await supabase
         .from("expense_categories")
         .update({ is_active: false, updated_at: new Date().toISOString() })
@@ -662,6 +705,9 @@ const RevenuePage = () => {
         delete next[removedId];
         return next;
       });
+      
+      // Refresh expense totals since we deleted ledger entries
+      fetchExpensesData();
     } catch (err) {
       console.error("Error deleting category:", err);
       const message = String(err?.message || "");

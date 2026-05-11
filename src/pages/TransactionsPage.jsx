@@ -549,7 +549,7 @@ const TransactionsPage = () => {
   };
   return (
     <div
-      className="app-page transactions-page-vibe transactions-typography p-8 md:p-12 lg:p-24 overflow-x-auto"
+      className="app-page transactions-page-vibe transactions-typography p-8 md:p-12 lg:p-24 overflow-x-hidden"
       style={{
         "--app-theme-page-bg": "#ffffff",
         "--app-theme-card-bg": "#fbfbfb",
@@ -581,6 +581,11 @@ const TransactionsPage = () => {
         }
         .transactions-page-vibe .transactions-muted {
           color: #666666 !important;
+        }
+        .transactions-page-vibe .transactions-value {
+          font-family: "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+          font-weight: 500 !important;
+          letter-spacing: 0.02em !important;
         }
         .transactions-page-vibe [class*="bg-white/"] {
           background: #fbfbfb !important;
@@ -836,7 +841,123 @@ const TransactionsPage = () => {
         </div>
 
         <div className="transactions-card-alt border border-white/10 overflow-hidden rounded-2xl">
-          <table className="w-full text-left border-collapse">
+          <div className="md:hidden divide-y divide-[#e6e6e6]">
+            {transactions.map((tx) => {
+              const rawStatus = String(tx.status || "completed").toLowerCase();
+              const linkedCustomer = tx.subscriptions?.customers || null;
+              const fallbackCustomer = customerDirectory.find(
+                (customer) =>
+                  normalizeName(`${customer.first_name || ""} ${customer.last_name || ""}`) ===
+                  normalizeName(tx.sender_name),
+              );
+              const resolvedCustomer = linkedCustomer || fallbackCustomer || null;
+              const adjustedStatus =
+                rawStatus === "inactive" && resolvedCustomer && isCustomerActiveNow(resolvedCustomer)
+                  ? "completed"
+                  : rawStatus;
+              const statusClass =
+                adjustedStatus === "completed"
+                  ? "text-emerald-600 bg-emerald-50 border-emerald-200"
+                  : adjustedStatus === "inactive"
+                    ? "text-red-600 bg-red-50 border-red-200"
+                    : "text-amber-600 bg-amber-50 border-amber-200";
+              const statusLabel = adjustedStatus.charAt(0).toUpperCase() + adjustedStatus.slice(1);
+              const matchLabel = resolvedCustomer
+                ? `Matched: ${resolvedCustomer.first_name || ""} ${resolvedCustomer.last_name || ""}`.trim()
+                : tx.matched_customer_id
+                  ? "Matched customer record"
+                  : "No matching customer";
+
+              return (
+                <div key={`mobile-${tx.id}`} className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="text-[10px] tracking-[0.08em] font-light transactions-subtle">
+                        Transaction ID
+                      </p>
+                      <p className="mt-1 text-sm font-medium text-[#0d0d0d] break-all">
+                        <span className="transactions-value">
+                        #Tx-{tx.id.substring(0, 8)}
+                        </span>
+                      </p>
+                    </div>
+                    <span className={`shrink-0 text-[9px] tracking-[0.08em] font-medium px-3 py-1 border rounded-full ${statusClass}`}>
+                      {statusLabel}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 text-[11px]">
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="transactions-subtle shrink-0">Sender</span>
+                      <span className="text-[#0d0d0d] text-right break-words max-w-[65%]">
+                        <span className="transactions-value">
+                        {tx.sender_name ||
+                          (tx.subscriptions?.customers
+                            ? `${tx.subscriptions.customers.first_name} ${tx.subscriptions.customers.last_name}`
+                            : "N/A")}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="transactions-subtle shrink-0">Match</span>
+                      <span className="text-[#0d0d0d] text-right break-words max-w-[65%] transactions-value">
+                        {matchLabel}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="transactions-subtle shrink-0">Mode</span>
+                      <span className="text-[#0d0d0d] text-right transactions-value">
+                        {tx.payment_mode || "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex items-start justify-between gap-4">
+                      <span className="transactions-subtle shrink-0">Account / Ref</span>
+                      <div className="max-w-[65%] text-right text-[#0d0d0d] break-words">
+                        <div className="transactions-value">{tx.sender_account_name || "-"}</div>
+                        <div className="mt-1 transactions-value">{tx.source_transaction_id || "-"}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="transactions-subtle shrink-0">Amount</span>
+                      <span className="text-[#0d0d0d] font-medium transactions-value">
+                        ₹{tx.amount || "0"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="transactions-subtle shrink-0">Date</span>
+                      <span className="text-[#0d0d0d] text-right transactions-value">
+                        {tx.created_at && !Number.isNaN(new Date(tx.created_at).getTime())
+                          ? new Date(tx.created_at).toLocaleDateString("en-GB")
+                          : "-"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {!loading && transactions.length === 0 && (
+              <div className="p-8 text-center text-[#8a8a8a] flex flex-col items-center gap-4">
+                <span className="text-[10px] tracking-[0.08em] font-light">
+                  No Recent Transactions Found
+                </span>
+                <span className="text-[9px] tracking-[0.08em] font-light">
+                  Transactions will appear here once applications are processed and paid.
+                </span>
+              </div>
+            )}
+
+            {loading && (
+              <div className="p-8 text-center">
+                <span className="text-[10px] tracking-[0.08em] text-[#8a8a8a] animate-pulse font-light">
+                  Downloading Ledger...
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="hidden md:block overflow-x-auto custom-scrollbar">
+            <table className="min-w-[1100px] w-full text-left border-collapse table-fixed">
             <thead className="bg-[#f7f7f7]">
               <tr className="border-b border-[#e6e6e6]">
                 <th className="p-6 text-[10px] tracking-[0.08em] font-light transactions-subtle">
@@ -891,46 +1012,46 @@ const TransactionsPage = () => {
                       : "No matching customer";
                   return (
                     <tr key={tx.id} className="border-b border-[#e6e6e6] hover:bg-[#f9f9f9] transition-colors group">
-                      <td className="p-6">
-                        <span className="text-[10px] text-[#8a8a8a] font-light tracking-[0.08em]">
+                      <td className="p-6 align-top">
+                        <span className="text-[10px] text-[#8a8a8a] font-light tracking-[0.08em] transactions-value">
                           #Tx-{tx.id.substring(0, 8)}
                         </span>
                       </td>
-                      <td className="p-6">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium tracking-tight text-[#0d0d0d]">
+                      <td className="p-6 align-top">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-sm font-medium tracking-tight text-[#0d0d0d] transactions-value">
                             {tx.sender_name ||
                               (tx.subscriptions?.customers
                                 ? `${tx.subscriptions.customers.first_name} ${tx.subscriptions.customers.last_name}`
                                 : "N/A")}
                           </span>
-                          <span className="text-[9px] text-[#8a8a8a] font-light tracking-[0.08em] mt-1">
+                          <span className="text-[9px] text-[#8a8a8a] font-light tracking-[0.08em]">
                             {matchLabel}
                           </span>
-                          <span className="text-[9px] text-[#8a8a8a] font-light tracking-[0.08em] mt-1">
+                          <span className="text-[9px] text-[#8a8a8a] font-light tracking-[0.08em]">
                             Plan: {tx.subscriptions?.plan_name || "Individual"}
                           </span>
                         </div>
                       </td>
-                      <td className="p-6 text-[10px] text-[#8a8a8a] font-light tracking-[0.08em]">
+                      <td className="p-6 text-[10px] text-[#8a8a8a] font-light tracking-[0.08em] align-top transactions-value">
                         {tx.payment_mode || "N/A"}
                       </td>
-                      <td className="p-6">
-                        <div className="flex flex-col">
-                          <span className="text-[10px] text-[#8a8a8a] font-light tracking-[0.08em]">
+                      <td className="p-6 align-top">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] text-[#8a8a8a] font-light tracking-[0.08em] transactions-value break-words">
                             {tx.sender_account_name || "-"}
                           </span>
-                          <span className="text-[9px] text-[#8a8a8a] font-light tracking-[0.08em] mt-1">
+                          <span className="text-[9px] text-[#8a8a8a] font-light tracking-[0.08em] transactions-value break-words">
                             {tx.source_transaction_id || "-"}
                           </span>
                         </div>
                       </td>
-                      <td className="p-6">
-                        <span className="text-sm font-medium text-[#0d0d0d] tracking-widest">
+                      <td className="p-6 align-top">
+                        <span className="text-sm font-medium text-[#0d0d0d] tracking-widest transactions-value">
                           ₹{tx.amount || "0"}
                         </span>
                       </td>
-                      <td className="p-6 text-sm text-[#8a8a8a] font-light tracking-[0.08em]">
+                      <td className="p-6 text-sm text-[#8a8a8a] font-light tracking-[0.08em] align-top transactions-value">
                         {tx.created_at && !Number.isNaN(new Date(tx.created_at).getTime())
                           ? new Date(tx.created_at).toLocaleDateString("en-GB")
                           : "-"}
@@ -945,7 +1066,8 @@ const TransactionsPage = () => {
                 })()
               ))}
             </tbody>
-          </table>
+            </table>
+          </div>
 
           {loading && (
             <div className="p-24 text-center">
