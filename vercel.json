@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/scanner-poll",
-      "schedule": "* * * * *"
+      "schedule": "5 0 * * *"
     },
     {
       "path": "/api/cron/expiry-reminders",
