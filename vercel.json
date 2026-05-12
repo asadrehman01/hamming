@@ -1,12 +1,30 @@
 {
   "crons": [
     {
-      "path": "/api/cron/scanner-poll",
-      "schedule": "5 0 * * *"
+      "path": "/api/cron-worker?job=scanner-poll",
+      "schedule": "0 5 * * *"
     },
     {
-      "path": "/api/cron/expiry-reminders",
+      "path": "/api/cron-worker?job=expiry-reminders",
       "schedule": "1 0 * * *"
     }
+  ],
+  "rewrites": [
+    { "source": "/api/attendance/today", "destination": "/api/attendance?type=today" },
+    { "source": "/api/attendance/heatmap", "destination": "/api/attendance?type=heatmap" },
+    { "source": "/api/attendance/member", "destination": "/api/attendance?type=member" },
+    { "source": "/api/attendance/at-risk", "destination": "/api/attendance?type=at-risk" },
+    { "source": "/api/scanner/settings", "destination": "/api/scanner-manage?type=settings" },
+    { "source": "/api/scanner/unmatched", "destination": "/api/scanner-manage?type=unmatched" },
+    { "source": "/api/scanner/unmapped-ids", "destination": "/api/scanner-manage?type=unmapped-ids" },
+    { "source": "/api/scanner/map-member", "destination": "/api/scanner-manage?type=map-member" },
+    { "source": "/api/scanner/auto-map", "destination": "/api/scanner-manage?type=auto-map" },
+    { "source": "/api/gym/id-settings", "destination": "/api/gym-manage?type=id-settings" },
+    { "source": "/api/gym/preview-id", "destination": "/api/gym-manage?type=preview-id" },
+    { "source": "/api/scanner-sync", "destination": "/api/scanner-ops?type=sync" },
+    { "source": "/api/scanner-enroll", "destination": "/api/scanner-ops?type=enroll" },
+    { "source": "/api/scanner-test-connection", "destination": "/api/scanner-ops?type=test-connection" },
+    { "source": "/api/cron/scanner-poll", "destination": "/api/cron-worker?job=scanner-poll" },
+    { "source": "/api/cron/expiry-reminders", "destination": "/api/cron-worker?job=expiry-reminders" }
   ]
 }
