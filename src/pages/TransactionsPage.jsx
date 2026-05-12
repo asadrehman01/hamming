@@ -970,29 +970,29 @@ const TransactionsPage = () => {
             )}
           </div>
 
-          <div className="hidden md:block overflow-x-hidden">
+          <div className="hidden md:block overflow-x-auto custom-scrollbar">
             <table className="w-full text-left border-collapse table-auto">
             <thead className="bg-[#f7f7f7]">
               <tr className="border-b border-[#e6e6e6]">
-                <th className="p-3 md:p-4 lg:p-6 text-[10px] tracking-[0.08em] font-light transactions-subtle">
+                <th className="p-2 md:p-3 lg:p-4 text-[10px] tracking-[0.08em] font-light transactions-subtle">
                   Transaction ID
                 </th>
-                <th className="p-3 md:p-4 lg:p-6 text-[10px] tracking-[0.08em] font-light transactions-subtle">
+                <th className="p-2 md:p-3 lg:p-4 text-[10px] tracking-[0.08em] font-light transactions-subtle">
                   Sender / Customer
                 </th>
-                <th className="p-3 md:p-4 lg:p-6 text-[10px] tracking-[0.08em] font-light transactions-subtle">
+                <th className="p-2 md:p-3 lg:p-4 text-[10px] tracking-[0.08em] font-light transactions-subtle">
                   Mode
                 </th>
-                <th className="p-3 md:p-4 lg:p-6 text-[10px] tracking-[0.08em] font-light transactions-subtle">
+                <th className="p-2 md:p-3 lg:p-4 text-[10px] tracking-[0.08em] font-light transactions-subtle">
                   Account / Ref
                 </th>
-                <th className="p-3 md:p-4 lg:p-6 text-[10px] tracking-[0.08em] font-light transactions-subtle">
+                <th className="p-2 md:p-3 lg:p-4 text-[10px] tracking-[0.08em] font-light transactions-subtle">
                   Amount
                 </th>
-                <th className="p-3 md:p-4 lg:p-6 text-[10px] tracking-[0.08em] font-light transactions-subtle">
+                <th className="p-2 md:p-3 lg:p-4 text-[10px] tracking-[0.08em] font-light transactions-subtle">
                   Date
                 </th>
-                <th className="p-3 md:p-4 lg:p-6 text-[10px] tracking-[0.08em] font-light transactions-subtle text-right">
+                <th className="p-2 md:p-3 lg:p-4 text-[10px] tracking-[0.08em] font-light transactions-subtle text-right">
                   Status
                 </th>
               </tr>
@@ -1003,12 +1003,12 @@ const TransactionsPage = () => {
                   computeTransactionDisplayData(tx, customerDirectory);
                 return (
                   <tr key={tx.id} className="border-b border-[#e6e6e6] hover:bg-[#f9f9f9] transition-colors group">
-                      <td className="p-3 md:p-4 lg:p-6 align-top">
+                      <td className="p-2 md:p-3 lg:p-4 align-top w-[80px]">
                         <span className="text-[10px] text-[#8a8a8a] font-light tracking-[0.08em] transactions-value whitespace-nowrap">
                           {tx.id.substring(0, 8)}
                         </span>
                       </td>
-                      <td className="p-3 md:p-4 lg:p-6 align-top">
+                      <td className="p-2 md:p-3 lg:p-4 align-top max-w-[180px]">
                         <div className="flex flex-col gap-1">
                           <span className="text-sm font-medium tracking-tight text-[#0d0d0d] transactions-value">
                             {tx.sender_name ||
@@ -1024,10 +1024,10 @@ const TransactionsPage = () => {
                           </span>
                         </div>
                       </td>
-                      <td className="p-3 md:p-4 lg:p-6 text-[10px] text-[#8a8a8a] font-light tracking-[0.08em] align-top transactions-value">
+                      <td className="p-2 md:p-3 lg:p-4 text-[10px] text-[#8a8a8a] font-light tracking-[0.08em] align-top transactions-value">
                         {tx.payment_mode || "N/A"}
                       </td>
-                      <td className="p-3 md:p-4 lg:p-6 align-top max-w-[140px]">
+                      <td className="p-2 md:p-3 lg:p-4 align-top max-w-[140px]">
                         <div className="flex flex-col gap-1">
                           <span className="text-[10px] text-[#8a8a8a] font-light tracking-[0.08em] transactions-value break-words">
                             {tx.sender_account_name || "-"}
@@ -1037,17 +1037,17 @@ const TransactionsPage = () => {
                           </span>
                         </div>
                       </td>
-                      <td className="p-3 md:p-4 lg:p-6 align-top">
+                      <td className="p-2 md:p-3 lg:p-4 align-top">
                         <span className="text-sm font-medium text-[#0d0d0d] tracking-widest transactions-value whitespace-nowrap">
                           ₹{tx.amount || "0"}
                         </span>
                       </td>
-                      <td className="p-3 md:p-4 lg:p-6 text-sm text-[#8a8a8a] font-light tracking-[0.08em] align-top transactions-value whitespace-nowrap">
+                      <td className="p-2 md:p-3 lg:p-4 text-sm text-[#8a8a8a] font-light tracking-[0.08em] align-top transactions-value whitespace-nowrap">
                         {tx.created_at && !Number.isNaN(new Date(tx.created_at).getTime())
                           ? new Date(tx.created_at).toLocaleDateString("en-GB")
                           : "-"}
                       </td>
-                      <td className="p-3 md:p-4 lg:p-6 text-right">
+                      <td className="p-2 md:p-3 lg:p-4 text-right">
                         <span className={`text-[9px] tracking-[0.08em] font-medium px-3 py-1 border rounded-full ${statusClass}`}>
                           {statusLabel}
                         </span>
