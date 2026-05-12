@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/scanner-poll",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/expiry-reminders",
+      "schedule": "1 0 * * *"
     }
   ]
 }

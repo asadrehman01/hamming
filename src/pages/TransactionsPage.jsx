@@ -1054,8 +1054,7 @@ const TransactionsPage = () => {
                       </td>
                     </tr>
                   );
-                })()
-              ))}
+              })}
             </tbody>
             </table>
           </div>
