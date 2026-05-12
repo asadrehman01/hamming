@@ -547,9 +547,45 @@ const TransactionsPage = () => {
       setSaving(false);
     }
   };
+  const computeTransactionDisplayData = (tx, customerDirectory) => {
+    const rawStatus = String(tx.status || "completed").toLowerCase();
+    const linkedCustomer = tx.subscriptions?.customers || null;
+    const fallbackCustomer = customerDirectory.find(
+      (customer) =>
+        normalizeName(`${customer.first_name || ""} ${customer.last_name || ""}`) ===
+        normalizeName(tx.sender_name),
+    );
+    const resolvedCustomer = linkedCustomer || fallbackCustomer || null;
+    const adjustedStatus =
+      rawStatus === "inactive" && resolvedCustomer && isCustomerActiveNow(resolvedCustomer)
+        ? "completed"
+        : rawStatus;
+    const statusClass =
+      adjustedStatus === "completed"
+        ? "text-emerald-600 bg-emerald-50 border-emerald-200"
+        : adjustedStatus === "inactive"
+          ? "text-red-600 bg-red-50 border-red-200"
+          : "text-amber-600 bg-amber-50 border-amber-200";
+    const statusLabel = adjustedStatus.charAt(0).toUpperCase() + adjustedStatus.slice(1);
+    const matchLabel = resolvedCustomer
+      ? `Matched: ${resolvedCustomer.first_name || ""} ${resolvedCustomer.last_name || ""}`.trim()
+      : tx.matched_customer_id
+        ? "Matched customer record"
+        : "No matching customer";
+
+    return {
+      rawStatus,
+      resolvedCustomer,
+      adjustedStatus,
+      statusClass,
+      statusLabel,
+      matchLabel,
+    };
+  };
+
   return (
     <div
-      className="app-page transactions-page-vibe transactions-typography p-8 md:p-12 lg:p-24 overflow-x-hidden"
+      className="app-page transactions-page-vibe transactions-typography p-8 md:p-12 lg:p-24 overflow-x-hidden md:overflow-x-visible"
       style={{
         "--app-theme-page-bg": "#ffffff",
         "--app-theme-card-bg": "#fbfbfb",
@@ -843,30 +879,8 @@ const TransactionsPage = () => {
         <div className="transactions-card-alt border border-white/10 overflow-hidden rounded-2xl">
           <div className="md:hidden divide-y divide-[#e6e6e6]">
             {transactions.map((tx) => {
-              const rawStatus = String(tx.status || "completed").toLowerCase();
-              const linkedCustomer = tx.subscriptions?.customers || null;
-              const fallbackCustomer = customerDirectory.find(
-                (customer) =>
-                  normalizeName(`${customer.first_name || ""} ${customer.last_name || ""}`) ===
-                  normalizeName(tx.sender_name),
-              );
-              const resolvedCustomer = linkedCustomer || fallbackCustomer || null;
-              const adjustedStatus =
-                rawStatus === "inactive" && resolvedCustomer && isCustomerActiveNow(resolvedCustomer)
-                  ? "completed"
-                  : rawStatus;
-              const statusClass =
-                adjustedStatus === "completed"
-                  ? "text-emerald-600 bg-emerald-50 border-emerald-200"
-                  : adjustedStatus === "inactive"
-                    ? "text-red-600 bg-red-50 border-red-200"
-                    : "text-amber-600 bg-amber-50 border-amber-200";
-              const statusLabel = adjustedStatus.charAt(0).toUpperCase() + adjustedStatus.slice(1);
-              const matchLabel = resolvedCustomer
-                ? `Matched: ${resolvedCustomer.first_name || ""} ${resolvedCustomer.last_name || ""}`.trim()
-                : tx.matched_customer_id
-                  ? "Matched customer record"
-                  : "No matching customer";
+              const { statusClass, statusLabel, matchLabel } =
+                computeTransactionDisplayData(tx, customerDirectory);
 
               return (
                 <div key={`mobile-${tx.id}`} className="p-4 space-y-3">
@@ -984,34 +998,11 @@ const TransactionsPage = () => {
               </tr>
             </thead>
             <tbody>
-              {transactions.map((tx) => (
-                (() => {
-                  const rawStatus = String(tx.status || "completed").toLowerCase();
-                  const linkedCustomer = tx.subscriptions?.customers || null;
-                  const fallbackCustomer = customerDirectory.find(
-                    (customer) =>
-                      normalizeName(`${customer.first_name || ""} ${customer.last_name || ""}`) ===
-                      normalizeName(tx.sender_name),
-                  );
-                  const resolvedCustomer = linkedCustomer || fallbackCustomer || null;
-                  const adjustedStatus =
-                    rawStatus === "inactive" && resolvedCustomer && isCustomerActiveNow(resolvedCustomer)
-                      ? "completed"
-                      : rawStatus;
-                  const statusClass =
-                    adjustedStatus === "completed"
-                      ? "text-emerald-600 bg-emerald-50 border-emerald-200"
-                      : adjustedStatus === "inactive"
-                        ? "text-red-600 bg-red-50 border-red-200"
-                        : "text-amber-600 bg-amber-50 border-amber-200";
-                  const statusLabel = adjustedStatus.charAt(0).toUpperCase() + adjustedStatus.slice(1);
-                  const matchLabel = resolvedCustomer
-                    ? `Matched: ${resolvedCustomer.first_name || ""} ${resolvedCustomer.last_name || ""}`.trim()
-                    : tx.matched_customer_id
-                      ? "Matched customer record"
-                      : "No matching customer";
-                  return (
-                    <tr key={tx.id} className="border-b border-[#e6e6e6] hover:bg-[#f9f9f9] transition-colors group">
+              {transactions.map((tx) => {
+                const { statusClass, statusLabel, matchLabel } =
+                  computeTransactionDisplayData(tx, customerDirectory);
+                return (
+                  <tr key={tx.id} className="border-b border-[#e6e6e6] hover:bg-[#f9f9f9] transition-colors group">
                       <td className="p-6 align-top">
                         <span className="text-[10px] text-[#8a8a8a] font-light tracking-[0.08em] transactions-value">
                           #Tx-{tx.id.substring(0, 8)}

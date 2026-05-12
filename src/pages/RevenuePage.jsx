@@ -611,7 +611,19 @@ const RevenuePage = () => {
       ).toISOString();
 
       const categoryIds = categories.map((cat) => cat.id);
+      let originalRows = [];
       if (categoryIds.length > 0) {
+        // Fetch existing rows for restoration if subsequent insert fails
+        const { data: fetchedRows, error: fetchError } = await supabase
+          .from("expenses")
+          .select("*")
+          .eq("gym_id", gymId)
+          .in("category_id", categoryIds)
+          .gte("date", startOfMonth)
+          .lte("date", endOfMonth);
+        if (fetchError) throw fetchError;
+        originalRows = fetchedRows || [];
+
         const { error: deleteError } = await supabase
           .from("expenses")
           .delete()
@@ -622,7 +634,7 @@ const RevenuePage = () => {
         if (deleteError) throw deleteError;
       }
 
-      // Then upsert only entries with non-zero amounts
+      // Then insert only entries with non-zero amounts
       const toUpsert = categories
         .map((category) => ({
           gym_id: gymId,
@@ -630,13 +642,19 @@ const RevenuePage = () => {
           amount: safeAmount(expenseInputs[category.id] || 0),
           date: ledgerDate,
         }))
-        .filter((item) => item.amount > 0); // Only upsert if amount > 0
+        .filter((item) => item.amount > 0); // Only insert if amount > 0
 
       if (toUpsert.length > 0) {
-        const { error } = await supabase
+        const { error: insertError } = await supabase
           .from("expenses")
           .insert(toUpsert);
-        if (error) throw error;
+        if (insertError) {
+          // Restore previously deleted rows on failure
+          if (originalRows.length > 0) {
+            await supabase.from("expenses").insert(originalRows);
+          }
+          throw insertError;
+        }
       }
       fetchExpensesData();
     } catch (err) {
