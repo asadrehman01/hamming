@@ -215,11 +215,19 @@ const CustomersPage = () => {
       }
 
       if (customerId) {
-        const { error: deleteRevenueLogsError } = await supabase
-          .from("admin_client_revenue_entries")
+        // 4. Delete attendance logs
+        await supabase
+          .from("attendance_logs")
           .delete()
+          .eq("user_id", gymId)
           .eq("customer_id", customerId);
-        if (deleteRevenueLogsError) throw deleteRevenueLogsError;
+
+        // 5. Delete communication logs
+        await supabase
+          .from("communication_logs")
+          .delete()
+          .eq("gym_id", gymId)
+          .eq("customer_id", customerId);
       }
 
       const folderPrefix = `${deleteTargetCustomer.gym_id}/${deleteTargetCustomer.id}`;
