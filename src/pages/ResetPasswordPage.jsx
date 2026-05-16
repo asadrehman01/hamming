@@ -81,7 +81,8 @@ const ResetPasswordPage = () => {
     setLoading(true);
 
     try {
-      await postPublicApi("/api/auth/reset-password", {
+      await postPublicApi("/api/auth-reset", {
+        action: "reset",
         token,
         newPassword,
         confirmPassword,

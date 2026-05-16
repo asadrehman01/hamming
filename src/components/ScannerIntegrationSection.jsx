@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { postBackendApi } from "../lib/backendApi";
+import { getBackendApi, postBackendApi } from "../lib/backendApi";
 
 const ScannerIntegrationSection = () => {
   const [enabled, setEnabled] = useState(false);
@@ -33,17 +33,12 @@ const ScannerIntegrationSection = () => {
         if (!currentSession) return;
         setSession(currentSession);
         
-        const baseUrl = String(import.meta.env.VITE_BACKEND_API_BASE_URL || "").replace(/\/+$/, "");
         let data;
         
         try {
-          if (baseUrl) {
-            const res = await fetch(`${baseUrl}/api/scanner/settings`, {
-              headers: { Authorization: `Bearer ${currentSession.access_token}` }
-            });
-            if (res.ok) {
-              data = await res.json();
-            }
+          if (import.meta.env.VITE_BACKEND_API_BASE_URL) {
+            const response = await getBackendApi("/api/scanner?type=settings");
+            data = response?.settings;
           }
           if (!data) {
             const { data: fallbackData } = await supabase.from("scanner_settings").select("*").maybeSingle();
@@ -95,7 +90,7 @@ const ScannerIntegrationSection = () => {
     setExpanded(false);
     
     try {
-      await postBackendApi("/api/scanner/settings", { enabled: false });
+      await postBackendApi("/api/scanner?type=settings", { enabled: false });
     } catch (err) {
       console.error("Failed to disable scanner settings:", err);
     }
@@ -115,7 +110,7 @@ const ScannerIntegrationSection = () => {
     setTesting(true);
     setTestStatus(null);
     try {
-      await postBackendApi("/api/scanner/test-connection", {
+      await postBackendApi("/api/scanner?type=test-connection", {
         ip: settings.ip_address,
         port: Number(settings.port)
       });
@@ -132,7 +127,7 @@ const ScannerIntegrationSection = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await postBackendApi("/api/scanner/settings", {
+      await postBackendApi("/api/scanner?type=settings", {
         enabled: true,
         ip_address: settings.ip_address,
         port: Number(settings.port),
@@ -154,7 +149,7 @@ const ScannerIntegrationSection = () => {
     }
     setSyncing(true);
     try {
-      await postBackendApi("/api/scanner/sync-now", {});
+      await postBackendApi("/api/scanner?type=sync", {});
       const now = new Date().toISOString();
       setLastSynced(now);
       

@@ -65,13 +65,6 @@ const ChangeAccountPasswordModal = ({ isOpen, onClose, email }) => {
       setError(null);
     }
 
-    if (!supabase) {
-      if (isMountedRef.current) {
-        setError("Authentication is not configured.");
-      }
-      return;
-    }
-
     if (!email) {
       if (isMountedRef.current) {
         setError("No account email found for this user.");
@@ -84,7 +77,7 @@ const ChangeAccountPasswordModal = ({ isOpen, onClose, email }) => {
     }
 
     try {
-      await postBackendApi("/api/auth/send-password-reset", {});
+      await postBackendApi("/api/auth-reset", { action: "request" });
       if (isMountedRef.current) {
         setSuccess(true);
         startCooldown();

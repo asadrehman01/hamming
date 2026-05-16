@@ -158,6 +158,31 @@ const getServiceRoleClient = (supabaseUrl, serviceRoleKey) => {
   return createClient(supabaseUrl, serviceRoleKey);
 };
 
+const listAllAuthUsers = async (adminClient) => {
+  const perPage = 1000;
+  let page = 1;
+  const users = [];
+
+  while (true) {
+    const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage });
+
+    if (error) {
+      throw error;
+    }
+
+    const pageUsers = Array.isArray(data?.users) ? data.users : [];
+    users.push(...pageUsers);
+
+    if (pageUsers.length < perPage) {
+      break;
+    }
+
+    page += 1;
+  }
+
+  return users;
+};
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -196,6 +221,48 @@ export default async function handler(req, res) {
     }
 
     const admin = getServiceRoleClient(supabaseUrl, serviceRoleKey);
+
+    if (action === "users") {
+      const [{ data: gyms, error: gymError }, { data: billingSettings, error: billingError }, authUsers] = await Promise.all([
+        admin
+          .from("gyms")
+          .select("id, name, created_at")
+          .order("created_at", { ascending: false }),
+        admin
+          .from("billing_settings")
+          .select("gym_id, gym_display_name"),
+        listAllAuthUsers(admin),
+      ]);
+
+      if (gymError) {
+        throw gymError;
+      }
+
+      if (billingError) {
+        throw billingError;
+      }
+
+      const emailByUserId = new Map(
+        authUsers.map((authUser) => [authUser.id, authUser.email || ""]),
+      );
+
+      const billingByGymId = new Map(
+        (billingSettings || []).map((billing) => [billing.gym_id, billing.gym_display_name]),
+      );
+
+      const users = (gyms || []).map((gym) => ({
+        id: gym.id,
+        loginEmail: emailByUserId.get(gym.id) || "",
+        gymName: billingByGymId.get(gym.id) || gym.name || "MY GYM",
+        createdAt: gym.created_at,
+      }));
+
+      return res.status(200).json({
+        totalUsers: users.length,
+        users,
+      });
+    }
+
     const { data: gym, error: gymError } = await admin
       .from("gyms")
       .select("admin_password")

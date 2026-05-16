@@ -233,7 +233,14 @@ const BillingPage = () => {
   useEffect(() => {
     let alive = true;
     fetchIdSettings()
-      .then((data) => { if (alive) setIdSettings({ id_format: data.id_format ?? "", id_padding: data.id_padding ?? 3 }); })
+      .then((data) => {
+        if (!alive) return;
+        const settings = data?.settings || data || {};
+        setIdSettings({
+          id_format: settings.id_format ?? "",
+          id_padding: settings.id_padding ?? 3,
+        });
+      })
       .catch(() => {});
     supabase.from("customers").select("id", { count: "exact", head: true })
       .then(({ count }) => { if (alive && count > 0) setHasExistingMembers(true); })

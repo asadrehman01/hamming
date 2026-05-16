@@ -6,8 +6,10 @@ const endpointToFunctionName = {
   "/api/broadcast-email": "broadcast-email",
   "/api/run-auto-migration": "run-auto-migration",
   "/api/bug-report": "bug-report",
-  "/api/admin-users": "admin-users",
-  "/api/auth/send-password-reset": "send-password-reset",
+  "/api/admin-auth": "admin-users",
+  "/api/gym": "gym",
+  "/api/scanner": "scanner",
+  "/api/auth-reset": "auth-reset",
 };
 
 const buildApiUrl = (path) => {
@@ -156,6 +158,43 @@ export const postBackendApi = async (path, body) => {
   }
 };
 
+export const getBackendApi = async (path) => {
+  if (!configuredApiBase) {
+    await getAuthToken();
+    return invokeEdgeFallback(path, null);
+  }
+
+  const token = await getAuthToken();
+  const url = buildApiUrl(path);
+
+  let response;
+  try {
+    response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch (networkError) {
+    return invokeEdgeFallback(path, null, networkError);
+  }
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      return invokeEdgeFallback(
+        path,
+        null,
+        new Error(
+          `Backend endpoint not found: ${url}. Set VITE_BACKEND_API_BASE_URL or run your backend API server.`,
+        ),
+      );
+    }
+    throw new Error(await parseApiError(response));
+  }
+
+  return response.json();
+};
+
 const ensureBroadcastDelivery = (responsePayload) => {
   if (!responsePayload || typeof responsePayload !== "object") {
     return responsePayload;
@@ -183,25 +222,25 @@ export const sendBugReport = async (payload) =>
   postBackendApi("/api/bug-report", payload);
 
 export const fetchAdminUsers = async () => {
-  return postBackendApi("/api/admin-users", {});
+  return postBackendApi("/api/admin-auth", { action: "users" });
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Member ID Settings & Preview
 // ─────────────────────────────────────────────────────────────────────────────
-export const fetchIdSettings = async () => getBackendApi('/api/gym/id-settings');
-export const saveIdSettings = async (payload) => postBackendApi('/api/gym/id-settings', payload);
-export const previewMemberId = async (payload) => postBackendApi('/api/gym/preview-id', payload);
+export const fetchIdSettings = async () => getBackendApi("/api/gym?type=id-settings");
+export const saveIdSettings = async (payload) => postBackendApi("/api/gym?type=id-settings", payload);
+export const previewMemberId = async (payload) => postBackendApi("/api/gym?type=preview-id", payload);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Scanner Integration & Mapping
 // ─────────────────────────────────────────────────────────────────────────────
-export const fetchUnmappedIds = async () => getBackendApi('/api/scanner/unmapped-ids');
-export const mapScannerMember = async (payload) => postBackendApi('/api/scanner/map-member', payload);
-export const autoMapScannerMembers = async () => postBackendApi('/api/scanner/auto-map', {});
+export const fetchUnmappedIds = async () => getBackendApi("/api/scanner?type=unmapped-ids");
+export const mapScannerMember = async (payload) => postBackendApi("/api/scanner?type=map-member", payload);
+export const autoMapScannerMembers = async () => postBackendApi("/api/scanner?type=auto-map", {});
 
 // Additional scanner settings
-export const testScannerConnection = async (payload) => postBackendApi('/api/scanner/test-connection', payload);
-export const syncScanner = async (payload) => postBackendApi('/api/scanner/sync', payload);
-export const enrollScannerMember = async (payload) => postBackendApi('/api/scanner/enroll', payload);
-export const unenrollScannerMember = async (payload) => postBackendApi('/api/scanner/unenroll', payload);
+export const testScannerConnection = async (payload) => postBackendApi("/api/scanner?type=test-connection", payload);
+export const syncScanner = async (payload) => postBackendApi("/api/scanner?type=sync", payload);
+export const enrollScannerMember = async (payload) => postBackendApi("/api/scanner?type=enroll", payload);
+export const unenrollScannerMember = async (payload) => postBackendApi("/api/scanner?type=unenroll", payload);
