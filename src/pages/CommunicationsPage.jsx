@@ -676,7 +676,7 @@ const CommunicationsPage = () => {
                         using the template you define above.
                       </p>
                       <p>
-                        Use placeholders like <code className="text-[#666666">{"{first_name}"}</code> to personalize.
+                        Use placeholders like <code className="text-[#666666]">{"{first_name}"}</code> to personalize.
                       </p>
                     </div>
                   </div>

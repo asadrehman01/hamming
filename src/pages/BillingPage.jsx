@@ -383,8 +383,8 @@ const BillingPage = () => {
     .billing-page-vibe .billing-card-title { color: #6b6b6b !important; }
     .billing-page-vibe input, .billing-page-vibe select, .billing-page-vibe textarea { background-color: #ffffff !important; color: #0d0d0d !important; border-color: rgba(0,0,0,0.12) !important; }
     .billing-page-vibe input::placeholder, .billing-page-vibe textarea::placeholder { color: #a0a0a0 !important; }
-    .billing-page-vibe button { background-color: #ffffff !important; color: #0d0d0d !important; border-color: rgba(0,0,0,0.12) !important; }
-    .billing-page-vibe button:hover { background-color: #f4f4f4 !important; }
+    .billing-page-vibe .billing-action { background-color: #ffffff; color: #0d0d0d; border-color: rgba(0,0,0,0.12); }
+    .billing-page-vibe .billing-action:hover { background-color: #f4f4f4; }
     `}</style>
       <div className="w-full max-w-4xl mx-auto space-y-6">
         <header className="space-y-2">
@@ -424,7 +424,7 @@ const BillingPage = () => {
             <button
               type="button"
               onClick={() => updateField("receipt_enabled", !form.receipt_enabled)}
-              className={`px-3 py-1.5 rounded-lg border text-[10px] uppercase tracking-[0.12em] transition-colors ${
+              className={`billing-action px-3 py-1.5 rounded-lg border text-[10px] uppercase tracking-[0.12em] transition-colors ${
                 form.receipt_enabled
                   ? "border-emerald-300/20 bg-emerald-500/[0.08] text-emerald-200/90"
                   : "border-red-300/20 bg-red-500/[0.08] text-red-200/90"
@@ -609,7 +609,7 @@ const BillingPage = () => {
           <button
             type="submit"
             disabled={saving}
-            className="w-full md:w-auto rounded-xl border border-white/15 bg-white/[0.05] hover:bg-white/[0.09] px-5 py-2.5 text-[13px] text-white/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed tracking-wide md:mt-1"
+            className="billing-action w-full md:w-auto rounded-xl border border-white/15 bg-white/[0.05] hover:bg-white/[0.09] px-5 py-2.5 text-[13px] text-white/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed tracking-wide md:mt-1"
           >
             {saving ? "Saving..." : "Save Billing Settings"}
           </button>
@@ -676,7 +676,7 @@ const BillingPage = () => {
             type="button"
             onClick={handleSaveIdSettings}
             disabled={idSaving}
-            className="w-full md:w-auto rounded-xl border border-white/15 bg-white/[0.05] hover:bg-white/[0.09] px-5 py-2.5 text-[13px] text-white/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed tracking-wide flex items-center gap-2"
+            className="billing-action w-full md:w-auto rounded-xl border border-white/15 bg-white/[0.05] hover:bg-white/[0.09] px-5 py-2.5 text-[13px] text-white/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed tracking-wide flex items-center gap-2"
           >
             {idSaving && <Loader2 size={13} className="animate-spin" />}
             {idSaving ? "Saving..." : "Save ID Format"}

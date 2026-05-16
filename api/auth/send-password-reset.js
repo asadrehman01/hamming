@@ -106,7 +106,8 @@ export default async function handler(req, res) {
       .gte("created_at", since);
 
     if (Number(count || 0) >= RATE_LIMIT_MAX) {
-      return res.status(429).json({ error: "Too many requests. Please wait before requesting another link." });
+      console.warn("Password reset rate limit reached:", { userId: user.id, count, RATE_LIMIT_MAX });
+      return res.status(200).json(GENERIC_OK);
     }
 
     // Delete existing unused tokens for this user + type

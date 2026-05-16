@@ -171,9 +171,8 @@ export default async function handler(req, res) {
       }
 
       if (!resendApiKey || !resendFromEmail) {
-        return res
-          .status(500)
-          .json({ error: "Missing RESEND_API_KEY or RESEND_FROM_EMAIL." });
+        console.warn("Skipping admin password reset email because RESEND_API_KEY or RESEND_FROM_EMAIL is missing.");
+        return res.status(200).json({ message: GENERIC_MESSAGE });
       }
 
       const rawToken = crypto.randomBytes(RESET_TOKEN_BYTES).toString("hex");
@@ -191,7 +190,13 @@ export default async function handler(req, res) {
         });
 
       if (insertError) {
-        throw insertError;
+        console.error("Failed to insert admin password reset token:", {
+          insertError,
+          userId,
+          tokenHash,
+          expiresAt,
+        });
+        return res.status(200).json({ message: GENERIC_MESSAGE });
       }
 
       const baseUrl = resolveBaseUrl(req);
