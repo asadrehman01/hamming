@@ -1,22 +1,16 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, LoaderCircle } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
-import { postPublicApi } from "../lib/publicApi";
 
 const INVALID_LINK_MESSAGE = "Invalid reset link.";
 const SUCCESS_MESSAGE = "Your password has been updated. You can now log in.";
 
 const ResetPasswordPage = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-
-  const token = useMemo(
-    () => String(searchParams.get("token") || "").trim(),
-    [searchParams],
-  );
 
   const [checkingSession, setCheckingSession] = useState(true);
+  const [hasValidSession, setHasValidSession] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -41,8 +35,7 @@ const ResetPasswordPage = () => {
         if (!active) return;
 
         if (data?.session) {
-          navigate("/dashboard", { replace: true });
-          return;
+          setHasValidSession(true);
         }
       } finally {
         if (active) {
@@ -56,7 +49,7 @@ const ResetPasswordPage = () => {
     return () => {
       active = false;
     };
-  }, [navigate]);
+  }, []);
 
   const passwordRules = {
     minLength: newPassword.length >= 8,
@@ -68,26 +61,25 @@ const ResetPasswordPage = () => {
   const allRulesMet = Object.values(passwordRules).every(Boolean);
   const passwordsMatch =
     newPassword.length > 0 && confirmPassword.length > 0 && newPassword === confirmPassword;
-  const canSubmit = Boolean(token) && allRulesMet && passwordsMatch && !loading;
+  const canSubmit = allRulesMet && passwordsMatch && !loading;
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!token) {
-      setError(INVALID_LINK_MESSAGE);
-      return;
-    }
 
     setError(null);
     setLoading(true);
 
     try {
-      await postPublicApi("/api/auth-reset", {
-        action: "reset",
-        token,
-        newPassword,
-        confirmPassword,
-      });
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
 
+      if (error) {
+        throw error;
+      }
+
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) {
+        throw signOutError;
+      }
       setSuccess(true);
     } catch (err) {
       setError(err?.message || "Something went wrong. Please try again.");
@@ -104,7 +96,7 @@ const ResetPasswordPage = () => {
     );
   }
 
-  if (!token) {
+  if (!hasValidSession) {
     return (
       <div className="app-page min-h-screen bg-black flex items-center justify-center p-4 sm:p-8 md:p-12 font-body">
         <div className="w-full max-w-[760px] bg-[#E8E0D5] shadow-2xl p-8 md:p-12">

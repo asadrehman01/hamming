@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Mail, RefreshCw, X } from "lucide-react";
-import { postBackendApi } from "../lib/backendApi";
+import { supabase } from "../lib/supabaseClient";
 
 const ChangeAccountPasswordModal = ({ isOpen, onClose, email }) => {
   const [loading, setLoading] = useState(false);
@@ -77,12 +77,28 @@ const ChangeAccountPasswordModal = ({ isOpen, onClose, email }) => {
     }
 
     try {
-      await postBackendApi("/api/auth-reset", { action: "request" });
+      const { data: { session } } = await supabase.auth.getSession();
+      const sessionEmail = session?.user?.email;
+
+      if (!sessionEmail) {
+        throw new Error("Missing auth session. Please sign in again.");
+      }
+
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(sessionEmail, {
+        redirectTo: window.location.origin + "/reset-password",
+      });
+
+      if (resetError) {
+        console.log("[ChangeAccountPasswordModal] JSON error:", JSON.stringify(resetError, null, 2));
+        throw resetError;
+      }
+
       if (isMountedRef.current) {
         setSuccess(true);
         startCooldown();
       }
     } catch (err) {
+      console.log("[ChangeAccountPasswordModal] fetch error object:", err);
       if (isMountedRef.current) {
         setError("Something went wrong. Please try again.");
       }

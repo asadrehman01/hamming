@@ -9,7 +9,6 @@ const endpointToFunctionName = {
   "/api/admin-auth": "admin-users",
   "/api/gym": "gym",
   "/api/scanner": "scanner",
-  "/api/auth-reset": "auth-reset",
 };
 
 const buildApiUrl = (path) => {

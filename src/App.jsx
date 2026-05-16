@@ -37,8 +37,9 @@ import {
 } from "./lib/accessControl";
 
 const RequireAuth = ({ session }) => {
+  const location = useLocation();
   if (!session) {
-    return <Navigate to="/login" replace />;
+    return location.pathname === "/login" ? null : <Navigate to="/login" replace />;
   }
   return <Outlet />;
 };
@@ -48,11 +49,11 @@ const RequireModeAccess = () => {
   const mode = getAccessMode();
 
   if (!mode) {
-    return <Navigate to="/login" replace />;
+    return location.pathname === "/login" ? null : <Navigate to="/login" replace />;
   }
 
   if (!canAccessPath(mode, location.pathname)) {
-    return <Navigate to="/dashboard" replace />;
+    return location.pathname === "/dashboard" ? null : <Navigate to="/dashboard" replace />;
   }
 
   return <Outlet />;
@@ -100,36 +101,25 @@ function App() {
       setSession(candidateSession ?? null);
     };
 
-    const bootstrapSession = async () => {
-      if (!supabase) {
-        setAuthLoading(false);
-        return;
-      }
+    if (!supabase) {
+      setAuthLoading(false);
+      return;
+    }
 
-      try {
-        const { data } = await supabase.auth.getSession();
-        await applySessionWithAccessCheck(data.session ?? null);
-      } catch (error) {
-        console.error("Failed to bootstrap session:", error);
-        if (active) {
-          setSession(null);
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      async (event, nextSession) => {
+        if (event === 'INITIAL_SESSION') {
+          await applySessionWithAccessCheck(nextSession ?? null);
+          if (active) setAuthLoading(false);
+        } else {
+          applySessionWithAccessCheck(nextSession ?? null);
         }
-      } finally {
-        if (active) setAuthLoading(false);
-      }
-    };
-
-    bootstrapSession();
-
-    const { data: listener } = supabase?.auth.onAuthStateChange(
-      (_event, nextSession) => {
-        applySessionWithAccessCheck(nextSession ?? null);
       },
-    ) ?? { data: { subscription: { unsubscribe: () => {} } } };
+    );
 
     return () => {
       active = false;
-      listener.subscription.unsubscribe();
+      listener?.subscription.unsubscribe();
     };
   }, []);
 
@@ -149,7 +139,7 @@ function App() {
             path="/login"
             element={
               session && getAccessMode() ? (
-                <Navigate to="/dashboard" replace />
+                window.location.pathname === "/dashboard" ? null : <Navigate to="/dashboard" replace />
               ) : (
                 <LoginPage />
               )
@@ -159,7 +149,7 @@ function App() {
             path="/signup"
             element={
               session && getAccessMode() ? (
-                <Navigate to="/dashboard" replace />
+                window.location.pathname === "/dashboard" ? null : <Navigate to="/dashboard" replace />
               ) : (
                 <SignupPage />
               )

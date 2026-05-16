@@ -240,7 +240,9 @@ const AutoMigrationPage = ({ onboarding = false, embedded = false }) => {
       } = await getUserWithRetry(supabase);
       setProcessingUser(user || null);
       if (onboarding && user && isMigrationOnboardingCompleted(user)) {
-        navigate("/dashboard", { replace: true });
+        if (window.location.pathname !== "/dashboard") {
+          navigate("/dashboard", { replace: true });
+        }
         return;
       }
       if (user && !isMigrationOnboardingCompleted(user)) {
