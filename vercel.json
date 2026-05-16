@@ -25,7 +25,7 @@
     { "source": "/api/scanner-enroll", "destination": "/api/scanner-ops?type=enroll" },
     { "source": "/api/scanner-test-connection", "destination": "/api/scanner-ops?type=test-connection" },
     { "source": "/api/cron/scanner-poll", "destination": "/api/cron-worker?job=scanner-poll" },
-    { "source": "/api/cron/expiry-reminders", "destination": "/api/cron-worker?job=expiry-reminders" }
+    { "source": "/api/cron/expiry-reminders", "destination": "/api/cron-worker?job=expiry-reminders" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
