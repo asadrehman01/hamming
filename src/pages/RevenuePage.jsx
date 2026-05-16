@@ -1015,9 +1015,10 @@ const RevenuePage = () => {
 .revenue-page-vibe { background-color: #ffffff !important; color: #0d0d0d; min-height: 100vh; }
 .revenue-header-title { font-family: 'Playfair Display', serif; font-weight: 400; color: #0d0d0d; letter-spacing: 0.02em; }
 .communications-subtle { color: #666666; }
-.revenue-page-vibe .revenue-panel { background: #fbfbfb; border-color: #e6e6e6; color: #0d0d0d; }
+.revenue-page-vibe .revenue-panel { background: #fafafa; border-color: rgba(0, 0, 0, 0.12); color: #0d0d0d; }
 .revenue-page-vibe .revenue-panel-muted { color: #666666; }
-.revenue-page-vibe .revenue-chart-bg { background: #fbfbfb; border-color: #e6e6e6; }
+.revenue-page-vibe .revenue-chart-bg { background: #fafafa; border-color: rgba(0, 0, 0, 0.12); }
+.revenue-page-vibe .revenue-card-title { color: #6b6b6b; }
 .revenue-page-vibe .revenue-input-dark { background: #ffffff; border-color: #e0e0e0; color: #0d0d0d; }
 .revenue-page-vibe .revenue-input-dark::placeholder { color: #a0a0a0; }
 `}</style>

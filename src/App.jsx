@@ -26,6 +26,8 @@ import AdminPage from "./pages/AdminPage";
 import AdminClientRevenuePage from "./pages/AdminClientRevenuePage";
 import AdminAccessPage from "./pages/AdminAccessPage";
 import SignupPage from "./pages/SignupPage";
+import ResetAdminPasswordPage from "./pages/ResetAdminPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import { supabase } from "./lib/supabaseClient";
 import { isCurrentUserAccessAllowed } from "./lib/appAccess";
 import {
@@ -163,6 +165,8 @@ function App() {
               )
             }
           />
+          <Route path="/reset-admin-password" element={<ResetAdminPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route element={<RequireAuth session={session} />}>
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/admin/client-revenue" element={<AdminClientRevenuePage />} />

@@ -431,21 +431,74 @@ const AttendancePage = () => {
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="app-page attendance-page p-6 md:p-10 overflow-y-auto h-full">
+    <div className="app-page attendance-page-vibe p-6 md:p-10 overflow-y-auto h-full">
+      <style>{` 
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap");
+.attendance-page-vibe { background-color: #ffffff !important; color: #0d0d0d; min-height: 100vh; }
+.attendance-page-vibe h1, .attendance-page-vibe h2, .attendance-page-vibe h3, .attendance-page-vibe .attendance-header-title { font-family: 'Playfair Display', serif !important; font-weight: 400; color: #0d0d0d; letter-spacing: 0.02em; }
+.attendance-page-vibe .attendance-subtle { color: #666666; }
+.attendance-page-vibe [class*="text-white/"] { color: #666666 !important; }
+.attendance-page-vibe [class*="text-white"] { color: #0d0d0d !important; }
+.attendance-page-vibe [style*="color: rgba(255,255,255"] { color: #0d0d0d !important; }
+.attendance-page-vibe .att-empty, .attendance-page-vibe .att-info-box, .attendance-page-vibe .att-settings-card, .attendance-page-vibe .att-map-row, .attendance-page-vibe .att-unmatched-alert, .attendance-page-vibe .att-unmatched-alert__body, .attendance-page-vibe .att-map-row__picker, .attendance-page-vibe .att-map-row__uid { color: #0d0d0d !important; }
+.attendance-page-vibe .att-empty p, .attendance-page-vibe .att-empty span, .attendance-page-vibe .att-info-box .text-white/45, .attendance-page-vibe .att-info-box .text-white/60 { color: #666666 !important; }
+.attendance-page-vibe .att-stat-card { background: #fafafa; border: 1px solid rgba(0,0,0,0.12); border-radius: 12px; padding: 16px; }
+.attendance-page-vibe .att-stat-card__label { color: #6b6b6b; }
+.attendance-page-vibe .att-stat-card__value { color: #0d0d0d; }
+.attendance-page-vibe .att-table-wrap { background: #fafafa; border: 1px solid rgba(0,0,0,0.12); border-radius: 12px; padding: 0.5rem; }
+.attendance-page-vibe .att-settings-card, .attendance-page-vibe .att-info-box, .attendance-page-vibe .att-map-row, .attendance-page-vibe .att-unmatched-alert { background: #fafafa; border: 1px solid rgba(0,0,0,0.12); }
+.attendance-page-vibe .att-empty { background: transparent; }
+.attendance-page-vibe input, .attendance-page-vibe select, .attendance-page-vibe textarea { background-color: #ffffff !important; color: #0d0d0d !important; border-color: rgba(0,0,0,0.12) !important; }
+.attendance-page-vibe button { border-color: rgba(0,0,0,0.12) !important; }
+/* Override tab/button/filter styles from global dark theme */
+.attendance-page-vibe .att-tabs { background: rgba(0,0,0,0.02) !important; border-color: rgba(0,0,0,0.06) !important; }
+.attendance-page-vibe .att-tab { color: #666666 !important; background: transparent !important; border-color: transparent !important; }
+.attendance-page-vibe .att-tab--active { background: rgba(0,0,0,0.03) !important; border-color: rgba(0,0,0,0.06) !important; color: #0d0d0d !important; }
+.attendance-page-vibe .att-tab svg { color: inherit !important; }
+.attendance-page-vibe .att-btn { color: #0d0d0d !important; background: transparent !important; }
+.attendance-page-vibe .att-btn--primary { background: rgba(16,185,129,0.08) !important; border-color: rgba(0,0,0,0.06) !important; color: #0d0d0d !important; }
+.attendance-page-vibe .att-btn--ghost { background: transparent !important; border-color: rgba(0,0,0,0.04) !important; color: #666666 !important; }
+.attendance-page-vibe .att-filter-tab { color: #666666 !important; background: transparent !important; border-color: transparent !important; }
+.attendance-page-vibe .att-filter-tab--active { background: rgba(0,0,0,0.03) !important; border-color: rgba(0,0,0,0.06) !important; color: #0d0d0d !important; }
+.attendance-page-vibe .att-btn svg, .attendance-page-vibe .att-filter-tab svg { color: inherit !important; }
+.attendance-page-vibe .att-uid { background: #f5f5f5 !important; color: #333 !important; border-color: rgba(0,0,0,0.06) !important; }
+/* Hover states - ensure hover doesn't switch to white from global dark CSS */
+.attendance-page-vibe .att-tab:hover:not(.att-tab--active):not(:disabled) { color: #444444 !important; background: rgba(0,0,0,0.03) !important; border-color: rgba(0,0,0,0.06) !important; }
+.attendance-page-vibe .att-btn:hover:not(:disabled) { transform: translateY(-1px) !important; color: #0d0d0d !important; background: rgba(0,0,0,0.03) !important; }
+.attendance-page-vibe .att-btn--primary:hover:not(:disabled) { background: rgba(16,185,129,0.12) !important; border-color: rgba(16,185,129,0.2) !important; color: #0d0d0d !important; box-shadow: none !important; }
+.attendance-page-vibe .att-btn--ghost:hover:not(:disabled) { background: rgba(0,0,0,0.03) !important; color: #444444 !important; border-color: rgba(0,0,0,0.06) !important; }
+.attendance-page-vibe .att-filter-tab:hover:not(:disabled) { color: #444444 !important; background: rgba(0,0,0,0.03) !important; border-color: rgba(0,0,0,0.06) !important; }
+
+/* Scanner settings card specific overrides */
+.attendance-page-vibe .att-settings-card { color: #0d0d0d !important; }
+.attendance-page-vibe .att-settings-card .att-label { color: #0d0d0d !important; }
+.attendance-page-vibe .att-settings-card .att-hint { color: #666666 !important; }
+.attendance-page-vibe .att-settings-card .att-feedback { color: inherit !important; }
+.attendance-page-vibe .att-settings-card .att-toggle-btn svg { color: #0d0d0d !important; }
+.attendance-page-vibe .att-settings-card .att-brand-badge { color: #6b6b6b !important; background: rgba(99,102,241,0.06) !important; border-color: rgba(99,102,241,0.12) !important; }
+.attendance-page-vibe .att-input::placeholder { color: rgba(0,0,0,0.35) !important; }
+.attendance-page-vibe .att-input, .attendance-page-vibe .att-select { background: #ffffff !important; color: #0d0d0d !important; border-color: rgba(0,0,0,0.12) !important; }
+.attendance-page-vibe .att-selected-customer .att-member-name, .attendance-page-vibe .att-member-name, .attendance-page-vibe .att-member-phone { color: #0d0d0d !important; }
+
+/* Subtle separators between settings sections */
+.attendance-page-vibe .att-divider { border-top: 1px solid rgba(0,0,0,0.06) !important; margin: 16px 0 !important; }
+.attendance-page-vibe .att-settings-card .att-settings-row + .att-settings-row { border-top: 1px solid rgba(0,0,0,0.04) !important; padding-top: 16px !important; margin-top: 16px !important; }
+.attendance-page-vibe .att-settings-card .att-settings-row + .att-divider { margin-top: 8px !important; }
+`}</style>
       <div className="w-full max-w-[1100px] mx-auto space-y-8">
 
         {/* ── Header ──────────────────────────────────────────────────────── */}
         <header className="flex flex-col md:flex-row md:items-end gap-4 justify-between">
           <div className="space-y-1">
-            <p className="text-[10px] tracking-[0.25em] font-mono text-white/40 uppercase">
-              Biometrics
-            </p>
-            <h1 className="text-4xl md:text-5xl font-medium tracking-tighter text-white" style={{ fontFamily: "Helvetica Neue, Helvetica, Arial, sans-serif" }}>
-              Attendance Sync
-            </h1>
-            <p className="text-sm text-white/50">
-              ZKTeco fingerprint scanner — live attendance log matching.
-            </p>
+              <p className="text-[10px] tracking-[0.25em] font-mono attendance-subtle uppercase">
+                Biometrics
+              </p>
+              <h1 className="attendance-header-title text-4xl md:text-5xl font-medium tracking-tighter" style={{ fontFamily: "'Playfair Display', serif" }}>
+                Attendance <span className="attendance-subtle">Sync</span>
+              </h1>
+              <p className="text-sm attendance-subtle">
+                ZKTeco fingerprint scanner — live attendance log matching.
+              </p>
           </div>
 
           {/* Connection badge + sync */}

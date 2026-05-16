@@ -1,17 +1,52 @@
-import React, { useEffect, useRef, useState } from "react";
-import { Mail, X } from "lucide-react";
-import { supabase } from "../lib/supabaseClient";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Mail, RefreshCw, X } from "lucide-react";
+import { postBackendApi } from "../lib/backendApi";
 
 const ChangeAccountPasswordModal = ({ isOpen, onClose, email }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const isMountedRef = useRef(false);
+  const cooldownTimerRef = useRef(null);
+
+  const maskedEmail = useMemo(() => {
+    if (!email || typeof email !== "string") return "Not available";
+    const trimmed = email.trim();
+    const [localPart, domainPart] = trimmed.split("@");
+    if (!localPart || !domainPart) return trimmed;
+
+    const visiblePrefix = localPart.slice(0, Math.min(2, localPart.length));
+    const maskedLocal = `${visiblePrefix}${"*".repeat(Math.max(localPart.length - visiblePrefix.length, 2))}`;
+    return `${maskedLocal}@${domainPart}`;
+  }, [email]);
+
+  const clearCooldownTimer = () => {
+    if (cooldownTimerRef.current) {
+      clearInterval(cooldownTimerRef.current);
+      cooldownTimerRef.current = null;
+    }
+  };
+
+  const startCooldown = () => {
+    clearCooldownTimer();
+    setCooldownSeconds(60);
+    cooldownTimerRef.current = setInterval(() => {
+      setCooldownSeconds((current) => {
+        if (current <= 1) {
+          clearCooldownTimer();
+          return 0;
+        }
+        return current - 1;
+      });
+    }, 1000);
+  };
 
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+      clearCooldownTimer();
     };
   }, []);
 
@@ -20,6 +55,8 @@ const ChangeAccountPasswordModal = ({ isOpen, onClose, email }) => {
     setLoading(false);
     setError(null);
     setSuccess(false);
+    setCooldownSeconds(0);
+    clearCooldownTimer();
   }, [isOpen]);
 
   const handleSendReset = async (event) => {
@@ -47,20 +84,14 @@ const ChangeAccountPasswordModal = ({ isOpen, onClose, email }) => {
     }
 
     try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-        email,
-        {
-          redirectTo: `${window.location.origin}/login`,
-        },
-      );
-
-      if (resetError) throw resetError;
+      await postBackendApi("/api/auth/send-password-reset", {});
       if (isMountedRef.current) {
         setSuccess(true);
+        startCooldown();
       }
     } catch (err) {
       if (isMountedRef.current) {
-        setError(err?.message || "Failed to send reset email.");
+        setError("Something went wrong. Please try again.");
       }
     } finally {
       if (isMountedRef.current) {
@@ -83,9 +114,7 @@ const ChangeAccountPasswordModal = ({ isOpen, onClose, email }) => {
         aria-modal="true"
       >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl md:text-2xl text-white">
-            Change Password
-          </h2>
+          <h2 className="text-xl md:text-2xl text-white">Change Password</h2>
           <button
             type="button"
             onClick={onClose}
@@ -95,56 +124,71 @@ const ChangeAccountPasswordModal = ({ isOpen, onClose, email }) => {
           </button>
         </div>
 
-        {success ? (
-          <div className="bg-white/5 border border-white/10 rounded-xl p-5 text-center">
-            <p className="text-white text-[13px]">
-              Password reset email sent.
-            </p>
-            <p className="text-[12px] text-white/65 mt-2">
-              Check {email} and follow the link to set your new login password.
-            </p>
-          </div>
-        ) : (
-          <form onSubmit={handleSendReset} className="space-y-5">
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
-                <p className="text-red-400 text-[12px]">{error}</p>
-              </div>
-            )}
+        <div className="space-y-5">
+          <p className="text-[12px] text-white/60 leading-relaxed">
+            For security, we'll send a password reset link to your registered email address.
+          </p>
 
-            <div className="space-y-2.5">
-              <label className="text-[11px] text-white/55">
-                Account Email
-              </label>
-              <div className="w-full bg-white/5 border border-white/10 px-4 py-3.5 text-[13px] text-white/80 rounded-xl flex items-center gap-2.5">
-                <Mail size={16} className="text-white/40" />
-                <span className="truncate">{email || "Not available"}</span>
-              </div>
+          <div className="space-y-2.5">
+            <label className="text-[11px] text-white/55">Account Email</label>
+            <div className="w-full bg-white/5 border border-white/10 px-4 py-3.5 text-[13px] text-white/80 rounded-xl flex items-center gap-2.5">
+              <Mail size={16} className="text-white/40" />
+              <span className="truncate">{maskedEmail}</span>
             </div>
+          </div>
 
-            <p className="text-[12px] text-white/60 leading-relaxed">
-              This sends a secure reset link to your email so you can update your
-              regular login password.
-            </p>
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+              <p className="text-red-400 text-[12px]">Something went wrong. Please try again.</p>
+            </div>
+          )}
 
-            <div className="flex gap-3 pt-2">
+          {success ? (
+            <div className="space-y-3">
+              <div className="bg-white/5 border border-white/10 rounded-xl p-5 text-center">
+                <p className="text-white text-[13px]">
+                  Reset link sent to your email. Check your inbox — the link expires in 15 minutes.
+                </p>
+              </div>
               <button
                 type="button"
-                onClick={onClose}
-                className="flex-1 px-4 py-3.5 border border-white/10 text-white text-[12px] hover:bg-white/5 transition-colors rounded-xl"
+                onClick={handleSendReset}
+                disabled={loading || cooldownSeconds > 0 || !email}
+                className="w-full px-4 py-3.5 bg-white text-black text-[12px] hover:bg-white/90 transition-colors disabled:opacity-50 rounded-xl flex items-center justify-center gap-2"
               >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading || !email}
-                className="flex-1 px-4 py-3.5 bg-white text-black text-[12px] hover:bg-white/90 transition-colors disabled:opacity-50 rounded-xl"
-              >
-                {loading ? "Sending..." : "Send Reset Link"}
+                {loading ? (
+                  <>
+                    <span className="h-4 w-4 rounded-full border-2 border-black/30 border-t-black animate-spin" />
+                    Sending...
+                  </>
+                ) : cooldownSeconds > 0 ? (
+                  <>
+                    <RefreshCw size={14} className="animate-spin" />
+                    Resend in {cooldownSeconds}s
+                  </>
+                ) : (
+                  "Resend"
+                )}
               </button>
             </div>
-          </form>
-        )}
+          ) : (
+            <button
+              type="button"
+              onClick={handleSendReset}
+              disabled={loading || !email}
+              className="w-full px-4 py-3.5 bg-white text-black text-[12px] hover:bg-white/90 transition-colors disabled:opacity-50 rounded-xl flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <span className="h-4 w-4 rounded-full border-2 border-black/30 border-t-black animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                "Send Reset Link"
+              )}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

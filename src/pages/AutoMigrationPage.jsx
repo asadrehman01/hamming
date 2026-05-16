@@ -900,8 +900,10 @@ const AutoMigrationPage = ({ onboarding = false, embedded = false }) => {
   const migrationContent = (
     <div className="migration-page-vibe space-y-6">
       <style>{` 
-.migration-page-vibe { background-color: #ffffff !important; color: #0d0d0d; min-height: 100vh; }
-.migration-page-vibe h1, .migration-page-vibe h2, .migration-page-vibe h3, .migration-page-vibe .migration-header-title { font-family: 'Playfair Display', serif; font-weight: 400; color: #0d0d0d; letter-spacing: 0.02em; }
+    @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap");
+    .migration-page-vibe { background-color: #ffffff !important; color: #0d0d0d; min-height: 100vh; }
+.migration-page-vibe h1, .migration-page-vibe h2, .migration-page-vibe h3, .migration-page-vibe .migration-header-title { font-family: 'Playfair Display', serif !important; font-weight: 400; color: #0d0d0d; letter-spacing: 0.02em; }
+.migration-page-vibe .migration-header-title { font-family: 'Playfair Display', serif !important; }
 .migration-page-vibe .migration-subtle { color: #666666; }
 .migration-page-vibe [class*="text-white/"] { color: #666666 !important; }
 .migration-page-vibe [class*="text-white"] { color: #0d0d0d !important; }
@@ -918,8 +920,8 @@ const AutoMigrationPage = ({ onboarding = false, embedded = false }) => {
               role="dialog"
               aria-modal="true"
             >
-              <h2 className="migration-header-title migration-decision-title text-xl sm:text-2xl leading-tight text-[#0d0d0d] mb-1">
-                Migration Setup
+              <h2 className="migration-header-title migration-decision-title text-xl sm:text-2xl leading-tight text-[#0d0d0d] mb-1" style={{ fontFamily: "'Playfair Display', serif" }}>
+                Migration <span className="migration-subtle">Setup</span>
               </h2>
               <p className="text-[13px] sm:text-sm migration-subtle leading-relaxed">
                 Do you want to transfer old data? Choosing "Not right now" will skip data transferring and you will not be redirected to integrations on future logins.
@@ -955,11 +957,17 @@ const AutoMigrationPage = ({ onboarding = false, embedded = false }) => {
           <p className="text-[10px] tracking-[0.25em] font-mono migration-subtle">
             Automatic Data Move
           </p>{" "}
-          <h1 className="migration-header-title text-3xl md:text-4xl font-medium tracking-[0.02em] text-[#0d0d0d]">
-            {onboarding
-              ? "Welcome Setup: Move Your Data"
-              : "Move Your Data Automatically"}
-          </h1>{" "}
+          <h1 className="migration-header-title text-3xl md:text-4xl font-medium tracking-[0.02em] text-[#0d0d0d]" style={{ fontFamily: "'Playfair Display', serif" }}>
+            {onboarding ? (
+              <>
+                Welcome Setup: <span className="migration-subtle">Move Your Data</span>
+              </>
+            ) : (
+              <>
+                Move Your Data <span className="migration-subtle">Automatically</span>
+              </>
+            )}
+          </h1>
           <p className="text-sm migration-subtle">
             {" "}
             Upload your data files and we will move everything for you. No
@@ -968,8 +976,8 @@ const AutoMigrationPage = ({ onboarding = false, embedded = false }) => {
           <div className="border border-[#e6e6e6] bg-white p-3 space-y-1 rounded-xl shadow-sm">
             {" "}
             <p className="migration-header-title text-[10px] tracking-[0.12em] text-[#0d0d0d] uppercase">
-              Quick Steps
-            </p>{" "}
+              Quick <span className="migration-subtle">Steps</span>
+            </p>
             <p className="text-xs migration-subtle">Step 1: Select your files.</p>{" "}
             <p className="text-xs migration-subtle">
               Step 2: Start migration.
@@ -986,7 +994,7 @@ const AutoMigrationPage = ({ onboarding = false, embedded = false }) => {
             {" "}
             <label className="border border-[#e6e6e6] p-4 cursor-pointer hover:border-[#d6d6d6] transition-colors rounded-xl bg-white">
               {" "}
-              <p className="migration-header-title text-sm text-[#0d0d0d]">Member Data File</p>{" "}
+              <p className="migration-header-title text-sm text-[#0d0d0d]">Member Data <span className="migration-subtle">File</span></p>
               <p className="text-[10px] migration-subtle mt-1">
                 Step 2A: Add your member file here.
               </p>{" "}
@@ -1003,7 +1011,7 @@ const AutoMigrationPage = ({ onboarding = false, embedded = false }) => {
             </label>{" "}
             <label className="border border-[#e6e6e6] p-4 cursor-pointer hover:border-[#d6d6d6] transition-colors rounded-xl bg-white">
               {" "}
-              <p className="migration-header-title text-sm text-[#0d0d0d]">Payment Data File</p>{" "}
+              <p className="migration-header-title text-sm text-[#0d0d0d]">Payment Data <span className="migration-subtle">File</span></p>
               <p className="text-[10px] migration-subtle mt-1">
                 Step 2B: Add your payment file here.
               </p>{" "}

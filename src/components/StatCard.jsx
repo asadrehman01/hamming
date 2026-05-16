@@ -23,7 +23,7 @@ const StatCard = ({ title, value, trend, icon, onClick }) => {
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[13px] tracking-[0.02em] text-white/65 font-light">
+          <p className="text-[13px] tracking-[0.02em] text-white/65 font-light dashboard-stat-card-title">
             {title}
           </p>
           <p className="mt-1 text-[34px] leading-none font-light text-white tracking-tight">

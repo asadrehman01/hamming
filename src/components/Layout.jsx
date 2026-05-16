@@ -7,7 +7,7 @@ import ChangeAccountPasswordModal from "./ChangeAccountPasswordModal";
 import BugReportModal from "./BugReportModal";
 import { supabase } from "../lib/supabaseClient";
 import { getUserWithRetry } from "../lib/authUser";
-import { clearAccessMode } from "../lib/accessControl";
+import { ACCESS_MODE, clearAccessMode, getAccessMode } from "../lib/accessControl";
 import { isMigrationOnboardingCompleted } from "../lib/migrationOnboarding";
 import OnboardingProgressBar from "./OnboardingProgressBar";
 
@@ -25,6 +25,8 @@ const Layout = () => {
   const [userLoaded, setUserLoaded] = useState(false);
   const mobileSettingsTriggerRef = useRef(null);
   const mobileSettingsPanelRef = useRef(null);
+  const accessMode = getAccessMode();
+  const isAdminMode = accessMode === ACCESS_MODE.ADMIN;
 
   useEffect(() => {
     let isMounted = true;
@@ -139,6 +141,12 @@ const Layout = () => {
     };
   }, [showSettingsPanel]);
 
+  useEffect(() => {
+    if (!isAdminMode && showAdminPasswordModal) {
+      setShowAdminPasswordModal(false);
+    }
+  }, [isAdminMode, showAdminPasswordModal]);
+
   const handleLogout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
@@ -232,17 +240,19 @@ const Layout = () => {
             </div>
 
             <div className="space-y-1.5">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAdminPasswordModal(true);
-                  setShowSettingsPanel(false);
-                }}
-                className="w-full text-left px-2.5 py-2 rounded-lg border border-white/10 bg-white/[0.02] hover:bg-white/[0.05] text-white/85 transition-colors flex items-center gap-2"
-              >
-                <KeyRound size={13} className="text-white/70" />
-                <span className="text-[10px]">Change Admin Password</span>
-              </button>
+              {isAdminMode && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAdminPasswordModal(true);
+                    setShowSettingsPanel(false);
+                  }}
+                  className="w-full text-left px-2.5 py-2 rounded-lg border border-white/10 bg-white/[0.02] hover:bg-white/[0.05] text-white/85 transition-colors flex items-center gap-2"
+                >
+                  <KeyRound size={13} className="text-white/70" />
+                  <span className="text-[10px]">Change Admin Password</span>
+                </button>
+              )}
 
               <button
                 type="button"
@@ -269,10 +279,12 @@ const Layout = () => {
         </>
       )}
 
-      <ChangeAdminPasswordModal
-        isOpen={showAdminPasswordModal}
-        onClose={() => setShowAdminPasswordModal(false)}
-      />
+      {isAdminMode && (
+        <ChangeAdminPasswordModal
+          isOpen={showAdminPasswordModal}
+          onClose={() => setShowAdminPasswordModal(false)}
+        />
+      )}
 
       <ChangeAccountPasswordModal
         isOpen={showAccountPasswordModal}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X } from "lucide-react";
+import { X, Eye, EyeOff, Check } from "lucide-react";
+import ForgotAdminPasswordModal from "./ForgotAdminPasswordModal";
 import { changeAdminPassword } from "../lib/accessControl";
 import { supabase } from "../lib/supabaseClient";
 import { getUserWithRetry } from "../lib/authUser";
@@ -7,11 +8,15 @@ const ChangeAdminPasswordModal = ({ isOpen, onClose }) => {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [userId, setUserId] = useState(null);
   const timeoutRef = useRef(null);
+  const [showForgotModal, setShowForgotModal] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -28,6 +33,9 @@ const ChangeAdminPasswordModal = ({ isOpen, onClose }) => {
         setCurrentPassword("");
         setNewPassword("");
         setConfirmPassword("");
+        setShowCurrentPassword(false);
+        setShowNewPassword(false);
+        setShowConfirmPassword(false);
         setLoading(false);
       }
 
@@ -78,15 +86,23 @@ const ChangeAdminPasswordModal = ({ isOpen, onClose }) => {
     };
   }, []);
 
+  const passwordRules = {
+    minLength: newPassword.length >= 8,
+    hasUppercase: /[A-Z]/.test(newPassword),
+    hasNumber: /\d/.test(newPassword),
+    hasSpecial: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword),
+  };
+  const allRulesMet = Object.values(passwordRules).every(Boolean);
+  const hasTypedBothNewPasswords =
+    newPassword.length > 0 && confirmPassword.length > 0;
+  const passwordsMatch = hasTypedBothNewPasswords && newPassword === confirmPassword;
+
   const validatePassword = (password) => {
     if (password.length < 8) {
       return "Password must be at least 8 characters long";
     }
     if (!/[A-Z]/.test(password)) {
       return "Password must contain at least one uppercase letter";
-    }
-    if (!/[a-z]/.test(password)) {
-      return "Password must contain at least one lowercase letter";
     }
     if (!/\d/.test(password)) {
       return "Password must contain at least one number";
@@ -96,6 +112,13 @@ const ChangeAdminPasswordModal = ({ isOpen, onClose }) => {
     }
     return null;
   };
+
+  const canSubmit =
+    currentPassword.length > 0 &&
+    newPassword.length > 0 &&
+    confirmPassword.length > 0 &&
+    allRulesMet &&
+    passwordsMatch;
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
@@ -196,43 +219,118 @@ const ChangeAdminPasswordModal = ({ isOpen, onClose }) => {
               <label className="text-[10px] tracking-[0.2em] font-mono text-white/40">
                 Current Password
               </label>{" "}
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Enter current password"
-                className="w-full bg-white/5 border border-white/10 px-4 py-3 text-base sm:text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30 transition-colors rounded-lg"
-              />{" "}
+              <div className="relative">
+                <input
+                  type={showCurrentPassword ? "text" : "password"}
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Enter current password"
+                  className="w-full bg-white/5 border border-white/10 px-4 py-3 pr-10 text-base sm:text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30 transition-colors rounded-lg"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors"
+                  aria-label={
+                    showCurrentPassword ? "Hide current password" : "Show current password"
+                  }
+                >
+                  {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>{" "}
             </div>{" "}
             <div className="space-y-2">
               {" "}
               <label className="text-[10px] tracking-[0.2em] font-mono text-white/40">
                 New Password
               </label>{" "}
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Enter new password"
-                className="w-full bg-white/5 border border-white/10 px-4 py-3 text-base sm:text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30 transition-colors rounded-lg"
-              />{" "}
-              <p className="text-[9px] text-white/40 mt-1">
-                Must contain: 8+ chars, uppercase, lowercase, number, and
-                special character
-              </p>{" "}
+              <div className="relative">
+                <input
+                  type={showNewPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password"
+                  className="w-full bg-white/5 border border-white/10 px-4 py-3 pr-10 text-base sm:text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30 transition-colors rounded-lg"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors"
+                  aria-label={showNewPassword ? "Hide new password" : "Show new password"}
+                >
+                  {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>{" "}
+              <div className="grid gap-1 text-[9px]">
+                <div
+                  className={`flex items-center gap-2 ${
+                    passwordRules.minLength ? "text-emerald-400" : "text-white/40"
+                  }`}
+                >
+                  <Check size={12} className={passwordRules.minLength ? "opacity-100" : "opacity-40"} />
+                  Minimum 8 characters
+                </div>
+                <div
+                  className={`flex items-center gap-2 ${
+                    passwordRules.hasUppercase ? "text-emerald-400" : "text-white/40"
+                  }`}
+                >
+                  <Check size={12} className={passwordRules.hasUppercase ? "opacity-100" : "opacity-40"} />
+                  At least one uppercase letter
+                </div>
+                <div
+                  className={`flex items-center gap-2 ${
+                    passwordRules.hasNumber ? "text-emerald-400" : "text-white/40"
+                  }`}
+                >
+                  <Check size={12} className={passwordRules.hasNumber ? "opacity-100" : "opacity-40"} />
+                  At least one number
+                </div>
+                <div
+                  className={`flex items-center gap-2 ${
+                    passwordRules.hasSpecial ? "text-emerald-400" : "text-white/40"
+                  }`}
+                >
+                  <Check size={12} className={passwordRules.hasSpecial ? "opacity-100" : "opacity-40"} />
+                  At least one special character
+                </div>
+              </div>{" "}
             </div>{" "}
             <div className="space-y-2">
               {" "}
               <label className="text-[10px] tracking-[0.2em] font-mono text-white/40">
                 Confirm New Password
               </label>{" "}
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm new password"
-                className="w-full bg-white/5 border border-white/10 px-4 py-3 text-base sm:text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30 transition-colors rounded-lg"
-              />{" "}
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
+                  className="w-full bg-white/5 border border-white/10 px-4 py-3 pr-10 text-base sm:text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30 transition-colors rounded-lg"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors"
+                  aria-label={
+                    showConfirmPassword
+                      ? "Hide confirm password"
+                      : "Show confirm password"
+                  }
+                >
+                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>{" "}
+              {hasTypedBothNewPasswords && (
+                <p
+                  className={`text-[9px] mt-1 ${
+                    passwordsMatch ? "text-emerald-400" : "text-red-400"
+                  }`}
+                >
+                  {passwordsMatch ? "Passwords match" : "Passwords do not match"}
+                </p>
+              )}{" "}
             </div>{" "}
             <div className="flex gap-3 pt-4">
               {" "}
@@ -246,15 +344,30 @@ const ChangeAdminPasswordModal = ({ isOpen, onClose }) => {
               </button>{" "}
               <button
                 type="submit"
-                disabled={loading}
-                className="flex-1 px-4 py-3 bg-white text-black text-[10px] tracking-[0.2em] font-medium hover:bg-white/90 transition-colors disabled:opacity-50 rounded-lg"
+                disabled={loading || !canSubmit}
+                className="flex-1 px-4 py-3 bg-white text-black text-[10px] tracking-[0.2em] font-medium hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed rounded-lg"
               >
                 {" "}
                 {loading ? "Updating..." : "Update Password"}{" "}
               </button>{" "}
             </div>{" "}
+            <div className="mt-2">
+              <button
+                type="button"
+                onClick={() => setShowForgotModal(true)}
+                className="native-inline-btn text-[9px] tracking-widest text-white/40 hover:text-white"
+              >
+                Forgot admin password?
+              </button>
+            </div>
           </form>
         )}{" "}
+      {showForgotModal && (
+        <ForgotAdminPasswordModal
+          isOpen={showForgotModal}
+          onClose={() => setShowForgotModal(false)}
+        />
+      )}
       </div>{" "}
     </div>
   );

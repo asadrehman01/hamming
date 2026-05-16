@@ -933,17 +933,84 @@ const CustomersPage = () => {
     return start <= today && today <= end;
   });
   return (
-    <div className="app-page px-4 md:px-6 lg:px-8 pt-12 md:pt-14 lg:pt-16 pb-4 md:pb-6 lg:pb-8">
-      
+    <div
+      className="app-page members-page-vibe px-4 md:px-6 lg:px-8 pt-12 md:pt-14 lg:pt-16 pb-4 md:pb-6 lg:pb-8"
+      style={{
+        "--app-theme-page-bg": "#ffffff",
+        "--app-theme-card-bg": "#fbfbfb",
+        "--app-theme-card-bg-alt": "#f4f4f4",
+        color: "#0d0d0d",
+      }}
+    >
+      <style>{`
+        @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap");
+        .members-page-vibe {
+          background: #ffffff !important;
+          color: #0d0d0d !important;
+          font-family: "DM Sans", system-ui, sans-serif;
+          min-height: 100vh;
+        }
+        .members-page-vibe .members-header-title {
+          font-family: "Playfair Display", Georgia, serif;
+        }
+        .members-page-vibe .members-card {
+          background: #fafafa !important;
+          border-color: rgba(0, 0, 0, 0.12) !important;
+        }
+        .members-page-vibe .members-card-alt {
+          background: #ffffff !important;
+          border-color: rgba(0, 0, 0, 0.12) !important;
+        }
+        .members-page-vibe .members-subtle {
+          color: #8a8a8a !important;
+        }
+        .members-page-vibe .members-muted {
+          color: #666666 !important;
+        }
+        .members-page-vibe .members-card-title {
+          color: #6b6b6b !important;
+        }
+        .members-page-vibe .members-value {
+          font-family: "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+          font-weight: 500 !important;
+          letter-spacing: 0.02em !important;
+        }
+        .members-page-vibe [class*="bg-white/"] {
+          background: #fafafa !important;
+        }
+        .members-page-vibe [class*="text-white/"] {
+          color: #8a8a8a !important;
+        }
+        .members-page-vibe .text-white {
+          color: #0d0d0d !important;
+        }
+        .members-page-vibe [class*="border-white/"] {
+          border-color: rgba(0, 0, 0, 0.12) !important;
+        }
+        .members-page-vibe input,
+        .members-page-vibe select {
+          background: #ffffff !important;
+          color: #0d0d0d !important;
+          border-color: #e0e0e0 !important;
+        }
+        .members-page-vibe input::placeholder {
+          color: #a0a0a0 !important;
+        }
+        .members-page-vibe option {
+          background: #ffffff;
+          color: #0d0d0d;
+        }
+      `}</style>
+
       <div className="w-full max-w-[1200px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-1000">
         
         <div className="flex-shrink-0 mb-6 md:mb-8">
           <div className="space-y-2">
-            <p className="text-[10px] tracking-[0.08em] text-white/40 dm-sans-light-008">
+            <p className="text-[10px] tracking-[0.08em] members-subtle dm-sans-light-008">
               Member Operations
             </p>
-            <h1 className="text-4xl md:text-5xl font-medium tracking-tighter text-white">
-              Customer <span className="text-white/20">Directory</span>
+            <h1 className="members-header-title text-4xl md:text-5xl font-medium tracking-tighter text-[#0d0d0d]">
+              Customer <span className="members-subtle">Directory</span>
             </h1>
           </div>
           <div className="mt-6 flex flex-col lg:flex-row items-stretch lg:items-center gap-3 md:gap-4 w-full">
@@ -968,7 +1035,7 @@ const CustomersPage = () => {
                   placeholder="Search by name..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full sm:w-56 lg:w-64 bg-white/5 border border-white/10 px-10 py-2.5 text-[10px] tracking-[0.1em] focus:border-white/30 focus:bg-white/10 outline-none transition-all placeholder:text-white/20"
+                  className="w-full sm:w-56 lg:w-64 bg-white/5 border border-white/10 px-10 py-2.5 text-[10px] tracking-[0.1em] rounded-xl focus:border-white/30 focus:bg-white/10 outline-none transition-all placeholder:text-white/20"
                 />
                 <svg
                   width="14"
@@ -1043,7 +1110,7 @@ const CustomersPage = () => {
             </div>
           )}
         </div>
-        <div className="border border-white/10 overflow-x-auto custom-scrollbar">
+        <div className="members-card mb-6 border p-4 md:p-6 overflow-x-auto custom-scrollbar rounded-2xl shadow-lg shadow-black/5">
           
           <div className="md:hidden divide-y divide-white/10">
             

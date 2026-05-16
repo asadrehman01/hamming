@@ -268,15 +268,16 @@ const DashboardPage = () => {
           font-family: "Playfair Display", Georgia, serif;
         }
         .dashboard-page-vibe .dashboard-card {
-          background: #fbfbfb;
-          border-color: #e6e6e6;
+          background: #fafafa;
+          border-color: rgba(0, 0, 0, 0.12);
         }
         .dashboard-page-vibe .dashboard-card:hover {
-          background: #f4f4f4;
+          background: #fafafa;
+          border-color: rgba(0, 0, 0, 0.12);
         }
         .dashboard-page-vibe .dashboard-quick-actions-card:hover {
-          background: #fbfbfb !important;
-          border-color: #e6e6e6 !important;
+          background: #fafafa !important;
+          border-color: rgba(0, 0, 0, 0.12) !important;
         }
         .dashboard-page-vibe .dashboard-chip {
           background: #ffffff;
@@ -290,18 +291,21 @@ const DashboardPage = () => {
           color: #666666;
         }
         .dashboard-page-vibe div[class*="bg-\\[#151920\\]"] {
-          background: #fbfbfb !important;
-          border-color: #e6e6e6 !important;
+          background: #fafafa !important;
+          border-color: rgba(0, 0, 0, 0.12) !important;
         }
         .dashboard-page-vibe div[class*="bg-\\[#151920\\]"]:hover {
-          background: #f4f4f4 !important;
-          border-color: #d0d0d0 !important;
+          background: #fafafa !important;
+          border-color: rgba(0, 0, 0, 0.12) !important;
         }
         .dashboard-page-vibe div[class*="bg-\\[#151920\\]"] p {
           color: #0d0d0d !important;
         }
         .dashboard-page-vibe div[class*="bg-\\[#151920\\]"] p[class*="text-white/65"] {
           color: #8a8a8a !important;
+        }
+        .dashboard-page-vibe .dashboard-stat-card-title {
+          color: #6b6b6b !important;
         }
         .dashboard-page-vibe div[class*="bg-\\[#151920\\]"] div[class*="bg-white"] {
           background: #f0f0f0 !important;

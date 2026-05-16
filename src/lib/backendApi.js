@@ -7,6 +7,7 @@ const endpointToFunctionName = {
   "/api/run-auto-migration": "run-auto-migration",
   "/api/bug-report": "bug-report",
   "/api/admin-users": "admin-users",
+  "/api/auth/send-password-reset": "send-password-reset",
 };
 
 const buildApiUrl = (path) => {

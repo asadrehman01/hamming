@@ -45,7 +45,7 @@ const MembershipChart = ({ data }) => {
   const maxValue = values.length === 0 ? 10 : Math.max(...values) + 10;
 
   return (
-    <div className="bg-[#151921] border border-white/5 p-4 md:p-10 rounded-2xl h-full flex flex-col shadow-2xl shadow-black/40 dashboard-page-vibe-chart">
+    <div className="bg-[#fafafa] border border-[rgba(0,0,0,0.12)] p-4 md:p-10 rounded-2xl h-full flex flex-col shadow-2xl shadow-black/40 dashboard-page-vibe-chart">
       <div className="flex justify-between items-center mb-6 md:mb-12">
         <div>
           <h3 className="text-lg font-medium text-white tracking-tight dashboard-chart-title">

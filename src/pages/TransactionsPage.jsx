@@ -605,12 +605,12 @@ const TransactionsPage = () => {
           font-family: "Playfair Display", Georgia, serif;
         }
         .transactions-page-vibe .transactions-card {
-          background: #fbfbfb !important;
-          border-color: #e6e6e6 !important;
+          background: #fafafa !important;
+          border-color: rgba(0, 0, 0, 0.12) !important;
         }
         .transactions-page-vibe .transactions-card-alt {
           background: #ffffff !important;
-          border-color: #e6e6e6 !important;
+          border-color: rgba(0, 0, 0, 0.12) !important;
         }
         .transactions-page-vibe .transactions-subtle {
           color: #8a8a8a !important;
@@ -618,13 +618,16 @@ const TransactionsPage = () => {
         .transactions-page-vibe .transactions-muted {
           color: #666666 !important;
         }
+        .transactions-page-vibe .transactions-card-title {
+          color: #6b6b6b !important;
+        }
         .transactions-page-vibe .transactions-value {
           font-family: "Helvetica Neue", Helvetica, Arial, sans-serif !important;
           font-weight: 500 !important;
           letter-spacing: 0.02em !important;
         }
         .transactions-page-vibe [class*="bg-white/"] {
-          background: #fbfbfb !important;
+          background: #fafafa !important;
         }
         .transactions-page-vibe [class*="text-white/"] {
           color: #8a8a8a !important;
@@ -636,7 +639,7 @@ const TransactionsPage = () => {
           color: #0d0d0d !important;
         }
         .transactions-page-vibe [class*="border-white/"] {
-          border-color: #e6e6e6 !important;
+          border-color: rgba(0, 0, 0, 0.12) !important;
         }
         .transactions-page-vibe input,
         .transactions-page-vibe select {

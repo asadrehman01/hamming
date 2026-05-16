@@ -10,143 +10,101 @@ import {
   verifyAdminPassword,
   forceResetAdminPassword,
 } from "../lib/accessControl";
-import { isMigrationOnboardingCompleted } from "../lib/migrationOnboarding";
-import { isCurrentUserAccessAllowed } from "../lib/appAccess";
+import ForgotAdminPasswordModal from "../components/ForgotAdminPasswordModal";
+
 const LoginPage = () => {
   const MIN_PASSWORD_LENGTH = 8;
   const navigate = useNavigate();
-  const resetTimeoutRef = useRef(null);
-  const unlockTimeoutRef = useRef(null);
-  const isMountedRef = useRef(true);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [mode, setMode] = useState(ACCESS_MODE.RECEPTION);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Admin-specific state
   const [adminPassword, setAdminPasswordInput] = useState("");
-  const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [adminPasswordConfirm, setAdminPasswordConfirm] = useState("");
   const [awaitingAdminSetup, setAwaitingAdminSetup] = useState(false);
   const [pendingUserId, setPendingUserId] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [showForgotAdminModal, setShowForgotAdminModal] = useState(false);
+  const resetTimeoutRef = useRef(null);
+
   const [resetAdminPassword, setResetAdminPassword] = useState("");
-  const [resetAdminPasswordConfirm, setResetAdminPasswordConfirm] =
-    useState("");
+  const [resetAdminPasswordConfirm, setResetAdminPasswordConfirm] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
   const [resetError, setResetError] = useState(null);
   const [resetSuccess, setResetSuccess] = useState(false);
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [showUnlockAnimation, setShowUnlockAnimation] = useState(false);
-
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-
-      if (resetTimeoutRef.current) {
-        clearTimeout(resetTimeoutRef.current);
-      }
-
-      if (unlockTimeoutRef.current) {
-        clearTimeout(unlockTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    setShowPassword(false);
-    setShowAdminPassword(false);
-  }, [mode]);
-
-  const navigatePostLogin = (user) => {
-    if (isMigrationOnboardingCompleted(user)) {
-      navigate("/dashboard");
-      return;
-    }
-    navigate("/integrations");
-  };
 
   const playUnlockAndNavigate = async (user) => {
     setShowUnlockAnimation(true);
-
-    await new Promise((resolve) => {
-      unlockTimeoutRef.current = setTimeout(resolve, 4200);
-    });
-
-    navigatePostLogin(user);
+    setTimeout(() => {
+      setShowUnlockAnimation(false);
+      navigate("/dashboard");
+    }, 800);
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (!supabase) {
-      setError("Supabase client not initialized.");
-      return;
-    }
-    setLoading(true);
     setError(null);
+    setLoading(true);
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (signInError) {
-        setError(signInError.message);
-        return;
-      }
-      const { data: userData, error: userError } =
-        await getUserWithRetry(supabase);
-      if (userError || !userData?.user) {
-        setError(userError?.message || "Unable to fetch account details.");
-        return;
+      const { data: signInData, error: signInError } =
+        await supabase.auth.signInWithPassword({ email, password });
+
+      if (signInError || !signInData?.user) {
+        throw new Error(signInError?.message || "Invalid credentials");
       }
 
-      const accessAllowed = await isCurrentUserAccessAllowed();
-      if (!accessAllowed) {
-        setError("Access denied. Please contact administrator.");
-        await supabase.auth.signOut();
-        return;
-      }
+      const userId = signInData.user.id;
 
-      if (mode === ACCESS_MODE.RECEPTION) {
+      if (mode === ACCESS_MODE.ADMIN) {
+        const adminExists = await hasAdminPassword(userId);
+        if (!adminExists) {
+          setPendingUserId(userId);
+          setAwaitingAdminSetup(true);
+          setError(null);
+          setLoading(false);
+          return;
+        }
+
+        if (!adminPassword) {
+          setError("Enter your admin password to access admin mode.");
+          await supabase.auth.signOut();
+          setLoading(false);
+          return;
+        }
+
+        const isValidAdminPassword = await verifyAdminPassword(userId, adminPassword);
+        if (!isValidAdminPassword) {
+          setError("Invalid admin password.");
+          await supabase.auth.signOut();
+          setLoading(false);
+          return;
+        }
+
+        setAccessMode(ACCESS_MODE.ADMIN);
+        await playUnlockAndNavigate(signInData.user);
+      } else {
         setAccessMode(ACCESS_MODE.RECEPTION);
-        await playUnlockAndNavigate(userData.user);
-        return;
+        await playUnlockAndNavigate(signInData.user);
       }
-      const userId = userData.user.id;
-      const adminExists = await hasAdminPassword(userId);
-      
-      if (!adminExists) {
-        setPendingUserId(userId);
-        setAwaitingAdminSetup(true);
-        setError(null); // Clear any existing errors when showing modal
-        return;
-      }
-      if (!adminPassword) {
-        setError("Enter your admin password to access admin mode.");
-        await supabase.auth.signOut();
-        return;
-      }
-      const isValidAdminPassword = await verifyAdminPassword(
-        userId,
-        adminPassword,
-      );
-      if (!isValidAdminPassword) {
-        setError("Invalid admin password.");
-        await supabase.auth.signOut();
-        return;
-      }
-      setAccessMode(ACCESS_MODE.ADMIN);
-      await playUnlockAndNavigate(userData.user);
     } catch (err) {
       setError(err?.message || "Login failed. Please try again.");
       try {
         await supabase.auth.signOut();
       } catch {
-        // ignore sign-out cleanup failures
+        // ignore
       }
     } finally {
       setLoading(false);
     }
   };
+
   const handleSetupAdminPassword = async (e) => {
     e.preventDefault();
     if (!pendingUserId) {
@@ -154,9 +112,7 @@ const LoginPage = () => {
       return;
     }
     if (adminPassword.length < MIN_PASSWORD_LENGTH) {
-      setError(
-        `Admin password must be at least ${MIN_PASSWORD_LENGTH} characters long.`,
-      );
+      setError(`Admin password must be at least ${MIN_PASSWORD_LENGTH} characters long.`);
       return;
     }
     if (adminPassword !== adminPasswordConfirm) {
@@ -169,12 +125,9 @@ const LoginPage = () => {
       setAccessMode(ACCESS_MODE.ADMIN);
       setAwaitingAdminSetup(false);
       setPendingUserId(null);
-      const { data: refreshedUser, error: getUserError } =
-        await getUserWithRetry(supabase);
+      const { data: refreshedUser, error: getUserError } = await getUserWithRetry(supabase);
       if (getUserError || !refreshedUser?.user) {
-        throw new Error(
-          getUserError?.message || "Failed to fetch updated user.",
-        );
+        throw new Error(getUserError?.message || "Failed to fetch updated user.");
       }
       await playUnlockAndNavigate(refreshedUser.user);
     } catch (setupError) {
@@ -183,14 +136,20 @@ const LoginPage = () => {
       setLoading(false);
     }
   };
+
   const handleCancelAdminSetup = async () => {
     setAwaitingAdminSetup(false);
     setPendingUserId(null);
     setAdminPasswordInput("");
     setAdminPasswordConfirm("");
     setError(null);
-    await supabase?.auth.signOut();
+    try {
+      await supabase?.auth.signOut();
+    } catch {
+      // ignore
+    }
   };
+
   const handleResetAdminPassword = async (e) => {
     e.preventDefault();
     setResetError(null);
@@ -204,29 +163,19 @@ const LoginPage = () => {
       return;
     }
     if (resetAdminPassword.length < MIN_PASSWORD_LENGTH) {
-      setResetError(
-        `Password must be at least ${MIN_PASSWORD_LENGTH} characters long`,
-      );
+      setResetError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters long`);
       return;
     }
     setResetLoading(true);
     try {
-      const { data: signInData, error: signInError } =
-        await supabase.auth.signInWithPassword({ email, password });
-      if (signInError) {
-        setResetError("Unable to verify your credentials. Please try again.");
-        setResetLoading(false);
-        return;
-      }
-
-      if (!signInData?.user) {
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError || !signInData?.user) {
         setResetError("Unable to verify your credentials. Please try again.");
         setResetLoading(false);
         return;
       }
 
       const userId = signInData.user.id;
-
       await forceResetAdminPassword(userId, resetAdminPassword);
       setResetSuccess(true);
       setResetAdminPassword("");
@@ -238,19 +187,19 @@ const LoginPage = () => {
       resetTimeoutRef.current = setTimeout(async () => {
         setShowForgotAdminModal(false);
         setResetSuccess(false);
-        await supabase.auth.signOut();
+        try {
+          await supabase.auth.signOut();
+        } catch {}
       }, 2000);
     } catch (err) {
-      setResetError(
-        err.message || "Failed to reset admin password. Please try again.",
-      );
+      setResetError(err.message || "Failed to reset admin password. Please try again.");
     } finally {
       setResetLoading(false);
     }
   };
+
   return (
     <>
-      {" "}
       <div className="app-page min-h-screen bg-black flex items-center justify-center p-4 sm:p-8 md:p-12 font-body">
         {" "}
         {/* Corner Labels */}{" "}

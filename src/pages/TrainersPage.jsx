@@ -183,14 +183,66 @@ const TrainersPage = () => {
   };
 
   return (
-    <div className="app-page p-4 md:p-8 lg:p-10 space-y-6 md:space-y-8">
-      <div className="border border-white/10 bg-white/[0.02] p-4 md:p-6">
+    <div
+      className="app-page trainers-page-vibe p-4 md:p-8 lg:p-10 space-y-6 md:space-y-8"
+      style={{
+        "--app-theme-page-bg": "#ffffff",
+        "--app-theme-card-bg": "#fbfbfb",
+        "--app-theme-card-bg-alt": "#f4f4f4",
+        color: "#0d0d0d",
+      }}
+    >
+      <style>{`
+        @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap");
+        .trainers-page-vibe {
+          background: #ffffff !important;
+          color: #0d0d0d !important;
+          font-family: "DM Sans", system-ui, sans-serif;
+          min-height: 100vh;
+        }
+        .trainers-page-vibe .trainers-header-title {
+          font-family: "Playfair Display", Georgia, serif;
+        }
+        .trainers-page-vibe .trainers-card {
+          background: #fafafa !important;
+          border-color: rgba(0, 0, 0, 0.12) !important;
+        }
+        .trainers-page-vibe .trainers-subtle {
+          color: #8a8a8a !important;
+        }
+        .trainers-page-vibe .trainers-card-title {
+          color: #6b6b6b !important;
+        }
+        .trainers-page-vibe [class*="bg-white/"] {
+          background: #fafafa !important;
+        }
+        .trainers-page-vibe [class*="text-white/"] {
+          color: #8a8a8a !important;
+        }
+        .trainers-page-vibe .text-white {
+          color: #0d0d0d !important;
+        }
+        .trainers-page-vibe [class*="border-white/"] {
+          border-color: rgba(0, 0, 0, 0.12) !important;
+        }
+        .trainers-page-vibe input,
+        .trainers-page-vibe select {
+          background: #ffffff !important;
+          color: #0d0d0d !important;
+          border-color: #e0e0e0 !important;
+        }
+        .trainers-page-vibe input::placeholder {
+          color: #a0a0a0 !important;
+        }
+      `}</style>
+
+      <header className="mb-6">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
           <div>
-            <h1 className="text-xl md:text-2xl text-white tracking-tight normal-case">
-              Trainer Directory
+            <h1 className="trainers-header-title text-4xl md:text-5xl font-medium tracking-tighter text-[#0d0d0d]">
+              Trainer <span className="trainers-subtle">Directory</span>
             </h1>
-            <p className="text-[10px] tracking-[0.08em] text-white/35 dm-sans-light-008 mt-2">
+            <p className="text-[10px] tracking-[0.08em] trainers-subtle dm-sans-light-008 mt-2">
               Trainer information and contact records
             </p>
           </div>
@@ -213,7 +265,7 @@ const TrainersPage = () => {
             placeholder="Search trainer by name, email or phone"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-transparent border border-white/10 py-3 pl-4 pr-10 text-sm text-white/80 placeholder:text-white/20 outline-none"
+            className="w-full bg-white border border-[#e0e0e0] px-4 py-3 text-sm text-[#0d0d0d] placeholder:text-[#a0a0a0] outline-none rounded-xl"
           />
           {searchQuery && (
             <button
@@ -225,9 +277,9 @@ const TrainersPage = () => {
             </button>
           )}
         </div>
-      </div>
+      </header>
 
-      <div className="border border-white/10 overflow-hidden">
+      <div className="trainers-card mb-6 border p-4 md:p-6 overflow-x-auto custom-scrollbar rounded-2xl shadow-lg shadow-black/5">
         {loading && trainers.length === 0 ? (
           <div className="p-14 text-center text-[10px] tracking-[0.08em] text-white/30 dm-sans-light-008">
             Loading trainers...

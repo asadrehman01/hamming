@@ -49,22 +49,28 @@ const IntegrationsPage = () => {
   return (
     <div className="app-page native-buttons-page integrations-typography integrations-page-vibe p-6 md:p-10">
       <style>{` 
-.integrations-page-vibe { background-color: #ffffff !important; color: #0d0d0d; min-height: 100vh; }
-.integrations-page-vibe h1, .integrations-page-vibe h2, .integrations-page-vibe h3, .integrations-page-vibe .integrations-header-helvetica, .integrations-page-vibe .migration-header-title { font-family: 'Playfair Display', serif; font-weight: 400; color: #0d0d0d; letter-spacing: 0.02em; }
-.integrations-page-vibe .integrations-subtle, .integrations-page-vibe .migration-subtle { color: #666666; }
-.integrations-page-vibe [class*="text-white/"] { color: #666666 !important; }
-.integrations-page-vibe [class*="text-white"] { color: #0d0d0d !important; }
-.integrations-page-vibe [class*="bg-white/[0.02]"], .integrations-page-vibe [class*="bg-white/[0.04]"], .integrations-page-vibe [class*="bg-black/20"], .integrations-page-vibe [class*="bg-[#151921]"], .integrations-page-vibe [class*="bg-[#0a0c10]"] { background-color: #fbfbfb !important; }
-.integrations-page-vibe [class*="border-white"] { border-color: #e6e6e6 !important; }
-.integrations-page-vibe button { border-color: #e0e0e0 !important; }
-`}</style>
+    @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap");
+    .integrations-page-vibe { background-color: #ffffff !important; color: #0d0d0d; min-height: 100vh; }
+    .integrations-page-vibe h1, .integrations-page-vibe h2, .integrations-page-vibe h3, .integrations-page-vibe .integrations-header-helvetica, .integrations-page-vibe .migration-header-title { font-family: 'Playfair Display', serif; font-weight: 400; color: #0d0d0d; letter-spacing: 0.02em; }
+    .integrations-page-vibe .integrations-subtle, .integrations-page-vibe .migration-subtle { color: #666666; }
+    .integrations-page-vibe [class*="text-white/"] { color: #666666 !important; }
+    .integrations-page-vibe [class*="text-white"] { color: #0d0d0d !important; }
+    .integrations-page-vibe [class*="bg-white/[0.02]"], .integrations-page-vibe [class*="bg-white/[0.04]"], .integrations-page-vibe [class*="bg-black/20"], .integrations-page-vibe [class*="bg-[#151921]"], .integrations-page-vibe [class*="bg-[#0a0c10]"] { background-color: #fafafa !important; }
+    .integrations-page-vibe [class*="bg-[#fbfbfb]"], .integrations-page-vibe .bg-\[\#fbfbfb\] { background-color: #fafafa !important; }
+    .integrations-page-vibe [class*="border-white"] { border-color: rgba(0,0,0,0.12) !important; }
+    .integrations-page-vibe [class*="border-\[\#e6e6e6\]"], .integrations-page-vibe .border-\[\#e6e6e6\] { border-color: rgba(0,0,0,0.12) !important; }
+    .integrations-page-vibe button { border-color: rgba(0,0,0,0.12) !important; }
+    /* Card title color (preserve main header color) */
+    .integrations-page-vibe .migration-header-title { color: #6b6b6b !important; }
+    .integrations-page-vibe header .migration-header-title { color: #0d0d0d !important; }
+    `}</style>
       <div className="w-full max-w-[1200px] mx-auto space-y-8">
         <header className="space-y-2">
           <p className="text-[10px] tracking-[0.25em] font-mono integrations-subtle">
             Migration
           </p>
-          <h1 className="migration-header-title text-4xl md:text-5xl font-medium tracking-tighter text-[#0d0d0d]">
-            Data Migration
+          <h1 className="migration-header-title text-4xl md:text-5xl font-medium tracking-tighter" style={{ fontFamily: "'Playfair Display', serif" }}>
+            Data <span className="integrations-subtle">Migration</span>
           </h1>
           <p className="text-sm integrations-subtle">
             One clean standard format for all imports. Legacy files are auto-detected during migration.

@@ -370,26 +370,31 @@ const BillingPage = () => {
   return (
     <div className="app-page billing-page-vibe p-4 md:px-10 md:pt-10">
       <style>{` 
-.billing-page-vibe { background-color: #ffffff !important; color: #0d0d0d; min-height: 100vh; }
-.billing-page-vibe h1, .billing-page-vibe h2, .billing-page-vibe h3 { font-family: 'Playfair Display', serif; font-weight: 400; color: #0d0d0d; letter-spacing: 0.02em; }
-.billing-page-vibe [class*="text-white/"] { color: #666666 !important; }
-.billing-page-vibe [class*="text-white"] { color: #0d0d0d !important; }
-.billing-page-vibe [class*="bg-[#151921]"], .billing-page-vibe [class*="bg-black/20"], .billing-page-vibe [class*="bg-white/5"], .billing-page-vibe [class*="bg-white/10"], .billing-page-vibe [class*="bg-white/[0.05]"], .billing-page-vibe [class*="bg-white/[0.04]"], .billing-page-vibe [class*="bg-white/[0.02]"] { background-color: #fbfbfb !important; }
-.billing-page-vibe [class*="border-white"] { border-color: #e6e6e6 !important; }
-.billing-page-vibe input, .billing-page-vibe select, .billing-page-vibe textarea { background-color: #ffffff !important; color: #0d0d0d !important; border-color: #e0e0e0 !important; }
-.billing-page-vibe input::placeholder, .billing-page-vibe textarea::placeholder { color: #a0a0a0 !important; }
-.billing-page-vibe button { background-color: #ffffff !important; color: #0d0d0d !important; border-color: #e0e0e0 !important; }
-.billing-page-vibe button:hover { background-color: #f4f4f4 !important; }
-`}</style>
+    @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap");
+    .billing-page-vibe { background-color: #ffffff !important; color: #0d0d0d; min-height: 100vh; }
+    .billing-page-vibe h1, .billing-page-vibe h2, .billing-page-vibe h3 { font-family: 'Playfair Display', serif !important; font-weight: 400; color: #0d0d0d; letter-spacing: 0.02em; }
+    .billing-page-vibe .billing-subtle { color: #666666; }
+    .billing-page-vibe [class*="text-white/"] { color: #666666 !important; }
+    .billing-page-vibe [class*="text-white"] { color: #0d0d0d !important; }
+    .billing-page-vibe [class*="bg-[#151921]"], .billing-page-vibe [class*="bg-black/20"], .billing-page-vibe [class*="bg-white/5"], .billing-page-vibe [class*="bg-white/10"], .billing-page-vibe [class*="bg-white/[0.05]"], .billing-page-vibe [class*="bg-white/[0.04]"], .billing-page-vibe [class*="bg-white/[0.02]"], .billing-page-vibe [class*="bg-[#fbfbfb]"] { background-color: #fafafa !important; }
+    .billing-page-vibe [class*="border-white"] { border-color: rgba(0,0,0,0.12) !important; }
+    .billing-page-vibe [class*="border-\[\#e6e6e6\]"], .billing-page-vibe .border-\[\#e6e6e6\] { border-color: rgba(0,0,0,0.12) !important; }
+    .billing-page-vibe .billing-panel { background: #fafafa; border-color: rgba(0,0,0,0.12); color: #0d0d0d; }
+    .billing-page-vibe .billing-card-title { color: #6b6b6b !important; }
+    .billing-page-vibe input, .billing-page-vibe select, .billing-page-vibe textarea { background-color: #ffffff !important; color: #0d0d0d !important; border-color: rgba(0,0,0,0.12) !important; }
+    .billing-page-vibe input::placeholder, .billing-page-vibe textarea::placeholder { color: #a0a0a0 !important; }
+    .billing-page-vibe button { background-color: #ffffff !important; color: #0d0d0d !important; border-color: rgba(0,0,0,0.12) !important; }
+    .billing-page-vibe button:hover { background-color: #f4f4f4 !important; }
+    `}</style>
       <div className="w-full max-w-4xl mx-auto space-y-6">
         <header className="space-y-2">
-          <p className="text-xs tracking-[0.2em] text-white/45 dm-sans-light-008">
+          <p className="text-xs tracking-[0.2em] billing-subtle dm-sans-light-008">
             Billing
           </p>
-          <h1 className="billing-header-title text-4xl md:text-5xl font-medium tracking-tighter text-white">
-            Receipt Settings
+          <h1 className="billing-header-title text-4xl md:text-5xl font-medium tracking-tighter" style={{ fontFamily: "'Playfair Display', serif" }}>
+            Receipt <span className="billing-subtle">Settings</span>
           </h1>
-          <p className="text-[13px] leading-snug text-white/55 dm-sans-light-008">
+          <p className="text-[13px] leading-snug billing-subtle dm-sans-light-008">
             Configure your gym receipt template and control whether receipts are sent automatically for new applications created inside this app.
           </p>
         </header>
