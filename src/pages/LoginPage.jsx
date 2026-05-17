@@ -40,10 +40,61 @@ const LoginPage = () => {
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [showUnlockAnimation, setShowUnlockAnimation] = useState(false);
 
-  const playUnlockAndNavigate = async (user) => {
+  const [authComplete, setAuthComplete] = useState(false);
+  const [animationComplete, setAnimationComplete] = useState(false);
+  const [authResult, setAuthResult] = useState(null);
+
+  useEffect(() => {
+    console.log(`[${new Date().toISOString()}] LoginPage mounted`);
+    return () => {
+      console.log(`[${new Date().toISOString()}] LoginPage unmounted`);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (authComplete && animationComplete && authResult) {
+      console.log(`[${new Date().toISOString()}] Synchronizing navigation. Both authComplete and animationComplete are true!`);
+      setShowUnlockAnimation(false);
+      setLoading(false);
+
+      if (!authResult.success) {
+        setError(authResult.error);
+        try {
+          supabase.auth.signOut();
+        } catch {
+          // ignore
+        }
+        // Reset states for subsequent login attempts
+        setAuthComplete(false);
+        setAnimationComplete(false);
+        setAuthResult(null);
+        return;
+      }
+
+      if (authResult.needsSetup) {
+        setPendingUserId(authResult.userId);
+        setAwaitingAdminSetup(true);
+        setError(null);
+        // Reset states
+        setAuthComplete(false);
+        setAnimationComplete(false);
+        setAuthResult(null);
+        return;
+      }
+
+      // Successful Reception or Admin login navigation
+      console.log(`[${new Date().toISOString()}] LoginPage handleLogin: animation completed, navigating to /dashboard`);
+      setAccessMode(authResult.mode);
+      navigate("/dashboard");
+    }
+  }, [authComplete, animationComplete, authResult, navigate]);
+
+  const playUnlockAndNavigate = async (modeToSet) => {
     setShowUnlockAnimation(true);
     setTimeout(() => {
       setShowUnlockAnimation(false);
+      setAccessMode(modeToSet);
+      console.log(`[${new Date().toISOString()}] playUnlockAndNavigate: animation completed, navigating to /dashboard`);
       navigate("/dashboard");
     }, 4000);
   };
@@ -53,20 +104,22 @@ const LoginPage = () => {
     setError(null);
     setLoading(true);
 
+    // Reset tracking states
+    setAuthComplete(false);
+    setAnimationComplete(false);
+    setAuthResult(null);
+
     // Start the lock animation immediately
     setShowUnlockAnimation(true);
 
-    let authComplete = false;
-    let animationComplete = false;
+    // 1. Start the animation timer
+    setTimeout(() => {
+      console.log(`[${new Date().toISOString()}] Animation cycle complete (4000ms elapsed)`);
+      setAnimationComplete(true);
+    }, 4000);
 
-    const animationPromise = new Promise((resolve) => {
-      setTimeout(() => {
-        animationComplete = true;
-        resolve(true);
-      }, 4000);
-    });
-
-    const authPromise = (async () => {
+    // 2. Start the auth task in parallel
+    (async () => {
       try {
         const { data: signInData, error: signInError } =
           await supabase.auth.signInWithPassword({ email, password });
@@ -94,8 +147,9 @@ const LoginPage = () => {
         if (mode === ACCESS_MODE.ADMIN) {
           const adminExists = await hasAdminPassword(userId);
           if (!adminExists) {
-            authComplete = true;
-            return { success: true, needsSetup: true, userId, user: signInData.user };
+            setAuthResult({ success: true, needsSetup: true, userId, user: signInData.user });
+            setAuthComplete(true);
+            return;
           }
 
           if (!adminPassword) {
@@ -109,52 +163,17 @@ const LoginPage = () => {
             throw new Error("Invalid admin password.");
           }
 
-          authComplete = true;
-          return { success: true, mode: ACCESS_MODE.ADMIN, user: signInData.user };
+          setAuthResult({ success: true, mode: ACCESS_MODE.ADMIN, user: signInData.user });
+          setAuthComplete(true);
         } else {
-          authComplete = true;
-          return { success: true, mode: ACCESS_MODE.RECEPTION, user: signInData.user };
+          setAuthResult({ success: true, mode: ACCESS_MODE.RECEPTION, user: signInData.user });
+          setAuthComplete(true);
         }
       } catch (err) {
-        authComplete = true;
-        return { success: false, error: err?.message || "Login failed. Please try again." };
+        setAuthResult({ success: false, error: err?.message || "Login failed. Please try again." });
+        setAuthComplete(true);
       }
     })();
-
-    try {
-      // Run both in parallel and wait for both to complete
-      const [, authResult] = await Promise.all([animationPromise, authPromise]);
-
-      setShowUnlockAnimation(false);
-      setLoading(false);
-
-      if (!authResult.success) {
-        setError(authResult.error);
-        try {
-          await supabase.auth.signOut();
-        } catch {
-          // ignore
-        }
-        return;
-      }
-
-      if (authResult.needsSetup) {
-        setPendingUserId(authResult.userId);
-        setAwaitingAdminSetup(true);
-        setError(null);
-        return;
-      }
-
-      // If both completed and auth succeeded, set access mode and navigate
-      if (authComplete && animationComplete) {
-        setAccessMode(authResult.mode);
-        navigate("/dashboard");
-      }
-    } catch (err) {
-      setShowUnlockAnimation(false);
-      setLoading(false);
-      setError("An unexpected error occurred during login.");
-    }
   };
 
   const handleSetupAdminPassword = async (e) => {
@@ -174,14 +193,13 @@ const LoginPage = () => {
     setLoading(true);
     try {
       await setAdminPassword(pendingUserId, adminPassword);
-      setAccessMode(ACCESS_MODE.ADMIN);
       setAwaitingAdminSetup(false);
       setPendingUserId(null);
       const { data: refreshedUser, error: getUserError } = await getUserWithRetry(supabase);
       if (getUserError || !refreshedUser?.user) {
         throw new Error(getUserError?.message || "Failed to fetch updated user.");
       }
-      await playUnlockAndNavigate(refreshedUser.user);
+      await playUnlockAndNavigate(ACCESS_MODE.ADMIN);
     } catch (setupError) {
       setError(setupError.message || "Failed to save admin password.");
     } finally {
