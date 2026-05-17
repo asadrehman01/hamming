@@ -190,18 +190,18 @@ const AttendancePage = () => {
       let query = supabase
         .from("attendance_logs")
         .select(`
-          id, scanner_uid, punch_time, punch_type, matched, created_at,
+          id, device_user_id, scanned_at, punch_type, matched, created_at,
           customers ( id, first_name, last_name, phone )
         `)
         .eq("user_id", user.id)
-        .order("punch_time", { ascending: false })
+        .order("scanned_at", { ascending: false })
         .limit(200);
 
       if (filterDate) {
         const start = new Date(filterDate);
         const end = new Date(filterDate);
         end.setDate(end.getDate() + 1);
-        query = query.gte("punch_time", start.toISOString()).lt("punch_time", end.toISOString());
+        query = query.gte("scanned_at", start.toISOString()).lt("scanned_at", end.toISOString());
       }
       if (filterMatch === "matched") query = query.eq("matched", true);
       if (filterMatch === "unmatched") query = query.eq("matched", false);
@@ -422,7 +422,7 @@ const AttendancePage = () => {
 
   // ─── Stats ───────────────────────────────────────────────────────────────
   const totalToday = logs.filter((l) => {
-    const d = new Date(l.punch_time);
+    const d = new Date(l.scanned_at);
     const n = new Date();
     return d.getDate() === n.getDate() && d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
   }).length;
@@ -678,8 +678,8 @@ const AttendancePage = () => {
                     {logs.map((log) => (
                       <tr key={log.id} className="att-table__row">
                         <td className="att-table__time">
-                          <span className="att-table__date">{fmtDate(log.punch_time).split(",").slice(0, 2).join(",")}</span>
-                          <span className="att-table__clock">{fmtTime(log.punch_time)}</span>
+                          <span className="att-table__date">{fmtDate(log.scanned_at).split(",").slice(0, 2).join(",")}</span>
+                          <span className="att-table__clock">{fmtTime(log.scanned_at)}</span>
                         </td>
                         <td>
                           {log.matched && log.customers ? (
@@ -699,7 +699,7 @@ const AttendancePage = () => {
                           )}
                         </td>
                         <td>
-                          <code className="att-uid">{log.scanner_uid}</code>
+                          <code className="att-uid">{log.device_user_id}</code>
                         </td>
                         <td>
                           <span className={`att-punch-type att-punch-type--${log.punch_type}`}>

@@ -41,15 +41,13 @@ export default function AttendanceDashboardCard({ userId }) {
           .select(`
             id,
             scanned_at,
-            punch_time,
             status,
             customer_id,
             customers ( id, first_name, last_name, phone, membership_end_date )
           `)
           .eq("user_id", userId)
-          .or(`scanned_at.gte.${thirtyDaysAgo},punch_time.gte.${thirtyDaysAgo}`)
+          .gte("scanned_at", thirtyDaysAgo)
           .order("scanned_at", { ascending: false })
-          .order("punch_time", { ascending: false })
           .limit(2000);
 
         if (logsError) throw logsError;
@@ -57,7 +55,7 @@ export default function AttendanceDashboardCard({ userId }) {
 
         const normalizedLogs = (rawLogs || []).map(l => ({
           ...l,
-          timestamp: l.scanned_at || l.punch_time,
+          timestamp: l.scanned_at,
         })).filter(l => l.timestamp);
 
         setLogs(normalizedLogs);
@@ -123,7 +121,7 @@ export default function AttendanceDashboardCard({ userId }) {
 
         const newLog = {
           ...payload.new,
-          timestamp: payload.new.scanned_at || payload.new.punch_time,
+          timestamp: payload.new.scanned_at,
           customers: customer
         };
 
