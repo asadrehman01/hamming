@@ -74,35 +74,7 @@ const parseFunctionError = (payload) => {
   return "Request failed";
 };
 
-const invokeEdgeFallback = async (path, body, originalError = null) => {
-  const functionName = endpointToFunctionName[path];
-  if (!functionName) {
-    if (originalError) throw originalError;
-    throw new Error(`No fallback available for endpoint: ${path}`);
-  }
-
-  const { data, error } = await supabase.functions.invoke(functionName, {
-    body: body || {},
-  });
-
-  if (error) {
-    throw new Error(error.message || String(error));
-  }
-
-  if (data?.error) {
-    throw new Error(parseFunctionError(data));
-  }
-
-  return data || {};
-};
-
 export const postBackendApi = async (path, body) => {
-  // If no backend API base is configured, route directly to Edge Functions.
-  if (!configuredApiBase) {
-    await getAuthToken();
-    return invokeEdgeFallback(path, body);
-  }
-
   const token = await getAuthToken();
   const url = buildApiUrl(path);
 
@@ -117,19 +89,10 @@ export const postBackendApi = async (path, body) => {
       body: JSON.stringify(body || {}),
     });
   } catch (networkError) {
-    return invokeEdgeFallback(path, body, networkError);
+    throw new Error(`Network error: ${networkError.message}`);
   }
 
   if (!response.ok) {
-    if (response.status === 404) {
-      return invokeEdgeFallback(
-        path,
-        body,
-        new Error(
-          `Backend endpoint not found: ${url}. Set VITE_BACKEND_API_BASE_URL or run your backend API server.`,
-        ),
-      );
-    }
     throw new Error(await parseApiError(response));
   }
 
@@ -158,11 +121,6 @@ export const postBackendApi = async (path, body) => {
 };
 
 export const getBackendApi = async (path) => {
-  if (!configuredApiBase) {
-    await getAuthToken();
-    return invokeEdgeFallback(path, null);
-  }
-
   const token = await getAuthToken();
   const url = buildApiUrl(path);
 
@@ -175,19 +133,10 @@ export const getBackendApi = async (path) => {
       },
     });
   } catch (networkError) {
-    return invokeEdgeFallback(path, null, networkError);
+    throw new Error(`Network error: ${networkError.message}`);
   }
 
   if (!response.ok) {
-    if (response.status === 404) {
-      return invokeEdgeFallback(
-        path,
-        null,
-        new Error(
-          `Backend endpoint not found: ${url}. Set VITE_BACKEND_API_BASE_URL or run your backend API server.`,
-        ),
-      );
-    }
     throw new Error(await parseApiError(response));
   }
 
