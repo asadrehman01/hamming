@@ -383,7 +383,7 @@ const TrainerModal = ({
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-white text-black py-4 text-[10px] tracking-[0.08em] dm-sans-light-008 font-medium disabled:opacity-40"
+            className="modal-submit-btn w-full py-4 text-[10px] tracking-[0.08em] dm-sans-light-008 font-medium disabled:opacity-40"
           >
             {loading
               ? "Saving..."

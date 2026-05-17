@@ -1011,16 +1011,16 @@ const CustomersPage = () => {
           background-color: rgba(0, 0, 0, 0.015) !important;
         }
         .members-page-vibe .new-application-btn {
-          background: #0d0d0d !important;
+          background: #2b2d31 !important;
           color: #ffffff !important;
-          border: 1px solid #0d0d0d !important;
+          border: 1px solid #2b2d31 !important;
           border-radius: 12px !important;
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
         }
         .members-page-vibe .new-application-btn:hover {
-          background: #262626 !important;
-          border-color: #262626 !important;
+          background: #1a1b1e !important;
+          border-color: #1a1b1e !important;
           transform: translateY(-1px) !important;
           box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15) !important;
         }

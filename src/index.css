@@ -1690,3 +1690,24 @@ input[type="date"].att-input::-webkit-calendar-picker-indicator {
   font-weight: 500 !important;
   color: #0d0d0d !important;
 }
+
+/* Modal Submit Button Premium Styling */
+.modal-submit-btn {
+  background: #2b2d31 !important;
+  color: #ffffff !important;
+  border: 1px solid #2b2d31 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.modal-submit-btn:hover:not(:disabled) {
+  background: #1a1b1e !important;
+  border-color: #1a1b1e !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+.modal-submit-btn:active:not(:disabled) {
+  transform: translateY(0) !important;
+}

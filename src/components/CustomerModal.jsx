@@ -1118,7 +1118,7 @@ const CustomerModal = ({
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-white text-black py-3.5 px-4 text-[10px] tracking-[0.3em] font-medium dm-sans-light-008 hover:bg-white/90 transition-all active:scale-[0.98] disabled:opacity-50"
+              className="modal-submit-btn w-full py-3.5 px-4 text-[10px] tracking-[0.3em] font-medium dm-sans-light-008 transition-all active:scale-[0.98] disabled:opacity-50"
             >
               {" "}
               {loading
