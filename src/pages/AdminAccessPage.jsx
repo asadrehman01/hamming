@@ -7,16 +7,34 @@ import { fetchAdminUsers } from "../lib/backendApi";
 const loadAccountUsers = async () => {
   const response = await fetchAdminUsers();
 
+  let accessMap = new Map();
+  try {
+    const { data: accessRows, error: accessError } = await supabase
+      .from("user_access")
+      .select("user_id, access_granted");
+
+    if (accessError) {
+      console.error("Failed to fetch user access statuses:", accessError);
+    } else if (accessRows) {
+      accessRows.forEach((row) => {
+        accessMap.set(row.user_id, row.access_granted);
+      });
+    }
+  } catch (err) {
+    console.error("Failed to fetch user access table:", err);
+  }
+
   return Array.isArray(response?.users)
-    ? response.users.map((row) => ({
-        id: row.id || `${row.loginEmail || row.login_email || "unknown"}-${row.gymName || row.gym_name || "gym"}`,
-        loginEmail: row.loginEmail || row.login_email || "-",
-        gymName: row.gymName || row.gym_name || "MY GYM",
-        accessAllowed:
-          row.accessAllowed !== undefined
-            ? row.accessAllowed === true
-            : row.access_allowed === true,
-      }))
+    ? response.users.map((row) => {
+        const userId = row.id;
+        const accessAllowed = accessMap.has(userId) ? accessMap.get(userId) : true;
+        return {
+          id: userId || `${row.loginEmail || row.login_email || "unknown"}-${row.gymName || row.gym_name || "gym"}`,
+          loginEmail: row.loginEmail || row.login_email || "-",
+          gymName: row.gymName || row.gym_name || "MY GYM",
+          accessAllowed,
+        };
+      })
     : [];
 };
 
@@ -79,17 +97,19 @@ const AdminAccessPage = () => {
     setUpdatingUserId(userId);
     setError(null);
     try {
-      const { data, error: rpcError } = await supabase.rpc("set_user_access", {
-        p_user_id: userId,
-        p_is_allowed: nextAllowed,
-      });
+      const { error: upsertError } = await supabase
+        .from("user_access")
+        .upsert(
+          {
+            user_id: userId,
+            access_granted: nextAllowed,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id" }
+        );
 
-      if (rpcError) {
-        throw rpcError;
-      }
-
-      if (data !== nextAllowed) {
-        throw new Error("Failed to update user access status.");
+      if (upsertError) {
+        throw upsertError;
       }
 
       setUsers((prevUsers) =>
@@ -181,8 +201,8 @@ const AdminAccessPage = () => {
                       {updatingUserId === row.id
                         ? "Updating..."
                         : row.accessAllowed
-                          ? "Allowed"
-                          : "Denied"}
+                          ? "ALLOWED"
+                          : "DENIED"}
                     </button>
                   </div>
                 </div>

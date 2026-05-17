@@ -62,6 +62,26 @@ const LoginPage = () => {
 
       const userId = signInData.user.id;
 
+      // Check access control status
+      try {
+        const { data: accessData, error: accessError } = await supabase
+          .from("user_access")
+          .select("access_granted")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (accessError) {
+          console.error("Failed to fetch user access status on login:", accessError);
+        } else if (accessData && accessData.access_granted === false) {
+          await supabase.auth.signOut();
+          setError("Your account access has been revoked. Please contact your administrator.");
+          setLoading(false);
+          return;
+        }
+      } catch (accessCheckErr) {
+        console.error("Error checking access status:", accessCheckErr);
+      }
+
       if (mode === ACCESS_MODE.ADMIN) {
         const adminExists = await hasAdminPassword(userId);
         if (!adminExists) {
