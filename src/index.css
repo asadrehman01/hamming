@@ -783,8 +783,20 @@ button.sidebar-settings-trigger:active:not(:disabled) {
 
 .login-unlock-shell {
   position: relative;
-  transform: scale(clamp(0.8, 2vw, 1.5));
+  transform: scale(1.1);
   transform-origin: center center;
+}
+
+@media (max-width: 640px) {
+  .login-unlock-shell {
+    transform: scale(0.8);
+  }
+}
+
+@media (min-width: 1200px) {
+  .login-unlock-shell {
+    transform: scale(1.4);
+  }
 }
 
 .login-unlock-lock-body {
