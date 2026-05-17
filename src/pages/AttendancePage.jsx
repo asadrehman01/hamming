@@ -353,7 +353,7 @@ const AttendancePage = () => {
         .from("unmatched_scans")
         .select("device_user_id, scanned_at")
         .eq("user_id", user.id)
-        .eq("reviewed", false)
+        .eq("resolved", false)
         .order("scanned_at", { ascending: false });
       const grouped = {};
       for (const row of data ?? []) {
@@ -386,9 +386,9 @@ const AttendancePage = () => {
     if (!user) return;
     const { data } = await supabase
       .from("scanner_member_map")
-      .select("device_user_id, customer_id, enrolled_at, customers(id, first_name, last_name, phone)")
+      .select("device_user_id, customer_id, created_at, customers(id, first_name, last_name, phone)")
       .eq("user_id", user.id)
-      .order("enrolled_at", { ascending: false });
+      .order("created_at", { ascending: false });
     setExistingMaps(data ?? []);
   };
 
@@ -400,7 +400,7 @@ const AttendancePage = () => {
       const result = await enrollScannerMember({ device_user_id: deviceUserId, customer_id: row.selected.id });
       if (!result.success) throw new Error(result.error || "Enrollment failed");
       setUnmatchedIds((prev) => prev.filter((u) => u.device_user_id !== deviceUserId));
-      setExistingMaps((prev) => [{ device_user_id: deviceUserId, customer_id: row.selected.id, enrolled_at: new Date().toISOString(), customers: row.selected }, ...prev]);
+      setExistingMaps((prev) => [{ device_user_id: deviceUserId, customer_id: row.selected.id, created_at: new Date().toISOString(), customers: row.selected }, ...prev]);
       setRow(deviceUserId, { search: "", selected: null, open: false, saving: false });
       setSyncMessage(`✓ Device ${deviceUserId} linked — ${result.backfilled ?? 0} historical record(s) backfilled.`);
     } catch (err) {
@@ -1010,7 +1010,7 @@ const AttendancePage = () => {
                               </div>
                             </div>
                           </td>
-                          <td className="text-white/35 text-xs">{fmtDate(m.enrolled_at).split(",").slice(0, 2).join(",")}</td>
+                          <td className="text-white/35 text-xs">{fmtDate(m.created_at).split(",").slice(0, 2).join(",")}</td>
                           <td>
                             <button type="button" onClick={() => unenrollMember(m.device_user_id)} className="att-btn att-btn--ghost att-btn--sm" id={`att-unlink-${m.device_user_id}`}>
                               <Unlink size={11} /> Unlink
