@@ -1010,6 +1010,23 @@ const CustomersPage = () => {
         .members-page-vibe .mobile-customer-row:hover {
           background-color: rgba(0, 0, 0, 0.015) !important;
         }
+        .members-page-vibe .new-application-btn {
+          background: #0d0d0d !important;
+          color: #ffffff !important;
+          border: 1px solid #0d0d0d !important;
+          border-radius: 12px !important;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+        }
+        .members-page-vibe .new-application-btn:hover {
+          background: #262626 !important;
+          border-color: #262626 !important;
+          transform: translateY(-1px) !important;
+          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15) !important;
+        }
+        .members-page-vibe .new-application-btn:active {
+          transform: translateY(0) !important;
+        }
       `}</style>
 
       <div className="w-full max-w-[1200px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-1000">
@@ -1027,7 +1044,7 @@ const CustomersPage = () => {
             
             <button
               onClick={handleOpenNewModal}
-              className="px-5 py-2.5 bg-white text-black border border-white/10 rounded-xl text-[10px] tracking-[0.12em] dm-sans-light-008 font-medium whitespace-nowrap hover:bg-white/90 transition-colors"
+              className="new-application-btn px-5 py-2.5 text-[10px] tracking-[0.12em] dm-sans-light-008 font-medium whitespace-nowrap"
             >
               
               New Application
