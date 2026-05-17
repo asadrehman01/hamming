@@ -36,7 +36,7 @@ const parseBody = (req) => {
 
 const getAction = (req, fallbackAction = "settings") => {
   const body = parseBody(req);
-  const url = new URL(req.url || "http://localhost");
+  const url = new URL(req.url, `https://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname.replace(/\/+$/, "");
   const pathAction = pathname.startsWith("/api/scanner/")
     ? pathname.slice("/api/scanner/".length)

@@ -23,7 +23,7 @@ const parseBody = (req) => {
 
 const getAction = (req) => {
   const body = parseBody(req);
-  const url = new URL(req.url || "http://localhost");
+  const url = new URL(req.url, `https://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname.replace(/\/+$/, "");
   const pathAction = pathname.startsWith("/api/auth-reset/")
     ? pathname.slice("/api/auth-reset/".length)

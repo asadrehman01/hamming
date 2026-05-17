@@ -41,7 +41,7 @@ const validatePadding = (value) => {
 
 const getAction = (req, fallbackAction = "id-settings") => {
   const body = parseBody(req);
-  const url = new URL(req.url || "http://localhost");
+  const url = new URL(req.url, `https://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname.replace(/\/+$/, "");
   const pathAction = pathname.startsWith("/api/gym/") ? pathname.slice("/api/gym/".length) : "";
 
