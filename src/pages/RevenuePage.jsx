@@ -1148,7 +1148,7 @@ const RevenuePage = () => {
               </span>
             </div>{" "}
           </div>{" "}
-          <div className="h-[350px] w-full">
+          <div className="h-[350px] w-full" style={{ width: "100%", minHeight: 350 }}>
             {" "}
             <ResponsiveContainer width="100%" height="100%">
               {" "}
@@ -1569,7 +1569,7 @@ const RevenuePage = () => {
             </p>{" "}
           </div>{" "}
         </div>{" "}
-        <div className="h-[200px] w-full">
+        <div className="h-[200px] w-full" style={{ width: "100%", minHeight: 200 }}>
           {" "}
           <ResponsiveContainer width="100%" height="100%">
             {" "}
