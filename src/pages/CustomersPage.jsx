@@ -1000,6 +1000,16 @@ const CustomersPage = () => {
           background: #ffffff;
           color: #0d0d0d;
         }
+        .members-page-vibe .mobile-customer-row {
+          border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+          transition: background-color 0.2s ease;
+        }
+        .members-page-vibe .mobile-customer-row:last-child {
+          border-bottom: none !important;
+        }
+        .members-page-vibe .mobile-customer-row:hover {
+          background-color: rgba(0, 0, 0, 0.015) !important;
+        }
       `}</style>
 
       <div className="w-full max-w-[1200px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-1000">
@@ -1112,12 +1122,12 @@ const CustomersPage = () => {
         </div>
         <div className="members-card mb-6 border p-4 md:p-6 overflow-x-auto custom-scrollbar rounded-2xl shadow-lg shadow-black/5">
           
-          <div className="md:hidden divide-y divide-white/10">
+          <div className="md:hidden">
             
             {displayCustomers.map((customer) => (
               <div
                 key={`mobile-${customer.id}`}
-                className="p-4 space-y-3 cursor-pointer"
+                className="mobile-customer-row p-4 space-y-3 cursor-pointer"
                 onClick={() => openCustomerPopup(customer)}
               >
                 <div className="flex items-center gap-3">
