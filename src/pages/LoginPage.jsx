@@ -45,25 +45,39 @@ const LoginPage = () => {
     setTimeout(() => {
       setShowUnlockAnimation(false);
       navigate("/dashboard");
-    }, 800);
+    }, 4000);
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    try {
-      const { data: signInData, error: signInError } =
-        await supabase.auth.signInWithPassword({ email, password });
 
-      if (signInError || !signInData?.user) {
-        throw new Error(signInError?.message || "Invalid credentials");
-      }
+    // Start the lock animation immediately
+    setShowUnlockAnimation(true);
 
-      const userId = signInData.user.id;
+    let authComplete = false;
+    let animationComplete = false;
 
-      // Check access control status
+    const animationPromise = new Promise((resolve) => {
+      setTimeout(() => {
+        animationComplete = true;
+        resolve(true);
+      }, 4000);
+    });
+
+    const authPromise = (async () => {
       try {
+        const { data: signInData, error: signInError } =
+          await supabase.auth.signInWithPassword({ email, password });
+
+        if (signInError || !signInData?.user) {
+          throw new Error(signInError?.message || "Invalid credentials");
+        }
+
+        const userId = signInData.user.id;
+
+        // Check access control status
         const { data: accessData, error: accessError } = await supabase
           .from("user_access")
           .select("access_granted")
@@ -74,54 +88,72 @@ const LoginPage = () => {
           console.error("Failed to fetch user access status on login:", accessError);
         } else if (accessData && accessData.access_granted === false) {
           await supabase.auth.signOut();
-          setError("Your account access has been revoked. Please contact your administrator.");
-          setLoading(false);
-          return;
+          throw new Error("Your account access has been revoked. Please contact your administrator.");
         }
-      } catch (accessCheckErr) {
-        console.error("Error checking access status:", accessCheckErr);
+
+        if (mode === ACCESS_MODE.ADMIN) {
+          const adminExists = await hasAdminPassword(userId);
+          if (!adminExists) {
+            authComplete = true;
+            return { success: true, needsSetup: true, userId, user: signInData.user };
+          }
+
+          if (!adminPassword) {
+            await supabase.auth.signOut();
+            throw new Error("Enter your admin password to access admin mode.");
+          }
+
+          const isValidAdminPassword = await verifyAdminPassword(userId, adminPassword);
+          if (!isValidAdminPassword) {
+            await supabase.auth.signOut();
+            throw new Error("Invalid admin password.");
+          }
+
+          authComplete = true;
+          return { success: true, mode: ACCESS_MODE.ADMIN, user: signInData.user };
+        } else {
+          authComplete = true;
+          return { success: true, mode: ACCESS_MODE.RECEPTION, user: signInData.user };
+        }
+      } catch (err) {
+        authComplete = true;
+        return { success: false, error: err?.message || "Login failed. Please try again." };
+      }
+    })();
+
+    try {
+      // Run both in parallel and wait for both to complete
+      const [, authResult] = await Promise.all([animationPromise, authPromise]);
+
+      setShowUnlockAnimation(false);
+      setLoading(false);
+
+      if (!authResult.success) {
+        setError(authResult.error);
+        try {
+          await supabase.auth.signOut();
+        } catch {
+          // ignore
+        }
+        return;
       }
 
-      if (mode === ACCESS_MODE.ADMIN) {
-        const adminExists = await hasAdminPassword(userId);
-        if (!adminExists) {
-          setPendingUserId(userId);
-          setAwaitingAdminSetup(true);
-          setError(null);
-          setLoading(false);
-          return;
-        }
+      if (authResult.needsSetup) {
+        setPendingUserId(authResult.userId);
+        setAwaitingAdminSetup(true);
+        setError(null);
+        return;
+      }
 
-        if (!adminPassword) {
-          setError("Enter your admin password to access admin mode.");
-          await supabase.auth.signOut();
-          setLoading(false);
-          return;
-        }
-
-        const isValidAdminPassword = await verifyAdminPassword(userId, adminPassword);
-        if (!isValidAdminPassword) {
-          setError("Invalid admin password.");
-          await supabase.auth.signOut();
-          setLoading(false);
-          return;
-        }
-
-        setAccessMode(ACCESS_MODE.ADMIN);
-        await playUnlockAndNavigate(signInData.user);
-      } else {
-        setAccessMode(ACCESS_MODE.RECEPTION);
-        await playUnlockAndNavigate(signInData.user);
+      // If both completed and auth succeeded, set access mode and navigate
+      if (authComplete && animationComplete) {
+        setAccessMode(authResult.mode);
+        navigate("/dashboard");
       }
     } catch (err) {
-      setError(err?.message || "Login failed. Please try again.");
-      try {
-        await supabase.auth.signOut();
-      } catch {
-        // ignore
-      }
-    } finally {
+      setShowUnlockAnimation(false);
       setLoading(false);
+      setError("An unexpected error occurred during login.");
     }
   };
 
