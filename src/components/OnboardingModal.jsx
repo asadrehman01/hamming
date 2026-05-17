@@ -77,7 +77,7 @@ const OnboardingModal = ({ onStartSetup, onClose }) => {
         <button
           type="button"
           ref={actionButtonRef}
-          className="mt-2 px-5 py-2.5 bg-white text-black border border-white/10 rounded-xl text-xs tracking-[0.12em] dm-sans-light-008 font-medium whitespace-nowrap hover:bg-white/90 transition-colors"
+          className="modal-submit-btn mt-2 px-5 py-2.5 text-xs tracking-[0.12em] dm-sans-light-008 font-medium whitespace-nowrap"
           onClick={() => typeof onStartSetup === "function" && onStartSetup()}
         >
           Set up now

@@ -1160,10 +1160,28 @@ const CustomersPage = () => {
                     }
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="text-[13px] text-white font-medium truncate">
-                      {customer.first_name} {customer.last_name}
-                    </p>
-                    <p className="text-[9px] text-white/35 dm-sans-light-008 tracking-[0.08em] truncate">
+                    <div className="flex items-center gap-2">
+                      <p className="text-[13px] text-white font-medium truncate">
+                        {customer.first_name} {customer.last_name}
+                      </p>
+                      {(() => {
+                        if (!customer.membership_end_date) return null;
+                        const end = parseDateOnly(customer.membership_end_date);
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const isActive = end && end >= today;
+                        return isActive ? (
+                          <span className="px-2 py-0.5 bg-emerald-500 text-black text-[8px] font-medium tracking-[0.1em] rounded-sm flex-shrink-0">
+                            Active
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 border border-red-500/50 text-red-500 text-[8px] font-medium tracking-[0.1em] rounded-sm flex-shrink-0">
+                            Expired
+                          </span>
+                        );
+                      })()}
+                    </div>
+                    <p className="text-[9px] text-white/35 dm-sans-light-008 tracking-[0.08em] truncate mt-0.5">
                       Id:
                       {(customer?.id != null
                         ? String(customer.id)
@@ -1213,6 +1231,29 @@ const CustomersPage = () => {
                     <span className="text-white/90 text-right dm-sans-light-008 tracking-[0.08em]">
                       {customer.membership_duration || "N/A"}
                     </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-white/45 tracking-[0.08em] dm-sans-light-008">
+                      Status
+                    </span>
+                    {(() => {
+                      if (!customer.membership_end_date) return (
+                        <span className="text-white/45 dm-sans-light-008 tracking-[0.08em]">N/A</span>
+                      );
+                      const end = parseDateOnly(customer.membership_end_date);
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const isActive = end && end >= today;
+                      return isActive ? (
+                        <span className="text-emerald-400 font-medium tracking-[0.08em] dm-sans-light-008">
+                          Active
+                        </span>
+                      ) : (
+                        <span className="text-red-400 font-medium tracking-[0.08em] dm-sans-light-008">
+                          Expired
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
 

@@ -246,7 +246,7 @@ const BugReportModal = ({ isOpen, onClose, accountEmail = "" }) => {
           <button
             type="submit"
             disabled={submitting || !emailConsent}
-            className="w-full rounded-xl border border-white/10 bg-white/[0.05] hover:bg-white/[0.09] text-white/90 px-4 py-3 text-[11px] tracking-[0.08em] transition-colors disabled:opacity-50"
+            className="modal-submit-btn w-full px-4 py-3 text-[11px] tracking-[0.08em] transition-colors disabled:opacity-50"
           >
             {submitting ? "Sending..." : "Send Bug Report"}
           </button>

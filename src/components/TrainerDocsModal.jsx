@@ -411,7 +411,7 @@ const TrainerDocsModal = ({ isOpen, onClose, trainer, onDocsUpdated }) => {
 					<button
 						onClick={handleSave}
 						disabled={uploading || (!photo && !aadhaar)}
-						className="w-full bg-white text-black p-4 sm:p-5 text-[10px] tracking-[0.2em] font-medium hover:bg-white/90 transition-all active:scale-[0.98] disabled:opacity-30 disabled:cursor-not-allowed"
+						className="modal-submit-btn w-full p-4 sm:p-5 text-[10px] tracking-[0.2em] font-medium transition-all active:scale-[0.98] disabled:opacity-30 disabled:cursor-not-allowed"
 					>
 						{uploading ? "Uploading..." : "Save documents"}
 					</button>
