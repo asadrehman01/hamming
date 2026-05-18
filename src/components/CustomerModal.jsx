@@ -625,6 +625,67 @@ const CustomerModal = ({
       }
       // Google Review Auto-Sender (Only for Brand New Customers)
       if (!initialData) {
+        // Send review email first, then wait before sending receipt to avoid spam-like bursts.
+        try {
+          const { data: integ } = await supabase
+            .from("gym_integrations")
+            .select("google_business_link")
+            .eq("gym_id", gymId)
+            .eq("provider", "RESEND")
+            .not("google_business_link", "is", null)
+            .maybeSingle();
+
+          if (integ?.google_business_link && resultData.email && resultData.first_name) {
+            const { data: revTemplate } = await supabase
+              .from("automation_templates")
+              .select("subject, body_text")
+              .eq("gym_id", gymId)
+              .eq("name", "GOOGLE_REVIEW_REQUEST")
+              .maybeSingle();
+
+            const fallbackTemplate = {
+              subject: "Welcome to the gym, {first_name}! Share your 5-star experience",
+              body_text:
+                "Hi {first_name},\n\nWelcome to the gym. We are excited to have you with us.\n\nIf your first experience has been great, please rate us 5 stars on Google here:\n{review_link}\n\nYour feedback helps us grow and helps more people discover our gym.\n\nThank you for being part of our community!",
+            };
+
+            const activeTemplate = {
+              subject: revTemplate?.subject || fallbackTemplate.subject,
+              body_text: revTemplate?.body_text || fallbackTemplate.body_text,
+            };
+
+            const reviewLink = integ?.google_business_link || "";
+            const personalizedBody = activeTemplate.body_text
+              .replace(/{first_name}/g, resultData.first_name)
+              .replace(/{review_link}/g, reviewLink);
+            const personalizedSubject = activeTemplate.subject.replace(
+              /{first_name}/g,
+              resultData.first_name,
+            );
+
+            const reviewResult = await sendEmailViaEdgeFunction({
+              subject: personalizedSubject,
+              message: personalizedBody,
+              recipientEmail: resultData.email,
+              description: "Review Request",
+            });
+            onboardingStatus = reviewResult.success
+              ? `Sent to ${resultData.email}.`
+              : `Failed (${reviewResult.error || "unknown error"}).`;
+
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+          } else if (!resultData.email) {
+            onboardingStatus = "Skipped (customer email missing).";
+          } else if (!resultData.first_name) {
+            onboardingStatus = "Skipped (customer first name missing).";
+          } else {
+            onboardingStatus = "Skipped (Google onboarding link not configured).";
+          }
+        } catch (revErr) {
+          console.error("[Review Request] Failed to prepare/send:", revErr);
+          onboardingStatus = "Failed (review request could not be sent).";
+        }
+
         // Billing Receipt Auto-Sender (Only for Brand New Customers)
         try {
           const { data: billingSettings, error: billingSettingsError } = await supabase
@@ -710,65 +771,6 @@ const CustomerModal = ({
         } catch (receiptError) {
           console.error("Failed to auto-send receipt:", receiptError);
           receiptStatus = "Failed (receipt could not be sent).";
-        }
-
-        // Send review email (with retry, never fails the save)
-        try {
-          const { data: integ } = await supabase
-            .from("gym_integrations")
-            .select("google_business_link")
-            .eq("gym_id", gymId)
-            .eq("provider", "RESEND")
-            .not("google_business_link", "is", null)
-            .maybeSingle();
-
-          if (integ?.google_business_link && resultData.email && resultData.first_name) {
-            const { data: revTemplate } = await supabase
-              .from("automation_templates")
-              .select("subject, body_text")
-              .eq("gym_id", gymId)
-              .eq("name", "GOOGLE_REVIEW_REQUEST")
-              .maybeSingle();
-
-            const fallbackTemplate = {
-              subject: "Welcome to the gym, {first_name}! Share your 5-star experience",
-              body_text:
-                "Hi {first_name},\n\nWelcome to the gym. We are excited to have you with us.\n\nIf your first experience has been great, please rate us 5 stars on Google here:\n{review_link}\n\nYour feedback helps us grow and helps more people discover our gym.\n\nThank you for being part of our community!",
-            };
-
-            const activeTemplate = {
-              subject: revTemplate?.subject || fallbackTemplate.subject,
-              body_text: revTemplate?.body_text || fallbackTemplate.body_text,
-            };
-
-            const reviewLink = integ?.google_business_link || "";
-            const personalizedBody = activeTemplate.body_text
-              .replace(/{first_name}/g, resultData.first_name)
-              .replace(/{review_link}/g, reviewLink);
-            const personalizedSubject = activeTemplate.subject.replace(
-              /{first_name}/g,
-              resultData.first_name,
-            );
-
-            const reviewResult = await sendEmailViaEdgeFunction({
-              subject: personalizedSubject,
-              message: personalizedBody,
-              recipientEmail: resultData.email,
-              description: "Review Request",
-            });
-            onboardingStatus = reviewResult.success
-              ? `Sent to ${resultData.email}.`
-              : `Failed (${reviewResult.error || "unknown error"}).`;
-          } else if (!resultData.email) {
-            onboardingStatus = "Skipped (customer email missing).";
-          } else if (!resultData.first_name) {
-            onboardingStatus = "Skipped (customer first name missing).";
-          } else {
-            onboardingStatus = "Skipped (Google onboarding link not configured).";
-          }
-        } catch (revErr) {
-          console.error("[Review Request] Failed to prepare/send:", revErr);
-          onboardingStatus = "Failed (review request could not be sent).";
         }
       }
       setLoading(false);
