@@ -56,13 +56,13 @@ const ResetAdminPasswordPage = () => {
       <div className="fixed top-8 right-8 text-[10px] tracking-[0.2em] text-white/40 font-mono">
         HMG / 03
       </div>
-      <div className="w-full max-w-[960px] h-[520px] bg-[#E8E0D5] flex flex-col md:flex-row shadow-2xl overflow-hidden">
+      <div className="w-full max-w-[960px] h-[520px] bg-[#151921] border border-white/10 flex flex-col md:flex-row shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         <div className="flex-1 p-10 md:p-12 flex flex-col justify-between">
           <div>
-            <h1 className="font-logo font-bold text-6xl text-[#0A0A0A] leading-none tracking-tight normal-case">
+            <h1 className="font-logo font-bold text-6xl text-white leading-none tracking-tight normal-case">
               Hamming
             </h1>
-            <p className="text-[10px] mt-2 tracking-widest text-[#6B6360] font-medium">
+            <p className="text-[10px] mt-2 tracking-widest text-white/60 font-medium">
               Reset Admin Password
             </p>
           </div>
@@ -70,29 +70,29 @@ const ResetAdminPasswordPage = () => {
           <div className="w-full max-w-[360px]">
             {success ? (
               <div className="space-y-4">
-                <p className="text-[#0A0A0A] text-[11px] tracking-wider leading-relaxed">
+                <p className="text-white text-[11px] tracking-wider leading-relaxed">
                   Admin password updated. You can close this page.
                 </p>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-5">
                 {error && (
-                  <div className="bg-red-500/10 border border-red-500/30 rounded p-3">
-                    <p className="text-red-600 text-[10px] tracking-wide">
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3">
+                    <p className="text-red-400 text-[10px] tracking-wide">
                       {error}
                     </p>
                   </div>
                 )}
 
                 <div className="space-y-1">
-                  <label className="text-[9px] tracking-widest text-[#6B6360]">
+                  <label className="text-[9px] tracking-widest text-white/40">
                     New Admin Password
                   </label>
                   <div className="relative">
                     <input
                       type={showNewPassword ? "text" : "password"}
                       placeholder="New admin password"
-                      className="w-full bg-transparent border-b border-[#0A0A0A]/20 py-2 pr-9 focus:border-[#0A0A0A] outline-none text-[#0A0A0A] caret-[#0A0A0A] text-base sm:text-[11px] tracking-wider placeholder:text-[#0A0A0A]/30"
+                      className="w-full bg-white/5 border border-white/10 px-4 py-3 pr-10 text-white placeholder:text-white/30 focus:outline-none focus:border-white/30 transition-colors rounded-xl text-base sm:text-[11px] tracking-wider"
                       value={newPassword}
                       onChange={(event) => setNewPassword(event.target.value)}
                       required
@@ -100,7 +100,7 @@ const ResetAdminPasswordPage = () => {
                     <button
                       type="button"
                       onClick={() => setShowNewPassword((prev) => !prev)}
-                      className="absolute right-1 top-1/2 -translate-y-1/2 text-[#0A0A0A]/50 hover:text-[#0A0A0A]"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors"
                       aria-label={
                         showNewPassword ? "Hide new password" : "Show new password"
                       }
@@ -111,14 +111,14 @@ const ResetAdminPasswordPage = () => {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[9px] tracking-widest text-[#6B6360]">
+                  <label className="text-[9px] tracking-widest text-white/40">
                     Confirm Admin Password
                   </label>
                   <div className="relative">
                     <input
                       type={showConfirmPassword ? "text" : "password"}
                       placeholder="Confirm admin password"
-                      className="w-full bg-transparent border-b border-[#0A0A0A]/20 py-2 pr-9 focus:border-[#0A0A0A] outline-none text-[#0A0A0A] caret-[#0A0A0A] text-base sm:text-[11px] tracking-wider placeholder:text-[#0A0A0A]/30"
+                      className="w-full bg-white/5 border border-white/10 px-4 py-3 pr-10 text-white placeholder:text-white/30 focus:outline-none focus:border-white/30 transition-colors rounded-xl text-base sm:text-[11px] tracking-wider"
                       value={confirmPassword}
                       onChange={(event) => setConfirmPassword(event.target.value)}
                       required
@@ -126,7 +126,7 @@ const ResetAdminPasswordPage = () => {
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword((prev) => !prev)}
-                      className="absolute right-1 top-1/2 -translate-y-1/2 text-[#0A0A0A]/50 hover:text-[#0A0A0A]"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors"
                       aria-label={
                         showConfirmPassword
                           ? "Hide confirm password"
@@ -142,7 +142,7 @@ const ResetAdminPasswordPage = () => {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="bg-[#0A0A0A] text-white py-3 px-8 text-[10px] tracking-[0.2em] font-medium hover:bg-black transition-all active:scale-[0.98] disabled:opacity-50"
+                    className="bg-white text-black py-3 px-8 text-[10px] tracking-[0.2em] font-medium hover:bg-white/90 transition-all active:scale-[0.98] disabled:opacity-50 rounded-xl"
                   >
                     {loading ? "Updating..." : "Update Admin Password"}
                   </button>
@@ -151,7 +151,7 @@ const ResetAdminPasswordPage = () => {
             )}
           </div>
 
-          <div className="text-[10px] tracking-widest text-[#6B6360] font-medium">
+          <div className="text-[10px] tracking-widest text-white/40 font-medium">
             Admin Access / 2026
           </div>
         </div>
