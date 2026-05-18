@@ -55,7 +55,7 @@ const ForgotAdminPasswordModal = ({ isOpen, onClose, defaultEmail = "" }) => {
       role="presentation"
     >
       <div
-        className="dm-sans-light-008 bg-[#E8E0D5] border border-black/10 rounded-2xl max-w-md w-full p-7 md:p-10 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+        className="dm-sans-light-008 bg-[#151921] border border-white/10 rounded-2xl max-w-md w-full p-7 md:p-10 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -65,18 +65,18 @@ const ForgotAdminPasswordModal = ({ isOpen, onClose, defaultEmail = "" }) => {
           <div>
             <h2
               id="forgot-admin-password-title"
-              className="text-[#0A0A0A] text-lg font-semibold tracking-tight"
+              className="text-white text-lg font-semibold tracking-tight"
             >
               Forgot Admin Password
             </h2>
-            <p className="text-[11px] text-[#6B6360] mt-1">
+            <p className="text-[11px] text-white/60 mt-1">
               Enter your account email address
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-[#6B6360] hover:text-[#0A0A0A] transition-colors"
+            className="text-white/40 hover:text-white transition-colors"
             aria-label="Close"
           >
             <X size={18} />
@@ -84,27 +84,27 @@ const ForgotAdminPasswordModal = ({ isOpen, onClose, defaultEmail = "" }) => {
         </div>
 
         {success ? (
-          <div className="mt-6 p-4 bg-white/40 border border-black/10 rounded-xl text-center">
-            <p className="text-[#0A0A0A] text-[12px] tracking-wide">
+          <div className="mt-6 p-4 bg-white/5 border border-white/10 rounded-xl text-center">
+            <p className="text-white text-[12px] tracking-wide">
               {SUCCESS_MESSAGE}
             </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             {error && (
-              <div className="bg-white/40 border border-black/10 rounded-xl p-3">
-                <p className="text-[#0A0A0A] text-[12px] tracking-wide">{error}</p>
+              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3">
+                <p className="text-red-400 text-[12px] tracking-wide">{error}</p>
               </div>
             )}
             <div>
-              <label className="text-[11px] text-[#6B6360] block mb-1" htmlFor="forgot-admin-email">
+              <label className="text-[11px] text-white/55 block mb-1" htmlFor="forgot-admin-email">
                 Account Email Address
               </label>
               <input
                 id="forgot-admin-email"
                 type="email"
                 placeholder="name@company.com"
-                className="w-full bg-transparent border-b border-black/15 px-0 py-3 text-[13px] text-[#0A0A0A] placeholder:text-[#0A0A0A]/30 focus:outline-none focus:border-[#0A0A0A]"
+                className="w-full bg-white/5 border border-white/10 px-4 py-3.5 text-[13px] text-white/80 rounded-xl placeholder:text-white/30 focus:outline-none focus:border-white/30 transition-colors"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 required
@@ -115,14 +115,14 @@ const ForgotAdminPasswordModal = ({ isOpen, onClose, defaultEmail = "" }) => {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-[#0A0A0A] text-white py-3 px-4 text-[10px] tracking-[0.2em] rounded-xl hover:bg-black disabled:opacity-50"
+                className="flex-1 px-4 py-3 bg-white text-black text-[10px] tracking-[0.2em] font-medium hover:bg-white/90 transition-colors disabled:opacity-50 rounded-xl"
               >
                 {loading ? "Sending..." : "Send Reset Link"}
               </button>
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 border border-black/10 text-[#0A0A0A] py-3 px-4 text-[10px] tracking-[0.2em] rounded-xl hover:bg-white/40"
+                className="flex-1 px-4 py-3 border border-white/10 text-white text-[10px] tracking-[0.2em] font-medium hover:bg-white/5 transition-colors rounded-xl"
               >
                 Cancel
               </button>
