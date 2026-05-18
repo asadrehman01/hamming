@@ -10,6 +10,42 @@ const isValidEmail = (value) =>
 const ForgotAdminPasswordModal = ({ isOpen, onClose, defaultEmail = "" }) => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setEmail(defaultEmail || "");
+    setLoading(false);
+    setError(null);
+    setSuccess(false);
+  }, [defaultEmail, isOpen]);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError(null);
+    setSuccess(false);
+
+    const trimmed = String(email || "").trim();
+    if (!isValidEmail(trimmed)) {
+      setError("Enter a valid email address.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await postPublicApi("/api/admin-password-reset", {
+        action: "request",
+        email: trimmed,
+      });
+      setSuccess(true);
+    } catch (err) {
+      setError(err?.message || "Unable to send reset link. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -57,16 +93,11 @@ const ForgotAdminPasswordModal = ({ isOpen, onClose, defaultEmail = "" }) => {
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             {error && (
               <div className="bg-red-500/10 border border-red-500/30 rounded p-3">
-                <p className="text-red-400 text-[12px] tracking-wide">
-                  {error}
-                </p>
+                <p className="text-red-400 text-[12px] tracking-wide">{error}</p>
               </div>
             )}
             <div>
-              <label
-                className="text-[11px] text-white/55 block mb-1"
-                htmlFor="forgot-admin-email"
-              >
+              <label className="text-[11px] text-white/55 block mb-1" htmlFor="forgot-admin-email">
                 Account Email Address
               </label>
               <input
@@ -92,42 +123,6 @@ const ForgotAdminPasswordModal = ({ isOpen, onClose, defaultEmail = "" }) => {
                 type="button"
                 onClick={onClose}
                 className="flex-1 border border-white/10 text-white/80 py-3 px-4 text-[12px] rounded-xl"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
-    </div>
-  );
-                htmlFor="forgot-admin-email"
-              >
-                Account Email Address
-              </label>
-              <input
-                id="forgot-admin-email"
-                type="email"
-                placeholder="name@company.com"
-                className="w-full bg-transparent border-b border-[#0A0A0A]/20 py-2 focus:border-[#0A0A0A] outline-none text-[#0A0A0A] caret-[#0A0A0A] text-base sm:text-[11px] tracking-wider placeholder:text-[#0A0A0A]/30"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                required
-              />
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex-1 bg-[#0A0A0A] text-white py-2 text-[10px] tracking-[0.2em] disabled:opacity-50"
-              >
-                {loading ? "Sending..." : "Send Reset Link"}
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 border border-[#0A0A0A]/20 text-[#0A0A0A] py-2 text-[10px] tracking-[0.2em]"
               >
                 Cancel
               </button>
