@@ -97,10 +97,9 @@ const sendWithResend = async ({ apiKey, from, to, subject, text, html }) => {
 const hashToken = (token) =>
   crypto.createHash("sha256").update(String(token || "")).digest("hex");
 
-const listAllAuthUsers = async (adminClient) => {
+const findAuthUserByEmail = async (adminClient, email) => {
   const perPage = 1000;
   let page = 1;
-  const users = [];
 
   while (true) {
     const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage });
@@ -110,7 +109,13 @@ const listAllAuthUsers = async (adminClient) => {
     }
 
     const pageUsers = Array.isArray(data?.users) ? data.users : [];
-    users.push(...pageUsers);
+    const match = pageUsers.find(
+      (authUser) => normalizeEmail(authUser.email) === normalizeEmail(email),
+    );
+
+    if (match?.id) {
+      return match;
+    }
 
     if (pageUsers.length < perPage) {
       break;
@@ -119,7 +124,7 @@ const listAllAuthUsers = async (adminClient) => {
     page += 1;
   }
 
-  return users;
+  return null;
 };
 
 const hashAdminPassword = (password) => {
@@ -155,7 +160,9 @@ export default async function handler(req, res) {
         .json({ error: "Missing Supabase server environment variables." });
     }
 
-    const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
+    const admin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false },
+    });
     const body = parseBody(req);
     const action = String(body?.action || "").toLowerCase();
 
@@ -165,8 +172,7 @@ export default async function handler(req, res) {
         return res.status(200).json({ message: GENERIC_MESSAGE });
       }
 
-      const authUsers = await listAllAuthUsers(admin);
-      const user = authUsers.find((authUser) => normalizeEmail(authUser.email) === rawEmail);
+      const user = await findAuthUserByEmail(admin, rawEmail);
 
       if (!user?.id) {
         return res.status(200).json({ message: GENERIC_MESSAGE });
