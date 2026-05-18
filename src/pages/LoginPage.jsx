@@ -49,74 +49,62 @@ const LoginPage = () => {
     return () => {
       console.log(`[${new Date().toISOString()}] LoginPage unmounted`);
     };
-  }, []);
-
-  useEffect(() => {
-    if (authComplete && animationComplete && authResult) {
-      console.log(`[${new Date().toISOString()}] Synchronizing navigation. Both authComplete and animationComplete are true!`);
-      setShowUnlockAnimation(false);
-      setLoading(false);
-
-      if (!authResult.success) {
-        setError(authResult.error);
-        try {
-          supabase.auth.signOut();
-        } catch {
-          // ignore
-        }
-        // Reset states for subsequent login attempts
-        setAuthComplete(false);
-        setAnimationComplete(false);
-        setAuthResult(null);
-        return;
-      }
-
-      if (authResult.needsSetup) {
-        setPendingUserId(authResult.userId);
-        setAwaitingAdminSetup(true);
-        setError(null);
-        // Reset states
-        setAuthComplete(false);
-        setAnimationComplete(false);
-        setAuthResult(null);
-        return;
-      }
-
-      // Successful Reception or Admin login navigation
-      console.log(`[${new Date().toISOString()}] LoginPage handleLogin: animation completed, navigating to /dashboard`);
-      setAccessMode(authResult.mode);
-      navigate("/dashboard");
-    }
-  }, [authComplete, animationComplete, authResult, navigate]);
-
-  const playUnlockAndNavigate = async (modeToSet) => {
-    setShowUnlockAnimation(true);
-    setTimeout(() => {
-      setShowUnlockAnimation(false);
-      setAccessMode(modeToSet);
-      console.log(`[${new Date().toISOString()}] playUnlockAndNavigate: animation completed, navigating to /dashboard`);
-      navigate("/dashboard");
-    }, 4000);
-  };
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-
-    // Reset tracking states
-    setAuthComplete(false);
-    setAnimationComplete(false);
-    setAuthResult(null);
-
-    // Start the lock animation immediately
-    setShowUnlockAnimation(true);
-
-    // 1. Start the animation timer
-    setTimeout(() => {
-      console.log(`[${new Date().toISOString()}] Animation cycle complete (4000ms elapsed)`);
-      setAnimationComplete(true);
-    }, 4000);
+      {awaitingAdminSetup && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-md bg-white p-6 border border-black/10 shadow-2xl rounded-2xl">
+            <h2 className="text-[#0d0d0d] text-lg font-semibold tracking-tight">
+              Create Admin Password
+            </h2>
+            <p className="text-[10px] tracking-widest text-[#8a8a8a] mt-1">
+              Required for future admin logins
+            </p>
+            {error && (
+              <div className="mt-4 bg-red-50 border border-red-200 rounded-2xl p-3">
+                <p className="text-red-700 text-[10px] tracking-wide">{error}</p>
+              </div>
+            )}
+            <form onSubmit={handleSetupAdminPassword} className="mt-6 space-y-4">
+              <div>
+                <input
+                  type="password"
+                  placeholder="NEW ADMIN Password"
+                  className="w-full bg-[#fbfbfb] border border-[#e6e6e6] px-4 py-3 text-[#0d0d0d] placeholder:text-[#b6b6b6] rounded-2xl text-base sm:text-[11px] tracking-wider focus:outline-none focus:border-[#d6d6d6]"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPasswordInput(e.target.value)}
+                  required
+                />
+                <p className="text-[8px] text-[#8a8a8a] mt-1">
+                  Minimum {MIN_PASSWORD_LENGTH} characters required
+                </p>
+              </div>
+              <input
+                type="password"
+                placeholder="CONFIRM ADMIN Password"
+                className="w-full bg-[#fbfbfb] border border-[#e6e6e6] px-4 py-3 text-[#0d0d0d] placeholder:text-[#b6b6b6] rounded-2xl text-base sm:text-[11px] tracking-wider focus:outline-none focus:border-[#d6d6d6]"
+                value={adminPasswordConfirm}
+                onChange={(e) => setAdminPasswordConfirm(e.target.value)}
+                required
+              />
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 bg-[#0d0d0d] text-white py-2 text-[10px] tracking-[0.2em] disabled:opacity-50 rounded-2xl"
+                >
+                  {loading ? "Saving..." : "Save"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancelAdminSetup}
+                  className="flex-1 border border-[#e6e6e6] text-[#0d0d0d] py-2 text-[10px] tracking-[0.2em] rounded-2xl"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     // 2. Start the auth task in parallel
     (async () => {
@@ -229,121 +217,76 @@ const LoginPage = () => {
       return;
     }
     if (resetAdminPassword !== resetAdminPasswordConfirm) {
-      setResetError("Passwords do not match");
-      return;
-    }
-    if (resetAdminPassword.length < MIN_PASSWORD_LENGTH) {
-      setResetError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters long`);
-      return;
-    }
-    setResetLoading(true);
-    try {
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (signInError || !signInData?.user) {
-        setResetError("Unable to verify your credentials. Please try again.");
-        setResetLoading(false);
-        return;
-      }
-
-      const userId = signInData.user.id;
-      await forceResetAdminPassword(userId, resetAdminPassword);
-      setResetSuccess(true);
-      setResetAdminPassword("");
-      setResetAdminPasswordConfirm("");
-
-      if (resetTimeoutRef.current) {
-        clearTimeout(resetTimeoutRef.current);
-      }
-      resetTimeoutRef.current = setTimeout(async () => {
-        setShowForgotAdminModal(false);
-        setResetSuccess(false);
-        try {
-          await supabase.auth.signOut();
-        } catch {}
-      }, 2000);
-    } catch (err) {
-      setResetError(err.message || "Failed to reset admin password. Please try again.");
-    } finally {
-      setResetLoading(false);
-    }
-  };
-
-  return (
-    <>
-      <div className="app-page min-h-screen bg-black flex items-center justify-center p-4 sm:p-8 md:p-12 font-body">
-        {" "}
-        {/* Corner Labels */}{" "}
-        <div className="fixed top-8 right-8 text-[10px] tracking-[0.2em] text-white/40 font-mono">
-          {" "}
-          HMG / 01{" "}
-        </div>{" "}
-        <div className="w-full max-w-[1200px] h-[600px] bg-[#E8E0D5] flex flex-col md:flex-row shadow-2xl overflow-hidden relative group">
-          {" "}
-          {/* Left Side: Branding & Form */}{" "}
-          <div className="flex-1 p-12 flex flex-col justify-between">
-            {" "}
-            <div className="flex flex-col items-center md:items-start text-center md:text-left">
-              {" "}
-              <h1 className="font-logo font-bold text-[4.15rem] sm:text-7xl text-[#0A0A0A] leading-none tracking-tight normal-case">
-                {" "}
-                Hamming{" "}
-              </h1>{" "}
-              <p className="text-[10px] mt-2 tracking-widest text-[#6B6360] font-medium">
-                {" "}
-                3rd Edition{" "}
-              </p>{" "}
-            </div>{" "}
-            <div className="w-full max-w-[320px]">
-              {" "}
-              <form onSubmit={handleLogin} className="space-y-6">
-                {" "}
-                {error && (
-                  <p className="text-red-600 text-[10px] tracking-wider mb-4">
-                    {error}
-                  </p>
-                )}{" "}
-                <div className="grid grid-cols-2 gap-2">
-                  {" "}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMode(ACCESS_MODE.RECEPTION);
-                      setError(null);
-                    }}
-                    className={`py-2 text-[9px] tracking-[0.2em] transition-colors ${mode === ACCESS_MODE.RECEPTION ? "bg-[#0A0A0A] text-white" : "text-[#6B6360] hover:text-[#0A0A0A]"}`}
-                  >
-                    {" "}
-                    Reception{" "}
-                  </button>{" "}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMode(ACCESS_MODE.ADMIN);
-                      setError(null);
-                    }}
-                    className={`py-2 text-[9px] tracking-[0.2em] transition-colors ${mode === ACCESS_MODE.ADMIN ? "bg-[#0A0A0A] text-white" : "text-[#6B6360] hover:text-[#0A0A0A]"}`}
+      {showForgotAdminModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-md bg-white p-6 border border-black/10 shadow-2xl rounded-2xl">
+            <h2 className="text-[#0d0d0d] text-lg font-semibold tracking-tight">Reset Admin Password</h2>
+            <p className="text-[10px] tracking-widest text-[#8a8a8a] mt-1">Create a new secure admin password</p>
+            {resetSuccess ? (
+              <div className="mt-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-center">
+                <p className="text-emerald-600 text-sm font-medium">Admin password reset successfully!</p>
+                <p className="text-[10px] text-emerald-500/70 mt-2">You can now login with your new admin password.</p>
+              </div>
+            ) : (
+              <form onSubmit={handleResetAdminPassword} className="mt-6 space-y-4">
+                {resetError && (
+                  <div className="bg-red-50 border border-red-200 rounded-2xl p-3">
+                    <p className="text-red-700 text-[10px]">{resetError}</p>
+                  </div>
+                )}
+                <div>
+                  <label className="text-[9px] tracking-widest text-[#8a8a8a] block mb-1">New Admin Password</label>
+                  <input
+                    type="password"
+                    placeholder="New admin password"
+                    className="w-full bg-[#fbfbfb] border border-[#e6e6e6] px-4 py-3 text-[#0d0d0d] placeholder:text-[#b6b6b6] rounded-2xl focus:outline-none focus:border-[#d6d6d6]"
+                    value={resetAdminPassword}
+                    onChange={(e) => setResetAdminPassword(e.target.value)}
+                    required
+                  />
+                  <p className="text-[8px] text-[#8a8a8a] mt-1">Minimum {MIN_PASSWORD_LENGTH} characters required</p>
+                </div>
+                <div>
+                  <label className="text-[9px] tracking-widest text-[#8a8a8a] block mb-1">Confirm Password</label>
+                  <input
+                    type="password"
+                    placeholder="Confirm password"
+                    className="w-full bg-[#fbfbfb] border border-[#e6e6e6] px-4 py-3 text-[#0d0d0d] placeholder:text-[#b6b6b6] rounded-2xl focus:outline-none focus:border-[#d6d6d6]"
+                    value={resetAdminPasswordConfirm}
+                    onChange={(e) => setResetAdminPasswordConfirm(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button type="submit" disabled={resetLoading} className="flex-1 bg-[#0d0d0d] text-white py-2 text-[10px] tracking-[0.2em] disabled:opacity-50 rounded-2xl">{resetLoading ? "Resetting..." : "Reset Password"}</button>
+                  <button type="button" onClick={() => { setShowForgotAdminModal(false); setResetError(null); setResetSuccess(false); setResetAdminPassword(""); setResetAdminPasswordConfirm(""); }} className="flex-1 border border-[#e6e6e6] text-[#0d0d0d] py-2 text-[10px] tracking-[0.2em] rounded-2xl">Cancel</button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
                   >
                     {" "}
                     Admin{" "}
                   </button>{" "}
                 </div>{" "}
                 <div className="space-y-1">
-                  {" "}
                   <input
                     type="email"
                     placeholder="Email address"
-                    className="login-credential-input w-full bg-transparent border-b border-[#0A0A0A]/20 py-2 focus:border-[#0A0A0A] outline-none text-[#0A0A0A] caret-[#0A0A0A] text-base sm:text-[11px] tracking-wider transition-colors placeholder:text-[#0A0A0A]/30"
+                    className="w-full bg-[#fbfbfb] border border-[#e6e6e6] px-4 py-3 text-[#0d0d0d] placeholder:text-[#b6b6b6] rounded-2xl text-base sm:text-[11px] tracking-wider transition-colors focus:outline-none focus:border-[#d6d6d6]"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                  />{" "}
-                </div>{" "}
+                  />
+                </div>
                 <div className="space-y-1">
                   <div className="relative">
                     <input
                       type={showPassword ? "text" : "password"}
                       placeholder="Password"
-                      className={`login-credential-input password-visibility-control ${showPassword ? "password-revealed" : ""} w-full bg-transparent border-b border-[#0A0A0A]/20 py-2 pr-9 focus:border-[#0A0A0A] outline-none text-[#0A0A0A] caret-[#0A0A0A] text-base sm:text-[11px] tracking-wider transition-colors placeholder:text-[#0A0A0A]/30`}
+                      className={`password-visibility-control ${showPassword ? "password-revealed" : ""} w-full bg-[#fbfbfb] border border-[#e6e6e6] px-4 py-3 pr-10 text-[#0d0d0d] placeholder:text-[#b6b6b6] rounded-2xl text-base sm:text-[11px] tracking-wider transition-colors focus:outline-none focus:border-[#d6d6d6]`}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       autoComplete="current-password"
@@ -401,10 +344,10 @@ const LoginPage = () => {
                 {mode === ACCESS_MODE.ADMIN && (
                   <div className="space-y-1">
                     <div className="relative">
-                      <input
+                        <input
                         type={showAdminPassword ? "text" : "password"}
                         placeholder="Admin Password"
-                        className={`login-credential-input admin-password-input password-visibility-control ${showAdminPassword ? "password-revealed" : ""} w-full bg-transparent border-b border-[#0A0A0A]/20 py-2 pr-9 focus:border-[#0A0A0A] outline-none text-[#0A0A0A] caret-[#0A0A0A] text-base sm:text-[11px] tracking-wider transition-colors placeholder:text-[#0A0A0A]/30`}
+                        className={`admin-password-input password-visibility-control ${showAdminPassword ? "password-revealed" : ""} w-full bg-[#fbfbfb] border border-[#e6e6e6] px-4 py-3 pr-10 text-[#0d0d0d] placeholder:text-[#b6b6b6] rounded-2xl text-base sm:text-[11px] tracking-wider transition-colors focus:outline-none focus:border-[#d6d6d6]`}
                         value={adminPassword}
                         onChange={(e) => setAdminPasswordInput(e.target.value)}
                         autoComplete="new-password"
