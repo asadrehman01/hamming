@@ -514,7 +514,7 @@ const LoginPage = () => {
       {awaitingAdminSetup && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           {" "}
-          <div className="w-full max-w-md bg-[#E8E0D5] p-6 border border-black/10 shadow-2xl">
+          <div className="w-full max-w-md bg-white p-6 border border-black/10 shadow-2xl rounded-2xl">
             {" "}
             <h2 className="text-[#0A0A0A] text-lg font-semibold tracking-tight">
               Create Admin Password
@@ -582,7 +582,7 @@ const LoginPage = () => {
       {showForgotAdminModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           {" "}
-          <div className="w-full max-w-md bg-[#E8E0D5] p-6 border border-black/10 shadow-2xl">
+          <div className="w-full max-w-md bg-white p-6 border border-black/10 shadow-2xl rounded-2xl">
             {" "}
             <h2 className="text-[#0A0A0A] text-lg font-semibold tracking-tight">
               Reset Admin Password
