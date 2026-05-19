@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import * as XLSX from "xlsx";
 import { supabase } from "../lib/supabaseClient";
 import { getUserWithRetry } from "../lib/authUser";
 import Papa from "papaparse";
@@ -6,6 +7,7 @@ import CustomerModal from "../components/CustomerModal";
 import ClientDocsModal from "../components/ClientDocsModal";
 import CustomerDetailsModal from "../components/CustomerDetailsModal";
 import SecureImage from "../components/SecureImage";
+import { Download, LoaderCircle } from "lucide-react";
 import {
    logImportJob,
    normalizeRowKeys,
@@ -17,6 +19,7 @@ import { toMonthStartDateString } from "../lib/financeDates";
 const CustomersPage = () => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [exportLoading, setExportLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDocsModalOpen, setIsDocsModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -89,6 +92,91 @@ const CustomersPage = () => {
     const mm = String(date.getMonth() + 1).padStart(2, "0");
     const yyyy = String(date.getFullYear());
     return `${dd}/${mm}/${yyyy}`;
+  };
+  const formatDateForExport = (value) => {
+    const date = parseDateOnly(value);
+    if (!date) return "";
+    const dd = String(date.getDate()).padStart(2, "0");
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const yyyy = String(date.getFullYear());
+    return `${dd}/${mm}/${yyyy}`;
+  };
+  const formatExportDuration = (customer) => {
+    const rawDuration = customer?.subscription?.duration ?? customer?.membership_duration ?? "";
+    if (rawDuration === null || rawDuration === undefined) return "";
+    if (typeof rawDuration === "number") {
+      return `${rawDuration} months`;
+    }
+    const normalized = String(rawDuration).trim();
+    if (!normalized || normalized.toLowerCase() === "n/a") return "";
+    return normalized;
+  };
+  const getExportStatus = (customer) => {
+    const hasMembershipData = Boolean(
+      customer?.subscription ||
+        customer?.membership_duration ||
+        customer?.membership_start_date ||
+        customer?.membership_end_date,
+    );
+    if (!hasMembershipData) return "No Membership";
+
+    const endDate = parseDateOnly(customer?.membership_end_date || customer?.subscription?.end_date);
+    if (!endDate) return "Active";
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return endDate >= today ? "Active" : "Expired";
+  };
+  const exportToExcel = async () => {
+    if (exportLoading) return;
+    setExportLoading(true);
+
+    try {
+      const rows = customers.map((customer, index) => ({
+        "#": index + 1,
+        "Full Name": `${String(customer?.first_name || "").trim()} ${String(customer?.last_name || "").trim()}`.trim(),
+        Phone: customer?.phone || "",
+        Email: customer?.email || "",
+        "Membership Plan": customer?.subscription?.plan_name || customer?.membership_plan || customer?.plan_name || "",
+        Duration: formatExportDuration(customer),
+        "Start Date": formatDateForExport(customer?.membership_start_date || customer?.subscription?.start_date),
+        "End Date": formatDateForExport(customer?.membership_end_date || customer?.subscription?.end_date),
+        Status: getExportStatus(customer),
+      }));
+
+      const headers = [
+        "#",
+        "Full Name",
+        "Phone",
+        "Email",
+        "Membership Plan",
+        "Duration",
+        "Start Date",
+        "End Date",
+        "Status",
+      ];
+
+      const worksheet = XLSX.utils.json_to_sheet(rows, { header: headers });
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Customers");
+
+      const colWidths = headers.map((key) => ({
+        wch: Math.max(
+          key.length,
+          ...rows.map((row) => String(row[key] || "").length),
+        ),
+      }));
+      worksheet["!cols"] = colWidths;
+
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
+
+      XLSX.writeFile(workbook, `customers-${yyyy}-${mm}-${dd}.xlsx`);
+    } finally {
+      setExportLoading(false);
+    }
   };
   useEffect(() => {
     fetchCustomers();
@@ -1051,6 +1139,25 @@ const CustomersPage = () => {
             </button>
             {/* Search and Filter Area */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto lg:ml-auto">
+              <button
+                type="button"
+                onClick={exportToExcel}
+                disabled={exportLoading || loading || customers.length === 0}
+                title="Exports all loaded customers"
+                className="new-application-btn inline-flex items-center justify-center gap-2 px-5 py-2.5 text-[10px] tracking-[0.12em] dm-sans-light-008 font-medium whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {exportLoading ? (
+                  <>
+                    <LoaderCircle size={14} className="animate-spin" />
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    <Download size={14} />
+                    Export to Excel
+                  </>
+                )}
+              </button>
               
               {/* Search Bar */}
               <div className="relative group">
