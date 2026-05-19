@@ -549,7 +549,7 @@ const BillingPage = () => {
             </div>
 
             <div className="space-y-3 md:col-span-2">
-              <p className="billing-header-title text-[20px] md:text-[24px] tracking-tight text-white">
+              <p className="billing-header-title text-[20px] md:text-[24px] tracking-tight text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
                 Gym Information
               </p>
               <p className="dm-sans-light-008 text-[10px] text-white/45">
@@ -625,7 +625,7 @@ const BillingPage = () => {
         <div className="rounded-2xl border border-white/10 bg-[#151921] p-5 md:px-7 md:pt-7 pb-7 space-y-5 mt-4">
           <div className="flex items-center gap-2 pb-1 border-b border-white/[0.06]">
             <Fingerprint size={15} className="text-indigo-400" />
-            <h2 className="billing-header-title text-[13px] md:text-[15px] uppercase tracking-[0.12em] text-white/75">Member ID Format</h2>
+            <h2 className="billing-header-title text-[13px] md:text-[15px] tracking-[0.12em] text-white/75">Member id format</h2>
           </div>
 
           {hasExistingMembers && (
