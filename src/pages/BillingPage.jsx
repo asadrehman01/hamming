@@ -5,7 +5,6 @@ import { getUserWithRetry } from "../lib/authUser";
 import { isMigrationOnboardingCompleted } from "../lib/migrationOnboarding";
 import { Mail, AtSign, Link as LinkIcon, Fingerprint, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 import { fetchIdSettings, saveIdSettings, previewMemberId } from "../lib/backendApi";
-import ScannerIntegrationSection from "../components/ScannerIntegrationSection";
 
 const DEFAULT_BILLING_VALUES = {
   receipt_enabled: true,
@@ -689,9 +688,6 @@ const BillingPage = () => {
             {idSaving ? "Saving..." : "Save ID Format"}
           </button>
         </div>
-
-        {/* ── Scanner Integration ────────────────────────────────────── */}
-        <ScannerIntegrationSection />
 
       </div>
     </div>
