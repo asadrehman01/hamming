@@ -152,7 +152,7 @@ const ForgotAdminPasswordModal = ({ isOpen, onClose, defaultEmail = "" }) => (
     onSubmit={async (email) => {
       await postPublicApi("/api/admin-password-reset", {
         email,
-        action: "forgot",
+        action: "request",
       });
     }}
   />
