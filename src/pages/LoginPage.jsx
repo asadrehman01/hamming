@@ -1,16 +1,162 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { getUserWithRetry } from "../lib/authUser";
 import { Link, useNavigate } from "react-router-dom";
+import { LoaderCircle, X } from "lucide-react";
 import {
   ACCESS_MODE,
   setAccessMode,
   hasAdminPassword,
   setAdminPassword,
   verifyAdminPassword,
-  forceResetAdminPassword,
 } from "../lib/accessControl";
-import ForgotAdminPasswordModal from "../components/ForgotAdminPasswordModal";
+import { postPublicApi } from "../lib/publicApi";
+
+const RESET_SUCCESS_MESSAGE =
+  "If this email is registered, a reset link has been sent. Check your inbox.";
+const RESET_ERROR_MESSAGE = "Something went wrong. Please try again.";
+
+const ForgotPasswordModal = ({
+  isOpen,
+  onClose,
+  defaultEmail = "",
+  onSubmit,
+  title = "Reset Password",
+  description = "Enter the account email address",
+}) => {
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setEmail(defaultEmail || "");
+    setLoading(false);
+    setError(null);
+    setSuccess(false);
+  }, [defaultEmail, isOpen]);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError(null);
+    setSuccess(false);
+
+    const trimmedEmail = String(email || "").trim();
+    if (!trimmedEmail) {
+      setError(RESET_ERROR_MESSAGE);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await onSubmit(trimmedEmail);
+      setSuccess(true);
+    } catch {
+      setError(RESET_ERROR_MESSAGE);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        className="w-full max-w-md rounded-2xl border border-black/10 bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight text-[#0A0A0A]">
+              {title}
+            </h2>
+            <p className="mt-1 text-[10px] tracking-widest text-[#6B6360]">
+              {description}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-[#6B6360] transition-colors hover:text-[#0A0A0A]"
+            aria-label="Close"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {success ? (
+          <div className="mt-6 rounded-2xl border border-black/10 bg-[#eef1f4] p-4">
+            <p className="text-[12px] leading-relaxed tracking-wide text-[#0A0A0A]">
+              {RESET_SUCCESS_MESSAGE}
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+            {error && (
+              <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-3">
+                <p className="text-[11px] tracking-wide text-red-600">{error}</p>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <label htmlFor="forgot-password-email" className="text-[9px] tracking-widest text-[#6B6360]">
+                Email Address
+              </label>
+              <input
+                id="forgot-password-email"
+                type="email"
+                placeholder="name@company.com"
+                className="w-full rounded-2xl border border-[#d4d9de] bg-[#eef1f4] px-4 py-3 text-base tracking-wider text-[#0A0A0A] placeholder:text-[#6f7780] outline-none transition-colors focus:border-[#c6ccd3] sm:text-[11px]"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0A0A0A] px-4 py-3 text-[10px] tracking-[0.2em] text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loading ? (
+                <>
+                  <LoaderCircle size={14} className="animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                "Send Reset Link"
+              )}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const ForgotAdminPasswordModal = ({ isOpen, onClose, defaultEmail = "" }) => (
+  <ForgotPasswordModal
+    isOpen={isOpen}
+    onClose={onClose}
+    defaultEmail={defaultEmail}
+    title="Forgot admin password?"
+    description="Enter your admin account email address"
+    onSubmit={async (email) => {
+      await postPublicApi("/api/admin-password-reset", {
+        email,
+        action: "forgot",
+      });
+    }}
+  />
+);
 
 const LoginPage = () => {
   const MIN_PASSWORD_LENGTH = 8;
@@ -27,14 +173,8 @@ const LoginPage = () => {
   const [adminPasswordConfirm, setAdminPasswordConfirm] = useState("");
   const [awaitingAdminSetup, setAwaitingAdminSetup] = useState(false);
   const [pendingUserId, setPendingUserId] = useState(null);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [showForgotAdminModal, setShowForgotAdminModal] = useState(false);
-  const resetTimeoutRef = useRef(null);
-
-  const [resetAdminPassword, setResetAdminPassword] = useState("");
-  const [resetAdminPasswordConfirm, setResetAdminPasswordConfirm] = useState("");
-  const [resetLoading, setResetLoading] = useState(false);
-  const [resetError, setResetError] = useState(null);
-  const [resetSuccess, setResetSuccess] = useState(false);
 
   const [showPassword, setShowPassword] = useState(false);
   const [showAdminPassword, setShowAdminPassword] = useState(false);
@@ -217,54 +357,6 @@ const LoginPage = () => {
       await supabase?.auth.signOut();
     } catch {
       // ignore
-    }
-  };
-
-  const handleResetAdminPassword = async (e) => {
-    e.preventDefault();
-    setResetError(null);
-    setResetSuccess(false);
-    if (!resetAdminPassword || !resetAdminPasswordConfirm) {
-      setResetError("Both password fields are required");
-      return;
-    }
-    if (resetAdminPassword !== resetAdminPasswordConfirm) {
-      setResetError("Passwords do not match");
-      return;
-    }
-    if (resetAdminPassword.length < MIN_PASSWORD_LENGTH) {
-      setResetError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters long`);
-      return;
-    }
-    setResetLoading(true);
-    try {
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (signInError || !signInData?.user) {
-        setResetError("Unable to verify your credentials. Please try again.");
-        setResetLoading(false);
-        return;
-      }
-
-      const userId = signInData.user.id;
-      await forceResetAdminPassword(userId, resetAdminPassword);
-      setResetSuccess(true);
-      setResetAdminPassword("");
-      setResetAdminPasswordConfirm("");
-
-      if (resetTimeoutRef.current) {
-        clearTimeout(resetTimeoutRef.current);
-      }
-      resetTimeoutRef.current = setTimeout(async () => {
-        setShowForgotAdminModal(false);
-        setResetSuccess(false);
-        try {
-          await supabase.auth.signOut();
-        } catch {}
-      }, 2000);
-    } catch (err) {
-      setResetError(err.message || "Failed to reset admin password. Please try again.");
-    } finally {
-      setResetLoading(false);
     }
   };
 
@@ -482,30 +574,22 @@ const LoginPage = () => {
                       ? "Processing..."
                       : `Sign In as ${mode === ACCESS_MODE.ADMIN ? "Admin" : "Reception"}`}{" "}
                   </button>{" "}
-                  {mode === ACCESS_MODE.ADMIN && (
-                    <button
-                      type="button"
-                      onClick={() => setShowForgotAdminModal(true)}
-                      className="native-inline-btn text-[9px] tracking-widest text-[#6B6360] font-medium"
-                    >
-                      {" "}
-                      Forgot Admin Password?{" "}
-                    </button>
-                  )}{" "}
-                  {mode === ACCESS_MODE.RECEPTION && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setError(
-                          "Use the standard account recovery flow from your administrator.",
-                        )
-                      }
-                      className="native-inline-btn text-[9px] tracking-widest text-[#6B6360] font-medium"
-                    >
-                      {" "}
-                      Forgot Password?{" "}
-                    </button>
-                  )}{" "}
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPasswordModal(true)}
+                    className="native-inline-btn text-[9px] tracking-widest text-[#6B6360] font-medium"
+                  >
+                    {" "}
+                    Forgot password?{" "}
+                  </button>{" "}
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotAdminModal(true)}
+                    className="native-inline-btn text-[9px] tracking-widest text-[#6B6360] font-medium"
+                  >
+                    {" "}
+                    Forgot admin password?{" "}
+                  </button>{" "}
                   <Link
                     to="/signup"
                     className="text-[9px] tracking-widest text-[#6B6360] font-medium hover:text-[#0A0A0A] transition-colors"
@@ -636,104 +720,30 @@ const LoginPage = () => {
           </div>{" "}
         </div>
       )}{" "}
-      {showForgotAdminModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          {" "}
-          <div className="w-full max-w-md bg-white p-6 border border-black/10 shadow-2xl rounded-2xl">
-            {" "}
-            <h2 className="text-[#0A0A0A] text-lg font-semibold tracking-tight">
-              Reset Admin Password
-            </h2>{" "}
-            <p className="text-[10px] tracking-widest text-[#6B6360] mt-1">
-              Create a new secure admin password
-            </p>{" "}
-            {resetSuccess ? (
-              <div className="mt-6 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded text-center">
-                {" "}
-                <p className="text-emerald-600 text-sm font-medium">
-                  Admin password reset successfully!
-                </p>{" "}
-                <p className="text-[10px] text-emerald-500/70 mt-2">
-                  You can now login with your new admin password.
-                </p>{" "}
-              </div>
-            ) : (
-              <form
-                onSubmit={handleResetAdminPassword}
-                className="mt-6 space-y-4"
-              >
-                {" "}
-                {resetError && (
-                  <div className="bg-red-500/10 border border-red-500/30 rounded p-3">
-                    {" "}
-                    <p className="text-red-600 text-[10px]">
-                      {resetError}
-                    </p>{" "}
-                  </div>
-                )}{" "}
-                <div>
-                  {" "}
-                  <label className="text-[9px] tracking-widest text-[#6B6360] block mb-1">
-                    New Admin Password
-                  </label>{" "}
-                  <input
-                    type="password"
-                    placeholder="New admin password"
-                    className="w-full bg-transparent border-b border-[#0A0A0A]/20 py-2 focus:border-[#0A0A0A] outline-none text-[#0A0A0A] caret-[#0A0A0A] text-base sm:text-[11px] tracking-wider placeholder:text-[#0A0A0A]/30"
-                    value={resetAdminPassword}
-                    onChange={(e) => setResetAdminPassword(e.target.value)}
-                    required
-                  />{" "}
-                  <p className="text-[8px] text-[#6B6360] mt-1">
-                    Minimum {MIN_PASSWORD_LENGTH} characters required
-                  </p>{" "}
-                </div>{" "}
-                <div>
-                  {" "}
-                  <label className="text-[9px] tracking-widest text-[#6B6360] block mb-1">
-                    Confirm Password
-                  </label>{" "}
-                  <input
-                    type="password"
-                    placeholder="Confirm password"
-                    className="w-full bg-transparent border-b border-[#0A0A0A]/20 py-2 focus:border-[#0A0A0A] outline-none text-[#0A0A0A] caret-[#0A0A0A] text-base sm:text-[11px] tracking-wider placeholder:text-[#0A0A0A]/30"
-                    value={resetAdminPasswordConfirm}
-                    onChange={(e) =>
-                      setResetAdminPasswordConfirm(e.target.value)
-                    }
-                    required
-                  />{" "}
-                </div>{" "}
-                <div className="flex gap-3 pt-2">
-                  {" "}
-                  <button
-                    type="submit"
-                    disabled={resetLoading}
-                    className="flex-1 bg-[#0A0A0A] text-white py-2 text-[10px] tracking-[0.2em] disabled:opacity-50"
-                  >
-                    {" "}
-                    {resetLoading ? "Resetting..." : "Reset Password"}{" "}
-                  </button>{" "}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowForgotAdminModal(false);
-                      setResetError(null);
-                      setResetSuccess(false);
-                      setResetAdminPassword("");
-                      setResetAdminPasswordConfirm("");
-                    }}
-                    className="flex-1 border border-[#0A0A0A]/20 text-[#0A0A0A] py-2 text-[10px] tracking-[0.2em]"
-                  >
-                    {" "}
-                    Cancel{" "}
-                  </button>{" "}
-                </div>{" "}
-              </form>
-            )}{" "}
-          </div>{" "}
-        </div>
-      )}{" "}
+      <ForgotPasswordModal
+        isOpen={showForgotPasswordModal}
+        onClose={() => setShowForgotPasswordModal(false)}
+        defaultEmail={email}
+        title="Forgot password?"
+        description="Enter your account email address"
+        onSubmit={async (emailAddress) => {
+          const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+            emailAddress,
+            {
+              redirectTo: window.location.origin + "/reset-password",
+            },
+          );
+
+          if (resetError) {
+            throw resetError;
+          }
+        }}
+      />
+      <ForgotAdminPasswordModal
+        isOpen={showForgotAdminModal}
+        onClose={() => setShowForgotAdminModal(false)}
+        defaultEmail={email}
+      />
     </>
   );
 };
