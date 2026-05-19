@@ -56,7 +56,7 @@ const ResetAdminPasswordPage = () => {
       className="app-page min-h-screen flex items-center justify-center p-4 sm:p-8 md:p-12 font-body"
       style={{
         "--app-theme-page-bg": "#ffffff",
-        "--app-theme-card-bg": "#fbfbfb",
+        "--app-theme-card-bg": "#f4f4f4",
         "--app-theme-card-bg-alt": "#f4f4f4",
         color: "#0d0d0d",
       }}
@@ -100,7 +100,7 @@ const ResetAdminPasswordPage = () => {
                     <input
                       type={showNewPassword ? "text" : "password"}
                       placeholder="New admin password"
-                      className="w-full bg-[#fbfbfb] border border-[#e6e6e6] px-4 py-3 pr-10 text-[#0d0d0d] placeholder:text-[#b6b6b6] focus:outline-none focus:border-[#d6d6d6] transition-colors rounded-2xl text-base sm:text-[11px] tracking-wider"
+                      className="w-full bg-[#f4f4f4] border border-[#e6e6e6] px-4 py-3 pr-10 text-[#0d0d0d] placeholder:text-[#b6b6b6] focus:outline-none focus:border-[#d6d6d6] transition-colors rounded-2xl text-base sm:text-[11px] tracking-wider"
                       value={newPassword}
                       onChange={(event) => setNewPassword(event.target.value)}
                       required
@@ -126,7 +126,7 @@ const ResetAdminPasswordPage = () => {
                     <input
                       type={showConfirmPassword ? "text" : "password"}
                       placeholder="Confirm admin password"
-                      className="w-full bg-[#fbfbfb] border border-[#e6e6e6] px-4 py-3 pr-10 text-[#0d0d0d] placeholder:text-[#b6b6b6] focus:outline-none focus:border-[#d6d6d6] transition-colors rounded-2xl text-base sm:text-[11px] tracking-wider"
+                      className="w-full bg-[#f4f4f4] border border-[#e6e6e6] px-4 py-3 pr-10 text-[#0d0d0d] placeholder:text-[#b6b6b6] focus:outline-none focus:border-[#d6d6d6] transition-colors rounded-2xl text-base sm:text-[11px] tracking-wider"
                       value={confirmPassword}
                       onChange={(event) => setConfirmPassword(event.target.value)}
                       required

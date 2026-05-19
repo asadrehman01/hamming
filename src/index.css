@@ -726,8 +726,8 @@ button.sidebar-settings-trigger:active:not(:disabled) {
 }
 
 .app-page .login-credential-input.admin-password-input {
-  background-color: #e8e0d5 !important;
-  background-image: linear-gradient(#e8e0d5, #e8e0d5) !important;
+  background-color: #f4f4f4 !important;
+  background-image: linear-gradient(#f4f4f4, #f4f4f4) !important;
   -webkit-background-clip: padding-box;
   background-clip: padding-box;
 }
@@ -737,10 +737,10 @@ button.sidebar-settings-trigger:active:not(:disabled) {
 .app-page .login-credential-input.admin-password-input:-webkit-autofill:focus,
 .app-page .login-credential-input.admin-password-input:-webkit-autofill:active {
   -webkit-text-fill-color: #0a0a0a !important;
-  -webkit-box-shadow: 0 0 0 1000px #e8e0d5 inset !important;
-  box-shadow: 0 0 0 1000px #e8e0d5 inset !important;
-  background-color: #e8e0d5 !important;
-  background-image: linear-gradient(#e8e0d5, #e8e0d5) !important;
+  -webkit-box-shadow: 0 0 0 1000px #f4f4f4 inset !important;
+  box-shadow: 0 0 0 1000px #f4f4f4 inset !important;
+  background-color: #f4f4f4 !important;
+  background-image: linear-gradient(#f4f4f4, #f4f4f4) !important;
 }
 
 .app-page .login-credential-input:-webkit-autofill,
@@ -748,14 +748,14 @@ button.sidebar-settings-trigger:active:not(:disabled) {
 .app-page .login-credential-input:-webkit-autofill:focus,
 .app-page .login-credential-input:-webkit-autofill:active {
   -webkit-text-fill-color: #0a0a0a;
-  -webkit-box-shadow: 0 0 0 1000px #e8e0d5 inset;
-  box-shadow: 0 0 0 1000px #e8e0d5 inset;
+  -webkit-box-shadow: 0 0 0 1000px #f4f4f4 inset;
+  box-shadow: 0 0 0 1000px #f4f4f4 inset;
   transition: background-color 9999s ease-out;
 }
 
 .app-page .login-credential-input:-moz-autofill {
-  box-shadow: 0 0 0 1000px #e8e0d5 inset;
-  background-color: #e8e0d5 !important;
+  box-shadow: 0 0 0 1000px #f4f4f4 inset;
+  background-color: #f4f4f4 !important;
   color: #0a0a0a !important;
 }
 
