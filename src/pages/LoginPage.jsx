@@ -332,7 +332,7 @@ const LoginPage = () => {
                   <input
                     type="email"
                     placeholder="Email address"
-                    className="login-credential-input w-full bg-[#f6f6f6] border border-[#dcdcdc] px-4 py-3 rounded-2xl focus:border-[#cfcfcf] outline-none text-[#0A0A0A] caret-[#0A0A0A] text-base sm:text-[11px] tracking-wider transition-colors placeholder:text-[#7a7a7a]"
+                    className="login-credential-input w-full bg-[#eef1f4] border border-[#d4d9de] px-4 py-3 rounded-2xl focus:border-[#c6ccd3] outline-none text-[#0A0A0A] caret-[#0A0A0A] text-base sm:text-[11px] tracking-wider transition-colors placeholder:text-[#6f7780]"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -343,7 +343,7 @@ const LoginPage = () => {
                     <input
                       type={showPassword ? "text" : "password"}
                       placeholder="Password"
-                      className={`login-credential-input password-visibility-control ${showPassword ? "password-revealed" : ""} w-full bg-[#f6f6f6] border border-[#dcdcdc] px-4 py-3 pr-10 rounded-2xl focus:border-[#cfcfcf] outline-none text-[#0A0A0A] caret-[#0A0A0A] text-base sm:text-[11px] tracking-wider transition-colors placeholder:text-[#7a7a7a]`}
+                      className={`login-credential-input password-visibility-control ${showPassword ? "password-revealed" : ""} w-full bg-[#eef1f4] border border-[#d4d9de] px-4 py-3 pr-10 rounded-2xl focus:border-[#c6ccd3] outline-none text-[#0A0A0A] caret-[#0A0A0A] text-base sm:text-[11px] tracking-wider transition-colors placeholder:text-[#6f7780]`}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       autoComplete="current-password"
@@ -404,7 +404,7 @@ const LoginPage = () => {
                       <input
                         type={showAdminPassword ? "text" : "password"}
                         placeholder="Admin Password"
-                        className={`login-credential-input admin-password-input password-visibility-control ${showAdminPassword ? "password-revealed" : ""} w-full bg-[#f6f6f6] border border-[#dcdcdc] px-4 py-3 pr-10 rounded-2xl focus:border-[#cfcfcf] outline-none text-[#0A0A0A] caret-[#0A0A0A] text-base sm:text-[11px] tracking-wider transition-colors placeholder:text-[#7a7a7a]`}
+                        className={`login-credential-input admin-password-input password-visibility-control ${showAdminPassword ? "password-revealed" : ""} w-full bg-[#eef1f4] border border-[#d4d9de] px-4 py-3 pr-10 rounded-2xl focus:border-[#c6ccd3] outline-none text-[#0A0A0A] caret-[#0A0A0A] text-base sm:text-[11px] tracking-wider transition-colors placeholder:text-[#6f7780]`}
                         value={adminPassword}
                         onChange={(e) => setAdminPasswordInput(e.target.value)}
                         autoComplete="new-password"
