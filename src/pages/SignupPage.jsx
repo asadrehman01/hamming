@@ -1,32 +1,144 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Link, useNavigate } from 'react-router-dom';
-const SignupPage = () => { const navigate = useNavigate();
-const [email, setEmail] = useState('');
-const [password, setPassword] = useState('');
-const [confirmPassword, setConfirmPassword] = useState('');
-const [loading, setLoading] = useState(false);
-const [error, setError] = useState(null);
-const [success, setSuccess] = useState(false);
-const handleSignup = async (e) => { e.preventDefault();
-if (!supabase) { setError("Supabase client not initialized.");
-return;
-} if (password.length < 6) { setError("Password must be at least 6 characters long.");
-return;
-} if (!/\d/.test(password)) { setError("Password must contain at least one number.");
-return;
-} if (password !== confirmPassword) { setError("Passwords do not match.");
-return;
-} setLoading(true);
-setError(null);
-setSuccess(false);
-const { data, error: signUpError } = await supabase.auth.signUp({ email, password, });
-if (signUpError) { setError(signUpError.message);
-} else { if (data?.session) { // Automatically logged in (if Supabase "Confirm email" is disabled) localStorage.removeItem('onboarding_migration_completed');
-navigate('/onboarding-migration');
-} else { // Redirection to login with success message setSuccess(true);
-} } setLoading(false);
+
+const SignupPage = () => {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
+
+  const handleSignup = async (e) => {
+    e.preventDefault();
+    if (!supabase) {
+      setError('Supabase client not initialized.');
+      return;
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
+    if (!/\d/.test(password)) {
+      setError('Password must contain at least one number.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
+    const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
+    if (signUpError) {
+      setError(signUpError.message);
+    } else {
+      if (data?.session) {
+        // Automatically logged in (if Supabase "Confirm email" is disabled)
+        localStorage.removeItem('onboarding_migration_completed');
+        navigate('/onboarding-migration');
+      } else {
+        // Redirection to login with success message
+        setSuccess(true);
+      }
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="app-page min-h-screen bg-black flex items-center justify-center p-4 sm:p-8 md:p-12 font-body">
+      {/* Corner Labels */}
+      <div className="fixed top-8 right-8 text-[10px] tracking-[0.2em] text-white/40 font-mono">HMG / 02</div>
+
+      <div className="w-full max-w-[1200px] md:h-[600px] bg-white flex flex-col md:flex-row shadow-2xl overflow-hidden relative group rounded-2xl">
+        <div className="flex-1 p-8 sm:p-12 flex flex-col justify-center md:justify-between">
+          <div className="flex flex-col items-start text-left md:items-start md:text-left">
+            <h1 className="font-logo font-bold text-[4.15rem] sm:text-7xl text-[#0A0A0A] leading-none tracking-tight normal-case">Hamming</h1>
+            <p className="text-[10px] mt-2 tracking-widest text-[#6B6360] font-medium">Join the Movement</p>
+          </div>
+
+          <div className="w-full max-w-[320px] mx-auto md:mx-0">
+            {success ? (
+              <div className="space-y-6">
+                <p className="text-[#0A0A0A] text-[11px] tracking-wider leading-relaxed">
+                  Registration successful. You can now sign in to your account.
+                </p>
+                <Link to="/login" className="inline-block bg-[#0A0A0A] text-white py-3 px-8 text-[10px] tracking-[0.2em] font-medium hover:bg-black transition-all active:scale-[0.98]">
+                  Back to Login
+                </Link>
+              </div>
+            ) : (
+              <form onSubmit={handleSignup} className="space-y-6">
+                {error && <p className="text-red-600 text-[10px] tracking-wider mb-4">{error}</p>}
+
+                <div className="space-y-1">
+                  <label className="sr-only" htmlFor="signup-email">Email address</label>
+                  <input
+                    id="signup-email"
+                    type="email"
+                    aria-label="Email address"
+                    placeholder="Email address"
+                    className="w-full bg-[#eef1f4] border border-[#d4d9de] px-4 py-3 rounded-2xl focus:border-[#c6ccd3] outline-none text-[#0A0A0A] caret-[#0A0A0A] text-base sm:text-[11px] tracking-wider transition-colors placeholder:text-[#6f7780]"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="sr-only" htmlFor="signup-password">Password</label>
+                  <input
+                    id="signup-password"
+                    type="password"
+                    aria-label="Password"
+                    placeholder="Password"
+                    className="w-full bg-[#eef1f4] border border-[#d4d9de] px-4 py-3 rounded-2xl focus:border-[#c6ccd3] outline-none text-[#0A0A0A] caret-[#0A0A0A] text-base sm:text-[11px] tracking-wider transition-colors placeholder:text-[#6f7780]"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <p className="text-[8px] text-[#6B6360] tracking-widest mt-1 opacity-50">min. 6 characters & 1 number</p>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="sr-only" htmlFor="signup-confirm-password">Confirm password</label>
+                  <input
+                    id="signup-confirm-password"
+                    type="password"
+                    aria-label="Confirm password"
+                    placeholder="Confirm password"
+                    className="w-full bg-[#eef1f4] border border-[#d4d9de] px-4 py-3 rounded-2xl focus:border-[#c6ccd3] outline-none text-[#0A0A0A] caret-[#0A0A0A] text-base sm:text-[11px] tracking-wider transition-colors placeholder:text-[#6f7780]"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col space-y-4 pt-4">
+                  <button type="submit" disabled={loading} className="bg-[#0A0A0A] text-white py-3 px-8 text-[10px] tracking-[0.2em] font-medium hover:bg-black transition-all active:scale-[0.98] disabled:opacity-50">
+                    {loading ? 'Creating Account...' : 'Register'}
+                  </button>
+
+                  <Link to="/login" className="text-[9px] tracking-widest text-[#6B6360] font-medium hover:text-[#0A0A0A] transition-colors">Already a member? Sign In</Link>
+                </div>
+              </form>
+            )}
+          </div>
+
+          <div className="text-[10px] tracking-widest text-[#6B6360] font-medium">New Account / 2026</div>
+        </div>
+
+        {/* Right Side: Hero Image */}
+        <div className="hidden md:block w-5/12 relative overflow-hidden bg-white/10">
+          <img src="/hero.png" alt="Gym Interior" className="absolute inset-0 w-full h-full object-cover grayscale-[20%] group-hover:scale-105 transition-transform duration-[2s]" />
+          <div className="absolute inset-0 bg-[#0A0A0A]/5" />
+        </div>
+      </div>
+    </div>
+  );
 };
-	return ( <div className="app-page min-h-screen bg-black flex items-center justify-center p-4 sm:p-8 md:p-12 font-body"> {/* Corner Labels */} <div className="fixed top-8 right-8 text-[10px] tracking-[0.2em] text-white/40 font-mono"> HMG / 02 </div> <div className="w-full max-w-[1200px] md:h-[600px] bg-white flex flex-col md:flex-row shadow-2xl overflow-hidden relative group rounded-2xl"> {/* Left Side: Branding & Form */} <div className="flex-1 p-8 sm:p-12 flex flex-col justify-center md:justify-between"> <div className="flex flex-col items-start text-left md:items-start md:text-left"> <h1 className="font-logo font-bold text-7xl text-[#0A0A0A] leading-none tracking-tight normal-case"> Hamming </h1> <p className="text-[10px] mt-2 tracking-widest text-[#6B6360] font-medium"> Join the Movement </p> </div> <div className="w-full max-w-[320px] mx-auto md:mx-0"> {success ? ( <div className="space-y-6"> <p className="text-[#0A0A0A] text-[11px] tracking-wider leading-relaxed"> Registration successful. You can now sign in to your account. </p> <Link to="/login" className="inline-block bg-[#0A0A0A] text-white py-3 px-8 text-[10px] tracking-[0.2em] font-medium hover:bg-black transition-all active:scale-[0.98]"> Back to Login </Link> </div> ) : ( <form onSubmit={handleSignup} className="space-y-6"> {error && ( <p className="text-red-600 text-[10px] tracking-wider mb-4">{error}</p> )} <div className="space-y-1"> <label className="sr-only" htmlFor="signup-email">Email address</label> <input id="signup-email" type="email" aria-label="Email address" placeholder="Email address" className="w-full bg-[#eef1f4] border border-[#d4d9de] px-4 py-3 rounded-2xl focus:border-[#c6ccd3] outline-none text-[#0A0A0A] caret-[#0A0A0A] text-[11px] sm:text-base tracking-wider transition-colors placeholder:text-[#6f7780]" value={email} onChange={(e) => setEmail(e.target.value)} required /> </div> <div className="space-y-1"> <label className="sr-only" htmlFor="signup-password">Password</label> <input id="signup-password" type="password" aria-label="Password" placeholder="Password" className="w-full bg-[#eef1f4] border border-[#d4d9de] px-4 py-3 rounded-2xl focus:border-[#c6ccd3] outline-none text-[#0A0A0A] caret-[#0A0A0A] text-[11px] sm:text-base tracking-wider transition-colors placeholder:text-[#6f7780]" value={password} onChange={(e) => setPassword(e.target.value)} required /> <p className="text-[8px] text-[#6B6360] tracking-widest mt-1 opacity-50"> min. 6 characters & 1 number </p> </div> <div className="space-y-1"> <label className="sr-only" htmlFor="signup-confirm-password">Confirm password</label> <input id="signup-confirm-password" type="password" aria-label="Confirm password" placeholder="Confirm password" className="w-full bg-[#eef1f4] border border-[#d4d9de] px-4 py-3 rounded-2xl focus:border-[#c6ccd3] outline-none text-[#0A0A0A] caret-[#0A0A0A] text-[11px] sm:text-base tracking-wider transition-colors placeholder:text-[#6f7780]" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required /> </div> <div className="flex flex-col space-y-4 pt-4"> <button type="submit" disabled={loading} className="bg-[#0A0A0A] text-white py-3 px-8 text-[10px] tracking-[0.2em] font-medium hover:bg-black transition-all active:scale-[0.98] disabled:opacity-50" > {loading ? 'Creating Account...' : 'Register'} </button> <Link to="/login" className="text-[9px] tracking-widest text-[#6B6360] font-medium hover:text-[#0A0A0A] transition-colors"> Already a member? Sign In </Link> </div> </form> )} </div> <div className="text-[10px] tracking-widest text-[#6B6360] font-medium"> New Account / 2026 </div> </div> {/* Right Side: Hero Image */} <div className="hidden md:block w-5/12 relative overflow-hidden bg-white/10"> <img src="/hero.png" alt="Gym Interior" className="absolute inset-0 w-full h-full object-cover grayscale-[20%] group-hover:scale-105 transition-transform duration-[2s]" /> <div className="absolute inset-0 bg-[#0A0A0A]/5" /> </div> </div> </div> );
-};
+
 export default SignupPage;
