@@ -304,9 +304,11 @@ const LoginPage = () => {
             throw new Error("Invalid admin password.");
           }
 
+          setAccessMode(ACCESS_MODE.ADMIN);
           setAuthResult({ success: true, mode: ACCESS_MODE.ADMIN, user: signInData.user });
           setAuthComplete(true);
         } else {
+          setAccessMode(ACCESS_MODE.RECEPTION);
           setAuthResult({ success: true, mode: ACCESS_MODE.RECEPTION, user: signInData.user });
           setAuthComplete(true);
         }

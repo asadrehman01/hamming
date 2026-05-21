@@ -49,7 +49,11 @@ const RequireModeAccess = () => {
   const mode = getAccessMode();
 
   if (!mode) {
-    return location.pathname === "/login" ? null : <Navigate to="/login" replace />;
+    return (
+      <div className="min-h-screen bg-[#0B0E14] text-white flex items-center justify-center text-sm tracking-[0.04em] text-white/40 font-light" style={{ fontFamily: 'DM Sans, sans-serif' }}>
+        Loading...
+      </div>
+    );
   }
 
   if (!canAccessPath(mode, location.pathname)) {
