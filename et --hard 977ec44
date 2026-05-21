@@ -1,0 +1,66 @@
+[33m977ec44[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Adjust billing page heading typography
+[33mac20991[m Remove billing scanner integration section
+[33m044ac2e[m Add customer directory Excel export
+[33m81b6aca[m fix forgot admin password payload mismatch
+[33mba9276c[m Add login password recovery modals
+[33mb2549f3[m Match Signup logo & input sizing to Login (mobile)
+[33mc46566e[m Replace beige admin input (#e8e0d5/#fbfbfb) with neutral gray #f4f4f4
+[33m55f9591[m Use cooler gray auth inputs and align signup logo on mobile
+[33m4607066[m Refine auth page input styling and mobile alignment
+[33m72d9cd4[m Restore white auth theme and center signup on mobile
+[33m9cdb497[m Fix login page mobile centering and restore build
+[33m513cc85[m SignupPage: center form on mobile and switch to white dashboard theme
+[33m4c73c5a[m LoginPage: switch remaining beige modal backgrounds to white theme
+[33mfce4f89[m Match login page to white admin/dashboard theme
+[33m8354564[m Match admin reset page to white theme
+[33m2c36821[m Match admin reset page to dark theme
+[33m87baada[m Match forgot admin modal to dark theme
+[33ma44d011[m Match forgot admin modal theme
+[33m3246a82[m Fix admin password reset user lookup
+[33mb4d0fd8[m Fix admin password reset email lookup
+[33m1f88ea2[m Fix: restore forgot-admin modal state/handler after UI refactor
+[33m0bcebff[m UI: theme-match reset password modal + reset page
+[33mc3b0a69[m Onboarding: review email before receipt; 3s delay
+[33m2fe6135[m feat: show active or expired status in the mobile customer list view
+[33mc08ba49[m style: match New Application and modal submit buttons with search bar colors
+[33m576e94a[m style: apply premium dark accent hover state to the New Application button
+[33mddb6304[m style: add high-contrast bottom borders between customer rows in mobile view
+[33m193160c[m fix: configure Supabase client with persistSession and specific hamming-auth storage key to prevent session drop on mobile Safari
+[33m5a42ebd[m animation shit dawg
+[33m6a9c23d[m fix: make login lock animation scale responsively using clamp and fill viewport on desktop
+[33mf9b6d8d[m fix: prevent parent route unmounting LoginPage lock animation early by delaying access mode set
+[33m743bedd[m feat: decouple auth execution and lock animation timing, waiting full 4000ms
+[33m2b18319[m trigger redeploy user access control
+[33m9685722[m feat: implement user access control via user_access table
+[33m5457b2e[m Fix Recharts width/height warning by using explicit inline minHeight on chart wrapper divs
+[33m7d8e862[m Fix Invalid URL error caused by relative req.url in Vercel edge functions
+[33m6fd1190[m trigger redeploy after removing backend url var
+[33mdbe530a[m trigger redeploy after backendApi fix
+[33m17ef76c[m Refactor backendApi to fallback to same-origin requests instead of edge functions
+[33mdb96825[m Fix column name mismatches for unmatched_scans and scanner_member_map queries
+[33mb0af085[m Update frontend column references for attendance logs to match new schema
+[33m5f257e4[m remove last auth-reset reference bitch
+[33m4765aa0[m fix vercel.json syntax nigger
+[33m958d642[m fix SPA fallback routing nigga
+[33m5d959ee[m fix SPA routing on vercel
+[33mb386a63[m consolidate api routes under vercel limit
+[33m48d75de[m almost there
+[33m86efa58[m almost there
+[33mcb1b443[m fix: resolve customer deletion failure by removing faulty revenue log cleanup and adding log cleanups
+[33md8779c5[m fix: resolve table status column cutoff on mid-range screens
+[33m18aba8d[m style: make transactions table responsive without horizontal scrolling
+[33me551d3b[m refactor: consolidate API routes to stay under Vercel Hobby limits
+[33m48629b0[m fix: change cron schedule to daily for Vercel Hobby plan
+[33ma7da709[m feat: implement automated expiry reminders and refactor transactions page
+[33m4a207e1[m Update project
+[33m479e780[m Update project
+[33m804ab9e[m Update project
+[33ma677fc0[m Update project
+[33m388c4b6[m[33m ([m[1;32masad[m[33m)[m Update project
+[33me752e96[m fixed env
+[33md265f6c[m miraroad nights
+[33mc449024[m Merge pull request #1 from asadrehman01/shayaan
+[33m22a85ab[m[33m ([m[1;31morigin/shayaan[m[33m)[m branching demo
+[33m2f62494[m verificstion removed
+[33m574b60b[m initial commit
+[33m7189b80[m first commit
