@@ -56,7 +56,7 @@ const ResetPasswordPage = () => {
     minLength: newPassword.length >= 8,
     hasUppercase: /[A-Z]/.test(newPassword),
     hasNumber: /\d/.test(newPassword),
-    hasSpecial: /[!@#$%^&*()_+-=[\]{};':"\\|,.<>/?]/.test(newPassword),
+    hasSpecial: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(newPassword),
   };
 
   const allRulesMet = Object.values(passwordRules).every(Boolean);
