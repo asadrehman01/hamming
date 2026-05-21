@@ -79,6 +79,10 @@ body {
   background: var(--app-scrollbar-track);
 }
 
+.sidebar-scroll {
+  -webkit-overflow-scrolling: touch;
+}
+
 .app-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);

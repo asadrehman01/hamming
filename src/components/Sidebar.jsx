@@ -128,7 +128,7 @@ const Sidebar = ({ isOpen, onClose, onOpenSettings, onOpenBugReport }) => {
         />
       )}{" "}
       <aside
-        className={` fixed inset-y-0 left-0 z-50 w-64 bg-[#0D0F14] border-r border-white/10 flex flex-col h-screen min-h-0 shadow-2xl transition-transform duration-300 ease-in-out text-[#B7BCC6] lg:translate-x-0 lg:static lg:block ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"} `}
+        className={`sidebar-scroll fixed inset-y-0 left-0 z-50 w-64 bg-[#0D0F14] border-r border-white/10 flex flex-col h-[100dvh] min-h-0 overflow-y-auto overscroll-contain shadow-2xl transition-transform duration-300 ease-in-out text-[#B7BCC6] lg:translate-x-0 lg:static lg:block ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"} `}
         style={{ fontFamily: "var(--font-sidebar)" }}
       >
         {" "}
@@ -174,7 +174,7 @@ const Sidebar = ({ isOpen, onClose, onOpenSettings, onOpenBugReport }) => {
             </button>
           </div>
         </div>{" "}
-        <nav className="flex-1 min-h-0 px-2 sm:px-3 py-2 sm:py-3 space-y-1.5 overflow-y-auto overflow-x-hidden custom-scrollbar">
+        <nav className="flex-1 min-h-0 px-2 sm:px-3 py-2 sm:py-3 space-y-1.5 overflow-x-hidden">
           {" "}
           {visibleMenuItems.map((item) => {
             const isActive = location.pathname === item.path;
@@ -206,7 +206,7 @@ const Sidebar = ({ isOpen, onClose, onOpenSettings, onOpenBugReport }) => {
           })}{" "}
         </nav>
 
-        <div className="sticky bottom-0 p-2 sm:p-3 border-t border-white/10 bg-[#0D0F14] pb-[max(0.75rem,env(safe-area-inset-bottom))] flex-shrink-0">
+        <div className="p-2 sm:p-3 border-t border-white/10 bg-[#0D0F14] pb-[max(0.75rem,env(safe-area-inset-bottom))] flex-shrink-0">
           <button
             type="button"
             onClick={() => {
