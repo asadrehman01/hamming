@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { getUserWithRetry } from "../lib/authUser";
 import { sendBroadcastEmail } from "../lib/backendApi";
+import { isTransientRequestError, withTransientRetry } from "../lib/transientRequest";
 import {
   Send,
   Users,
@@ -52,6 +53,9 @@ const CommunicationsPage = () => {
     fetchStats();
     fetchTemplate();
   }, []);
+
+  const runWithRetry = (operation) =>
+    withTransientRetry(operation, { retries: 2, baseDelayMs: 250 });
   const getCurrentGymId = async () => {
     const { data: authData, error: authError } = await getUserWithRetry(supabase);
     if (authError) throw authError;
@@ -122,20 +126,26 @@ const CommunicationsPage = () => {
       const todayIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
         .toISOString()
         .split("T")[0];
-      const { count: totalCount, error: totalError } = await supabase
-        .from("customers")
-        .select("*", { count: "exact", head: true })
-        .eq("gym_id", gymId);
-      const { count: activeCount, error: activeError } = await supabase
-        .from("customers")
-        .select("*", { count: "exact", head: true })
-        .eq("gym_id", gymId)
-        .or(`membership_end_date.is.null,membership_end_date.gte.${todayIso}`);
-      const { count: expiredCount, error: expiredError } = await supabase
-        .from("customers")
-        .select("*", { count: "exact", head: true })
-        .eq("gym_id", gymId)
-        .lt("membership_end_date", todayIso);
+      const { count: totalCount, error: totalError } = await runWithRetry(() =>
+        supabase
+          .from("customers")
+          .select("*", { count: "exact", head: true })
+          .eq("gym_id", gymId),
+      );
+      const { count: activeCount, error: activeError } = await runWithRetry(() =>
+        supabase
+          .from("customers")
+          .select("*", { count: "exact", head: true })
+          .eq("gym_id", gymId)
+          .or(`membership_end_date.is.null,membership_end_date.gte.${todayIso}`),
+      );
+      const { count: expiredCount, error: expiredError } = await runWithRetry(() =>
+        supabase
+          .from("customers")
+          .select("*", { count: "exact", head: true })
+          .eq("gym_id", gymId)
+          .lt("membership_end_date", todayIso),
+      );
       if (totalError || activeError || expiredError) {
         throw totalError || activeError || expiredError;
       }
@@ -146,10 +156,12 @@ const CommunicationsPage = () => {
       });
     } catch (error) {
       console.error("Error fetching stats:", error);
-      setStatus({
-        type: "error",
-        message: "Failed to load audience statistics.",
-      });
+      if (!isTransientRequestError(error)) {
+        setStatus({
+          type: "error",
+          message: "Failed to load audience statistics.",
+        });
+      }
     } finally {
       setStatsLoading(false);
     }
@@ -158,18 +170,22 @@ const CommunicationsPage = () => {
     try {
       const gymId = await getCurrentGymId();
       const [expiryResult, reviewResult] = await Promise.all([
-        supabase
-          .from("automation_templates")
-          .select("subject, body_text")
-          .eq("name", "EXPIRY_REMINDER")
-          .eq("gym_id", gymId)
-          .maybeSingle(),
-        supabase
-          .from("automation_templates")
-          .select("subject, body_text")
-          .eq("name", "GOOGLE_REVIEW_REQUEST")
-          .eq("gym_id", gymId)
-          .maybeSingle(),
+        runWithRetry(() =>
+          supabase
+            .from("automation_templates")
+            .select("subject, body_text")
+            .eq("name", "EXPIRY_REMINDER")
+            .eq("gym_id", gymId)
+            .maybeSingle(),
+        ),
+        runWithRetry(() =>
+          supabase
+            .from("automation_templates")
+            .select("subject, body_text")
+            .eq("name", "GOOGLE_REVIEW_REQUEST")
+            .eq("gym_id", gymId)
+            .maybeSingle(),
+        ),
       ]);
 
       const { data: expiryData, error: expiryError } = expiryResult;
@@ -213,17 +229,21 @@ const CommunicationsPage = () => {
           .map((queryError) => queryError.message)
           .join(" | ");
         console.error("Error fetching templates:", queryErrors);
-        setStatus({
-          type: "error",
-          message: `Failed to load one or more automation templates: ${combinedMessages}`,
-        });
+        if (!queryErrors.some(isTransientRequestError)) {
+          setStatus({
+            type: "error",
+            message: `Failed to load one or more automation templates: ${combinedMessages}`,
+          });
+        }
       }
     } catch (error) {
       console.error("Error fetching templates:", error);
-      setStatus({
-        type: "error",
-        message: "Failed to load automation templates.",
-      });
+      if (!isTransientRequestError(error)) {
+        setStatus({
+          type: "error",
+          message: "Failed to load automation templates.",
+        });
+      }
     }
   };
   const handleSend = async (e) => {

@@ -128,7 +128,7 @@ const Sidebar = ({ isOpen, onClose, onOpenSettings, onOpenBugReport }) => {
         />
       )}{" "}
       <aside
-        className={` fixed inset-y-0 left-0 z-50 w-64 bg-[#0D0F14] border-r border-white/10 flex flex-col h-screen shadow-2xl transition-transform duration-300 ease-in-out text-[#B7BCC6] lg:translate-x-0 lg:static lg:block ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"} `}
+        className={` fixed inset-y-0 left-0 z-50 w-64 bg-[#0D0F14] border-r border-white/10 flex flex-col h-screen min-h-0 shadow-2xl transition-transform duration-300 ease-in-out text-[#B7BCC6] lg:translate-x-0 lg:static lg:block ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"} `}
         style={{ fontFamily: "var(--font-sidebar)" }}
       >
         {" "}
@@ -174,7 +174,7 @@ const Sidebar = ({ isOpen, onClose, onOpenSettings, onOpenBugReport }) => {
             </button>
           </div>
         </div>{" "}
-        <nav className="flex-1 px-2 sm:px-3 py-2 sm:py-3 space-y-1.5 overflow-y-auto overflow-x-hidden custom-scrollbar">
+        <nav className="flex-1 min-h-0 px-2 sm:px-3 py-2 sm:py-3 space-y-1.5 overflow-y-auto overflow-x-hidden custom-scrollbar">
           {" "}
           {visibleMenuItems.map((item) => {
             const isActive = location.pathname === item.path;
