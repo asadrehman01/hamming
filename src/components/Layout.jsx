@@ -71,11 +71,9 @@ const Layout = () => {
 
     checkOnboarding();
 
-    const { data: listener } = supabase?.auth.onAuthStateChange(
-      (_event, _session) => {
-        checkOnboarding();
-      }
-    ) ?? { data: { subscription: { unsubscribe: () => {} } } };
+    const { data: listener } = supabase?.auth.onAuthStateChange(() => {
+      checkOnboarding();
+    }) ?? { data: { subscription: { unsubscribe: () => {} } } };
 
     const handleRefresh = (event) => {
       const detail = event?.detail || {};
@@ -204,7 +202,7 @@ const Layout = () => {
         onOpenBugReport={() => setShowBugReportModal(true)}
       />
 
-      <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar relative max-w-full">
+      <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar relative max-w-full pb-[calc(10rem+env(safe-area-inset-bottom))] lg:pb-0">
         <Outlet />
         {(!billingStepComplete || !migrationStepComplete) && (
           <OnboardingProgressBar

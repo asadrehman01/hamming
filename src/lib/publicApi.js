@@ -1,3 +1,5 @@
+import { withTransientRetry } from "./transientRequest";
+
 const configuredApiBase = String(import.meta.env.VITE_BACKEND_API_BASE_URL || "").trim();
 
 const normalizeBaseUrl = (baseUrl) => baseUrl.replace(/\/+$/, "");
@@ -29,12 +31,14 @@ const parsePublicApiError = async (response) => {
 export const postPublicApi = async (path, body) => {
   const url = buildPublicApiUrl(path);
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body || {}),
+  const response = await withTransientRetry(async () => {
+    return fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body || {}),
+    });
   });
 
   if (!response.ok) {

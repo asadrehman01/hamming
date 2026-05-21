@@ -1,15 +1,8 @@
 import { supabase } from "./supabaseClient";
+import { withTransientRetry } from "./transientRequest";
 
 const configuredApiBase = String(import.meta.env.VITE_BACKEND_API_BASE_URL || "").trim();
 const normalizeBaseUrl = (baseUrl) => baseUrl.replace(/\/+$/, "");
-const endpointToFunctionName = {
-  "/api/broadcast-email": "broadcast-email",
-  "/api/run-auto-migration": "run-auto-migration",
-  "/api/bug-report": "bug-report",
-  "/api/admin-auth": "admin-users",
-  "/api/gym": "gym",
-  "/api/scanner": "scanner",
-};
 
 const buildApiUrl = (path) => {
   if (/^https?:\/\//i.test(path)) {
@@ -59,19 +52,11 @@ const parseApiError = async (response) => {
 const sanitizeResponseBody = (body) => {
   const normalized = String(body || "");
   const redacted = normalized
-    .replace(/authorization\s*:\s*bearer\s+[A-Za-z0-9._\-]+/gi, "authorization: bearer [redacted]")
-    .replace(/bearer\s+[A-Za-z0-9._\-]+/gi, "bearer [redacted]")
+    .replace(/authorization\s*:\s*bearer\s+[A-Za-z0-9._-]+/gi, "authorization: bearer [redacted]")
+    .replace(/bearer\s+[A-Za-z0-9._-]+/gi, "bearer [redacted]")
     .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[redacted-email]");
 
   return redacted.slice(0, 200);
-};
-
-const parseFunctionError = (payload) => {
-  if (!payload) return "Request failed";
-  if (typeof payload.error === "string") return payload.error;
-  if (payload.error) return JSON.stringify(payload.error);
-  if (typeof payload.message === "string") return payload.message;
-  return "Request failed";
 };
 
 export const postBackendApi = async (path, body) => {
@@ -80,13 +65,15 @@ export const postBackendApi = async (path, body) => {
 
   let response;
   try {
-    response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(body || {}),
+    response = await withTransientRetry(async () => {
+      return fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body || {}),
+      });
     });
   } catch (networkError) {
     throw new Error(`Network error: ${networkError.message}`);
@@ -106,7 +93,7 @@ export const postBackendApi = async (path, body) => {
     } catch (readError) {
       console.error("Failed to read response text after JSON parse error:", readError);
     }
-    const isProduction = typeof process !== "undefined" && process.env?.NODE_ENV === "production";
+    const isProduction = import.meta.env.MODE === "production";
     const bodyDetails = isProduction
       ? { bodyLength: responseText.length }
       : { body: sanitizeResponseBody(responseText) };
@@ -126,11 +113,13 @@ export const getBackendApi = async (path) => {
 
   let response;
   try {
-    response = await fetch(url, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+    response = await withTransientRetry(async () => {
+      return fetch(url, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
     });
   } catch (networkError) {
     throw new Error(`Network error: ${networkError.message}`);

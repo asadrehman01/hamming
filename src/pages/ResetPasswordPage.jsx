@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, LoaderCircle } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
+import { withTransientRetry } from "../lib/transientRequest";
 
 const INVALID_LINK_MESSAGE = "Invalid reset link.";
 const SUCCESS_MESSAGE = "Your password has been updated. You can now log in.";
@@ -31,7 +32,7 @@ const ResetPasswordPage = () => {
       }
 
       try {
-        const { data } = await supabase.auth.getSession();
+        const { data } = await withTransientRetry(() => supabase.auth.getSession());
         if (!active) return;
 
         if (data?.session) {
@@ -55,7 +56,7 @@ const ResetPasswordPage = () => {
     minLength: newPassword.length >= 8,
     hasUppercase: /[A-Z]/.test(newPassword),
     hasNumber: /\d/.test(newPassword),
-    hasSpecial: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>\/?]/.test(newPassword),
+    hasSpecial: /[!@#$%^&*()_+-=[\]{};':"\\|,.<>/?]/.test(newPassword),
   };
 
   const allRulesMet = Object.values(passwordRules).every(Boolean);
@@ -70,13 +71,13 @@ const ResetPasswordPage = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      const { error } = await withTransientRetry(() => supabase.auth.updateUser({ password: newPassword }));
 
       if (error) {
         throw error;
       }
 
-      const { error: signOutError } = await supabase.auth.signOut();
+      const { error: signOutError } = await withTransientRetry(() => supabase.auth.signOut());
       if (signOutError) {
         throw signOutError;
       }

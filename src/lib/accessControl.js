@@ -10,8 +10,19 @@ const ACCESS_MODE_KEY = 'hmg_access_mode';
 const PBKDF2_ITERATIONS = 150000;
 const PBKDF2_KEY_LENGTH_BYTES = 32;
 
-// Security review: reception access excludes migration workflow routes.
-export const RECEPTION_ALLOWED_ROUTES = ['/dashboard', '/customers', '/trainers', '/transactions', '/communications', '/integrations'];
+// Security review: reception access includes the onboarding flow that Layout can route into
+// before the main dashboard is available.
+export const RECEPTION_ALLOWED_ROUTES = [
+  '/dashboard',
+  '/billing',
+  '/onboarding-migration',
+  '/auto-migration',
+  '/customers',
+  '/trainers',
+  '/transactions',
+  '/communications',
+  '/integrations',
+];
 
 export const getAccessMode = () => sessionStorage.getItem(ACCESS_MODE_KEY);
 

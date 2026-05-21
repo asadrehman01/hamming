@@ -11,6 +11,7 @@ import {
   verifyAdminPassword,
 } from "../lib/accessControl";
 import { postPublicApi } from "../lib/publicApi";
+import { withTransientRetry } from "../lib/transientRequest";
 
 const RESET_SUCCESS_MESSAGE =
   "If this email is registered, a reset link has been sent. Check your inbox.";
@@ -262,7 +263,7 @@ const LoginPage = () => {
     (async () => {
       try {
         const { data: signInData, error: signInError } =
-          await supabase.auth.signInWithPassword({ email, password });
+          await withTransientRetry(() => supabase.auth.signInWithPassword({ email, password }));
 
         if (signInError || !signInData?.user) {
           throw new Error(signInError?.message || "Invalid credentials");
@@ -727,11 +728,10 @@ const LoginPage = () => {
         title="Forgot password?"
         description="Enter your account email address"
         onSubmit={async (emailAddress) => {
-          const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-            emailAddress,
-            {
+          const { error: resetError } = await withTransientRetry(() =>
+            supabase.auth.resetPasswordForEmail(emailAddress, {
               redirectTo: window.location.origin + "/reset-password",
-            },
+            }),
           );
 
           if (resetError) {

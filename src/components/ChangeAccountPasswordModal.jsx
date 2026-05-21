@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Mail, RefreshCw, X } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
+import { withTransientRetry } from "../lib/transientRequest";
 
 const ChangeAccountPasswordModal = ({ isOpen, onClose, email }) => {
   const [loading, setLoading] = useState(false);
@@ -84,9 +85,11 @@ const ChangeAccountPasswordModal = ({ isOpen, onClose, email }) => {
         throw new Error("Missing auth session. Please sign in again.");
       }
 
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(sessionEmail, {
-        redirectTo: window.location.origin + "/reset-password",
-      });
+      const { error: resetError } = await withTransientRetry(() =>
+        supabase.auth.resetPasswordForEmail(sessionEmail, {
+          redirectTo: window.location.origin + "/reset-password",
+        }),
+      );
 
       if (resetError) {
         console.log("[ChangeAccountPasswordModal] JSON error:", JSON.stringify(resetError, null, 2));
