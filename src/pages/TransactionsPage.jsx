@@ -53,6 +53,7 @@ const TransactionsPage = () => {
   const [paymentImportLoading, setPaymentImportLoading] = useState(false);
   const [paymentImportStatus, setPaymentImportStatus] = useState(null);
   const [isSelectingSender, setIsSelectingSender] = useState(false);
+  const [currentGymId, setCurrentGymId] = useState(null);
   const blurTimeoutRef = useRef(null);
   const currentSourcePreset = getImportSourcePreset();
   const sourcePresetLabel =
@@ -78,8 +79,32 @@ const TransactionsPage = () => {
   }, []);
 
   useEffect(() => {
-    fetchTransactions();
-    fetchCustomerDirectory();
+    let active = true;
+
+    const loadInitialData = async () => {
+      try {
+        const {
+          data: { user },
+        } = await getUserWithRetry(supabase);
+
+        if (!active) return;
+        if (!user?.id) throw new Error("User not authenticated");
+        setCurrentGymId(user.id);
+
+        await Promise.all([
+          fetchTransactions(user.id),
+          fetchCustomerDirectory(user.id),
+        ]);
+      } catch (error) {
+        console.error("Error loading transactions page:", error);
+      }
+    };
+
+    loadInitialData();
+
+    return () => {
+      active = false;
+    };
   }, []);
   useEffect(() => {
     const channel = supabase
@@ -141,13 +166,12 @@ const TransactionsPage = () => {
     setSenderMatches(matches);
     setShowSenderMatches(true);
   }, [formData.sender_name, customerDirectory]);
-  const fetchTransactions = async () => {
+  const fetchTransactions = async (gymId = currentGymId) => {
+    if (!gymId) {
+      throw new Error("User not authenticated");
+    }
     setLoading(true);
     try {
-      const {
-        data: { user },
-      } = await getUserWithRetry(supabase);
-      if (!user) throw new Error("User not authenticated");
       const { data, error } = await supabase
         .from("payments")
         .select(
@@ -173,7 +197,7 @@ const TransactionsPage = () => {
             )
           `,
         )
-        .eq("gym_id", user.id)
+        .eq("gym_id", gymId)
         .order("created_at", { ascending: false });
       if (error) throw error;
       setTransactions(data || []);
@@ -183,16 +207,15 @@ const TransactionsPage = () => {
       setLoading(false);
     }
   };
-  const fetchCustomerDirectory = async () => {
+  const fetchCustomerDirectory = async (gymId = currentGymId) => {
+    if (!gymId) {
+      throw new Error("User not authenticated");
+    }
     try {
-      const {
-        data: { user },
-      } = await getUserWithRetry(supabase);
-      if (!user) throw new Error("User not authenticated");
       const { data, error } = await supabase
         .from("customers")
         .select("id, first_name, last_name, membership_start_date, membership_end_date")
-        .eq("gym_id", user.id)
+        .eq("gym_id", gymId)
         .order("first_name", { ascending: true });
       if (error) throw error;
       setCustomerDirectory(data || []);

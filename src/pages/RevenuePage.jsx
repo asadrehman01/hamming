@@ -30,6 +30,7 @@ import ConfirmExpenseCategoryRemovalModal from "../components/ConfirmExpenseCate
 // Pricing is now managed dynamically via Supabase membership_plans table
 const RevenuePage = () => {
   const DEFAULT_EXPENSE_CATEGORIES = ["Electricity", "Salaries", "Rent"];
+  const [currentGymId, setCurrentGymId] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
@@ -180,25 +181,55 @@ const RevenuePage = () => {
   const getMonthKey = (dateObj) =>
     `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, "0")}-01`;
   const getCurrentGymId = async () => {
+    if (currentGymId) return currentGymId;
     const {
       data: { user },
     } = await getUserWithRetry(supabase);
     if (!user) throw new Error("User not authenticated");
+    setCurrentGymId(user.id);
     return user.id;
   };
+
+  useEffect(() => {
+    let active = true;
+
+    const resolveGymId = async () => {
+      try {
+        const {
+          data: { user },
+        } = await getUserWithRetry(supabase);
+
+        if (!active) return;
+        if (!user?.id) throw new Error("User not authenticated");
+
+        setCurrentGymId(user.id);
+      } catch (error) {
+        console.error("Failed to resolve revenue session:", error);
+        if (active) {
+          setFetchError(error?.message || "Failed to load revenue data");
+          setLoading(false);
+        }
+      }
+    };
+
+    resolveGymId();
+
+    return () => {
+      active = false;
+    };
+  }, []);
   const handleReportClick = () => {
     if (summariesSectionRef.current) {
       summariesSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
 
-  const fetchMonthlySummaries = async ({ isActive = () => true } = {}) => {
+  const fetchMonthlySummaries = async ({ isActive = () => true, gymId = currentGymId } = {}) => {
     if (!isActive()) return;
     setLoadingSummaries(true);
     setSummaryError(null);
-    let gymId = null;
     try {
-      gymId = await getCurrentGymId();
+      if (!gymId) throw new Error("User not authenticated");
       const { data: summaries, error } = await supabase
         .from(SUMMARY_TABLE_NAME)
         .select("*")
@@ -407,33 +438,37 @@ const RevenuePage = () => {
   };
 
   useEffect(() => {
+    if (!currentGymId) return;
     let isActive = true;
-    fetchRevenueData({ isActive: () => isActive });
+    fetchRevenueData({ isActive: () => isActive, gymId: currentGymId });
     return () => {
       isActive = false;
     };
-  }, [expenseMonth]);
+  }, [expenseMonth, currentGymId]);
   useEffect(() => {
+    if (!currentGymId) return;
     let isActive = true;
-    fetchExpensesData({ isActive: () => isActive });
+    fetchExpensesData({ isActive: () => isActive, gymId: currentGymId });
     return () => {
       isActive = false;
     };
-  }, [expenseMonth]);
+  }, [expenseMonth, currentGymId]);
   useEffect(() => {
+    if (!currentGymId) return;
     let isActive = true;
-    fetchReconciliation({ isActive: () => isActive });
+    fetchReconciliation({ isActive: () => isActive, gymId: currentGymId });
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [currentGymId]);
   useEffect(() => {
+    if (!currentGymId) return;
     let isActive = true;
-    fetchMonthlySummaries({ isActive: () => isActive });
+    fetchMonthlySummaries({ isActive: () => isActive, gymId: currentGymId });
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [currentGymId]);
 
   useEffect(() => {
     if (loadingSummaries || generatingForMonth || autoSummaryChecked) return;
@@ -464,11 +499,11 @@ const RevenuePage = () => {
     autoSummaryChecked,
     monthlySummaries,
   ]);
-  const fetchExpensesData = async ({ isActive = () => true } = {}) => {
+  const fetchExpensesData = async ({ isActive = () => true, gymId = currentGymId } = {}) => {
     if (!isActive()) return;
     setExpenseError(null);
     try {
-      const gymId = await getCurrentGymId();
+      if (!gymId) throw new Error("User not authenticated");
       const normalizeCategoryName = (name) =>
         String(name || "")
           .trim()
@@ -741,30 +776,27 @@ const RevenuePage = () => {
     }
   };
 
-  const fetchRevenueData = async ({ isActive = () => true } = {}) => {
+  const fetchRevenueData = async ({ isActive = () => true, gymId = currentGymId } = {}) => {
     if (!isActive()) return;
     setLoading(true);
     setFetchError(null);
     try {
-      const {
-        data: { user },
-      } = await withRetry(() => getUserWithRetry(supabase), { retries: 2 });
-      if (!user) throw new Error("User not authenticated");
+      if (!gymId) throw new Error("User not authenticated");
       const [paymentsResult, customersResult, subscriptionsResult] = await withRetry(
         () =>
           Promise.all([
             supabase
               .from("payments")
               .select(` amount, status, created_at, revenue_month, subscription_id, sender_name, matched_customer_id, subscriptions ( plan_name ) `)
-              .eq("gym_id", user.id),
+              .eq("gym_id", gymId),
             supabase
               .from("customers")
               .select("id, first_name, last_name, membership_end_date, membership_duration")
-              .eq("gym_id", user.id),
+              .eq("gym_id", gymId),
             supabase
               .from("subscriptions")
               .select("id, amount, plan_name, status, created_at")
-              .eq("gym_id", user.id),
+              .eq("gym_id", gymId),
           ]),
         { retries: 2 },
       );
@@ -943,17 +975,14 @@ const RevenuePage = () => {
       }
     }
   };
-  const fetchReconciliation = async ({ isActive = () => true } = {}) => {
+  const fetchReconciliation = async ({ isActive = () => true, gymId = currentGymId } = {}) => {
     try {
-      const {
-        data: { user },
-      } = await getUserWithRetry(supabase);
-      if (!user) throw new Error("User not authenticated");
+      if (!gymId) throw new Error("User not authenticated");
       // Fetch last payment and customer import reconciliation records
       const { data: paymentRec, error: paymentRecError } = await supabase
         .from("import_reconciliations")
         .select("imported_value, legacy_value, metric_name")
-        .eq("gym_id", user.id)
+        .eq("gym_id", gymId)
         .in("metric_name", ["payments_count", "completed_revenue"])
         .order("created_at", { ascending: false });
       if (paymentRecError) throw paymentRecError;

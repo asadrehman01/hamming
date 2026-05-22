@@ -98,6 +98,7 @@ const SyncBadge = ({ lastSyncedAt }) => (
 // ─────────────────────────────────────────────────────────────────────────────
 const AttendancePage = () => {
   const navigate = useNavigate();
+  const [currentGymId, setCurrentGymId] = useState(null);
   // ── settings form state ──────────────────────────────────────────────────
   const [settings, setSettings] = useState({
     ip_address: "",
@@ -138,12 +139,38 @@ const AttendancePage = () => {
 
   // ─── Load on mount ────────────────────────────────────────────────────────
   useEffect(() => {
-    loadSettings();
-    loadLogs();
-    loadUnmatched();
-    loadCustomers();
-    loadExistingMaps();
+    let active = true;
+
+    const loadInitialData = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!active) return;
+        if (!user?.id) return;
+
+        setCurrentGymId(user.id);
+      } catch (error) {
+        console.error("Failed to resolve attendance session:", error);
+      }
+    };
+
+    loadInitialData();
+
+    return () => {
+      active = false;
+    };
   }, []);
+
+  useEffect(() => {
+    if (!currentGymId) return;
+
+    loadSettings(currentGymId);
+    loadUnmatched(currentGymId);
+    loadCustomers(currentGymId);
+    loadExistingMaps(currentGymId);
+  }, [currentGymId]);
 
   // ─── Auto-sync polling ────────────────────────────────────────────────────
   useEffect(() => {
@@ -156,15 +183,14 @@ const AttendancePage = () => {
   }, [settings.enabled, settings.ip_address, settings.sync_interval_minutes, connected]);
 
   // ─── Data fetchers ────────────────────────────────────────────────────────
-  const loadSettings = async () => {
+  const loadSettings = async (gymId = currentGymId) => {
     if (!supabase) return;
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!gymId) return;
 
     const { data } = await supabase
       .from("scanner_settings")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", gymId)
       .maybeSingle();
 
     if (data) {
@@ -182,18 +208,16 @@ const AttendancePage = () => {
 
   const loadLogs = useCallback(async () => {
     if (!supabase) return;
+    if (!currentGymId) return;
     setLogsLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
       let query = supabase
         .from("attendance_logs")
         .select(`
           id, device_user_id, scanned_at, punch_type, matched, created_at,
           customers ( id, first_name, last_name, phone )
         `)
-        .eq("user_id", user.id)
+        .eq("user_id", currentGymId)
         .order("scanned_at", { ascending: false })
         .limit(200);
 
@@ -212,9 +236,7 @@ const AttendancePage = () => {
     } finally {
       setLogsLoading(false);
     }
-  }, [filterDate, filterMatch]);
-
-  useEffect(() => { loadLogs(); }, [loadLogs]);
+  }, [filterDate, filterMatch, currentGymId]);
 
   // ─── Save settings ────────────────────────────────────────────────────────
   const saveSettings = async (e) => {
@@ -343,16 +365,15 @@ const AttendancePage = () => {
       .slice(0, 6);
   };
 
-  const loadUnmatched = async () => {
+  const loadUnmatched = async (gymId = currentGymId) => {
     if (!supabase) return;
+    if (!gymId) return;
     setMappingLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
       const { data } = await supabase
         .from("unmatched_scans")
         .select("device_user_id, scanned_at")
-        .eq("user_id", user.id)
+        .eq("user_id", gymId)
         .eq("resolved", false)
         .order("scanned_at", { ascending: false });
       const grouped = {};
@@ -368,26 +389,24 @@ const AttendancePage = () => {
     }
   };
 
-  const loadCustomers = async () => {
+  const loadCustomers = async (gymId = currentGymId) => {
     if (!supabase) return;
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!gymId) return;
     const { data } = await supabase
       .from("customers")
       .select("id, first_name, last_name, phone")
-      .eq("gym_id", user.id)
+      .eq("gym_id", gymId)
       .order("first_name");
     setCustomerList(data ?? []);
   };
 
-  const loadExistingMaps = async () => {
+  const loadExistingMaps = async (gymId = currentGymId) => {
     if (!supabase) return;
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!gymId) return;
     const { data } = await supabase
       .from("scanner_member_map")
       .select("device_user_id, customer_id, created_at, customers(id, first_name, last_name, phone)")
-      .eq("user_id", user.id)
+      .eq("user_id", gymId)
       .order("created_at", { ascending: false });
     setExistingMaps(data ?? []);
   };

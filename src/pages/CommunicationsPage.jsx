@@ -29,6 +29,7 @@ const CommunicationsPage = () => {
   // Shared states
   const [activeTab, setActiveTab] = useState("BROADCAST");
   const [status, setStatus] = useState(null);
+  const [currentGymId, setCurrentGymId] = useState(null);
 
   // Broadcast states
   const [subject, setSubject] = useState("");
@@ -50,16 +51,39 @@ const CommunicationsPage = () => {
   const activeTabIndex = Math.max(tabOrder.indexOf(normalizedActiveTab), 0);
   const recipientGroups = ["ALL", "ACTIVE", "EXPIRED"];
   useEffect(() => {
-    fetchStats();
-    fetchTemplate();
+    let active = true;
+
+    const loadInitialData = async () => {
+      try {
+        const {
+          data: { user },
+        } = await getUserWithRetry(supabase);
+
+        if (!active) return;
+        if (!user?.id) throw new Error("User not authenticated");
+
+        setCurrentGymId(user.id);
+        await Promise.all([fetchStats(user.id), fetchTemplate(user.id)]);
+      } catch (error) {
+        console.error("Error loading communications page:", error);
+      }
+    };
+
+    loadInitialData();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const runWithRetry = (operation) =>
     withTransientRetry(operation, { retries: 2, baseDelayMs: 250 });
   const getCurrentGymId = async () => {
+    if (currentGymId) return currentGymId;
     const { data: authData, error: authError } = await getUserWithRetry(supabase);
     if (authError) throw authError;
     if (!authData?.user?.id) throw new Error("User not authenticated");
+    setCurrentGymId(authData.user.id);
     return authData.user.id;
   };
 
@@ -117,10 +141,10 @@ const CommunicationsPage = () => {
     throw insertError;
   };
 
-  const fetchStats = async () => {
+  const fetchStats = async (gymId = currentGymId) => {
     setStatsLoading(true);
     try {
-      const gymId = await getCurrentGymId();
+      if (!gymId) throw new Error("User not authenticated");
       const now = new Date();
       now.setHours(0, 0, 0, 0);
       const todayIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
@@ -166,9 +190,9 @@ const CommunicationsPage = () => {
       setStatsLoading(false);
     }
   };
-  const fetchTemplate = async () => {
+  const fetchTemplate = async (gymId = currentGymId) => {
     try {
-      const gymId = await getCurrentGymId();
+      if (!gymId) throw new Error("User not authenticated");
       const [expiryResult, reviewResult] = await Promise.all([
         runWithRetry(() =>
           supabase
