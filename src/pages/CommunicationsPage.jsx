@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { getUserWithRetry } from "../lib/authUser";
-import { sendBroadcastEmail } from "../lib/backendApi";
 import { isTransientRequestError, withTransientRetry } from "../lib/transientRequest";
 import {
   Send,
@@ -16,13 +15,30 @@ import {
 const DEFAULT_EXPIRY_TEMPLATE = {
   subject: "{first_name}, your membership expires in 3 days",
   body_text:
-    "Hi {first_name},\n\nJust a quick reminder that your gym membership will expire in 3 days.\n\nRenew now to keep your workouts uninterrupted and continue your progress.\n\nIf you need any help with renewal, just reply to this email and we will assist you.\n\nSee you at the gym!",
+    "Hi {first_name}, your membership expires in 3 days. Renew to stay active. Reply to this SMS if you need help.",
 };
 
 const DEFAULT_REVIEW_TEMPLATE = {
   subject: "Welcome to the gym, {first_name}! Share your 5-star experience",
   body_text:
-    "Hi {first_name},\n\nWelcome to the gym. We are excited to have you with us.\n\nIf your first experience has been great, please rate us 5 stars on Google here:\n{review_link}\n\nYour feedback helps us grow and helps more people discover our gym.\n\nThank you for being part of our community!",
+    "Hi {first_name}, thanks for joining! Please review us: {review_link}",
+};
+
+const trimSms = (value, limit = 160) => {
+  const normalized = String(value || "").replace(/\s+/g, " ").trim();
+  if (normalized.length <= limit) return normalized;
+  return `${normalized.slice(0, Math.max(0, limit - 3))}...`;
+};
+
+const sendSMS = async (phoneNumber, message) => {
+  const { data, error } = await supabase.functions.invoke("send-sms", {
+    body: {
+      to: `+91${String(phoneNumber).replace(/\D/g, "")}`,
+      message: message,
+    },
+  });
+  if (error) console.error("SMS failed:", error);
+  return { data, error };
 };
 
 const CommunicationsPage = () => {
@@ -275,10 +291,46 @@ const CommunicationsPage = () => {
     setLoading(true);
     setStatus(null);
     try {
-      await sendBroadcastEmail({ subject, message, recipientGroup });
+      const gymId = await getCurrentGymId();
+      if (!gymId) throw new Error("User not authenticated");
+
+      const { data: customers, error: customerError } = await supabase
+        .from("customers")
+        .select("phone, first_name, membership_end_date")
+        .eq("gym_id", gymId)
+        .not("phone", "is", null);
+
+      if (customerError) throw customerError;
+
+      const todayIso = new Date().toISOString().split("T")[0];
+      const recipients = (customers || [])
+        .filter((customer) => {
+          if (recipientGroup === "ACTIVE") {
+            return !customer.membership_end_date || customer.membership_end_date >= todayIso;
+          }
+          if (recipientGroup === "EXPIRED") {
+            return customer.membership_end_date && customer.membership_end_date < todayIso;
+          }
+          return true;
+        })
+        .filter((customer) => String(customer.phone || "").trim());
+
+      let sentCount = 0;
+      for (const customer of recipients) {
+        const smsSubject = subject || template.subject;
+        const smsMessage = message || template.body_text;
+        const personalizedMessage = trimSms(
+          `${smsSubject ? `${smsSubject}: ` : ""}${smsMessage}`
+            .replace(/\{first_name\}/gi, customer.first_name || "there"),
+        );
+        const { error } = await sendSMS(customer.phone, personalizedMessage);
+        if (error) throw error;
+        sentCount += 1;
+      }
+
       setStatus({
         type: "success",
-        message: "Broadcast initiated successfully!",
+        message: `Broadcast initiated successfully! Sent ${sentCount} SMS messages.`,
       });
       setSubject("");
       setMessage("");
@@ -351,22 +403,41 @@ const CommunicationsPage = () => {
   const handleBroadcastReviews = async () => {
     if (
       !window.confirm(
-        "Are you sure you want to email all members who haven't been asked for a review yet?",
+        "Are you sure you want to text all members who haven't been asked for a review yet?",
       )
     )
       return;
     setBroadcastingReview(true);
     setStatus(null);
     try {
-      const data = await sendBroadcastEmail({
-        subject: reviewTemplate.subject,
-        message: reviewTemplate.body_text,
-        recipientGroup: "UNREVIEWED",
-        isReviewRequest: true,
-      });
+      const gymId = await getCurrentGymId();
+      if (!gymId) throw new Error("User not authenticated");
+
+      const { data: customers, error: customerError } = await supabase
+        .from("customers")
+        .select("phone, first_name, membership_end_date")
+        .eq("gym_id", gymId)
+        .not("phone", "is", null);
+
+      if (customerError) throw customerError;
+
+      const sentCustomers = (customers || []).filter((customer) => customer.phone);
+      let sentCount = 0;
+
+      for (const customer of sentCustomers) {
+        const personalizedMessage = trimSms(
+          reviewTemplate.body_text
+            .replace(/\{first_name\}/gi, customer.first_name || "there")
+            .replace(/\{review_link\}/gi, ""),
+        );
+        const { error } = await sendSMS(customer.phone, personalizedMessage);
+        if (error) throw error;
+        sentCount += 1;
+      }
+
       setStatus({
         type: "success",
-        message: `Sent bulk review requests to ${data.count || 0} unreviewed members!`,
+        message: `Sent bulk review requests to ${sentCount} members!`,
       });
     } catch (err) {
       console.error("Error broadcasting reviews:", err);
@@ -438,7 +509,7 @@ const CommunicationsPage = () => {
               Communications
             </h1>
             <p className="text-[10px] communications-subtle mt-2 font-mono tracking-widest">
-              Broadcast & Automation center
+              SMS & Automation center
             </p>
           </div>
         </header>
@@ -613,7 +684,7 @@ const CommunicationsPage = () => {
                   <div className="bg-[#fbfbfb] border border-[#e6e6e6] p-6 rounded-2xl hover:border-emerald-500/20 transition-colors">
                     <div className="flex items-center gap-3 mb-4 communications-subtle text-[10px] tracking-[0.08em] dm-sans-light-008">
                       <History className="w-4 h-4 text-[#0d0d0d]" />
-                      <h3 className="communications-header-title font-light tracking-[0.08em] dm-sans-light-008" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600, fontSize: "1.125rem" }}>Mailing Tips</h3>
+                      <h3 className="communications-header-title font-light tracking-[0.08em] dm-sans-light-008" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 600, fontSize: "1.125rem" }}>SMS Tips</h3>
                     </div>
                     <ul className="space-y-4 text-xs communications-subtle leading-relaxed dm-sans-light-008 tracking-[0.08em]">
                       <li className="flex gap-3">
@@ -655,7 +726,7 @@ const CommunicationsPage = () => {
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-xs font-light tracking-[0.08em] communications-subtle">
-                        Email subject
+                        SMS subject
                       </label>
                       <input
                         type="text"
@@ -716,7 +787,7 @@ const CommunicationsPage = () => {
                         for members whose plan expires in <strong>exactly 3 days</strong>.
                       </p>
                       <p>
-                        When a match is found, an email is automatically sent
+                        When a match is found, an SMS is automatically sent
                         using the template you define above.
                       </p>
                       <p>
@@ -745,7 +816,7 @@ const CommunicationsPage = () => {
                     >
                       <div className="space-y-1.5">
                         <label className="text-xs font-light tracking-[0.08em] communications-subtle">
-                          Email subject
+                          SMS subject
                         </label>
                         <input
                           type="text"

@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import Papa from "papaparse";
+import { supabase } from "../src/lib/supabaseClient.js";
 import { getEnv } from "./_env.js";
 
 const CHUNK_SIZE = 500;
@@ -50,6 +51,7 @@ const normalizeEmail = (value) =>
   String(value || "")
     .trim()
     .toLowerCase();
+const normalizePhone = (value) => String(value || "").replace(/\D/g, "");
 
 const parseCsvText = (csvText) => {
   const parsed = Papa.parse(csvText, {
@@ -255,46 +257,39 @@ const insertRowsWithFallback = async (admin, { table, rows, rowErrors, errorCode
   return { successCount, successfulRowIndices };
 };
 
-const sendNotifyEmail = async ({ notifyEmail, summary, resendApiKey, resendFromEmail }) => {
-  if (!notifyEmail || !resendApiKey || !resendFromEmail) {
+const trimSms = (value, limit = 160) => {
+  const normalized = String(value || "").replace(/\s+/g, " ").trim();
+  if (normalized.length <= limit) return normalized;
+  return `${normalized.slice(0, Math.max(0, limit - 3))}...`;
+};
+
+const sendSMS = async (phoneNumber, message) => {
+  if (!supabase) {
+    const error = new Error("Supabase client is not configured.");
+    console.error("SMS failed:", error);
+    return { data: null, error };
+  }
+
+  const { data, error } = await supabase.functions.invoke("send-sms", {
+    body: {
+      to: `+91${phoneNumber}`,
+      message: message,
+    },
+  });
+  if (error) console.error("SMS failed:", error);
+  return { data, error };
+};
+
+const sendNotifySms = async ({ notifyPhone, summary }) => {
+  if (!notifyPhone) {
     return;
   }
 
-  const lines = [
-    "Your migration run has completed.",
-    "",
-    `Source preset: ${summary.sourcePreset}`,
-    `Customers parsed: ${summary.customersParsed}`,
-    `Customers imported: ${summary.customersInserted + summary.customersUpdated}`,
-    `Payments parsed: ${summary.paymentsParsed}`,
-    `Payments imported: ${summary.paymentsInserted}`,
-    `Imported revenue: INR ${summary.importedRevenue.toLocaleString()}`,
-  ];
+  const message = trimSms(
+    `Migration complete. Source ${summary.sourcePreset}. Customers ${summary.customersInserted + summary.customersUpdated}/${summary.customersParsed}. Payments ${summary.paymentsInserted}/${summary.paymentsParsed}. Revenue INR ${summary.importedRevenue.toLocaleString()}.`,
+  );
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${resendApiKey}`,
-    },
-    signal: controller.signal,
-    body: JSON.stringify({
-      from: resendFromEmail,
-      to: [notifyEmail],
-      subject: "Migration Completed",
-      text: lines.join("\n"),
-    }),
-  });
-
-  clearTimeout(timeoutId);
-
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => "");
-    throw new Error(`Failed to send migration completion email: ${response.status} ${errorText}`.trim());
-  }
+  await sendSMS(notifyPhone, message);
 };
 
 export default async function handler(req, res) {
@@ -306,9 +301,6 @@ export default async function handler(req, res) {
     const supabaseUrl = getEnv("SUPABASE_URL", "VITE_SUPABASE_URL");
     const supabaseAnonKey = getEnv("SUPABASE_ANON_KEY", "VITE_SUPABASE_ANON_KEY");
     const serviceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
-    const resendApiKey = getEnv("RESEND_API_KEY");
-    const resendFromEmail = getEnv("RESEND_FROM_EMAIL");
-
     if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
       throw new Error("Missing Supabase environment variables for migration runner.");
     }
@@ -339,7 +331,7 @@ export default async function handler(req, res) {
     const paymentCsv = String(body?.paymentCsv || "").trim();
     const customerFileName = String(body?.customerFileName || "customers.csv");
     const paymentFileName = String(body?.paymentFileName || "payments.csv");
-    const notifyEmail = String(body?.notifyEmail || "").trim();
+    const notifyPhone = normalizePhone(body?.notifyPhone || body?.notifyEmail || "");
 
     if (!customerCsv && !paymentCsv) {
       return res.status(400).json({ error: "No CSV payload provided" });
@@ -659,11 +651,9 @@ export default async function handler(req, res) {
       importedRevenue,
     };
 
-    await sendNotifyEmail({
-      notifyEmail,
+    await sendNotifySms({
+      notifyPhone,
       summary,
-      resendApiKey,
-      resendFromEmail,
     });
 
     return res.status(200).json({

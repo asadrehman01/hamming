@@ -1,5 +1,6 @@
 
 import { createClient } from "@supabase/supabase-js";
+import { supabase } from "../src/lib/supabaseClient.js";
 import { getEnv } from "./_env.js";
 import { runPollCycle } from "./_pollCore.js";
 
@@ -60,16 +61,17 @@ async function handleScannerPoll(req, res, admin) {
 }
 
 async function handleExpiryReminders(req, res, admin) {
-  const resendApiKey = getEnv("RESEND_API_KEY");
-  const resendFromEmail = getEnv("RESEND_FROM_EMAIL");
-
-  if (!resendApiKey || !resendFromEmail) return res.status(500).json({ error: "Missing Resend configuration." });
+  if (!supabase) return res.status(500).json({ error: "Supabase client is not configured." });
 
   const targetDate = new Date();
   targetDate.setUTCDate(targetDate.getUTCDate() + 3);
   const targetDateStr = targetDate.toISOString().split("T")[0];
 
-  const { data: customers, error: customerError } = await admin.from("customers").select("id, gym_id, first_name, email").eq("membership_end_date", targetDateStr).not("email", "is", null);
+  const { data: customers, error: customerError } = await admin
+    .from("customers")
+    .select("id, gym_id, first_name, phone")
+    .eq("membership_end_date", targetDateStr)
+    .not("phone", "is", null);
   if (customerError) throw customerError;
   if (!customers?.length) return res.status(200).json({ success: true, count: 0, message: "No members expiring in 3 days." });
 
@@ -89,14 +91,21 @@ async function handleExpiryReminders(req, res, admin) {
     return text.replace(/\{first_name\}/g, firstName || "Member").replace(/\{review_link\}/g, reviewLink || "");
   };
 
-  const sendWithResend = async ({ apiKey, from, to, subject, text, replyTo }) => {
-    const r = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from, to, subject, text, reply_to: replyTo }),
+  const normalizePhone = (value) => String(value || "").replace(/\D/g, "");
+  const trimSms = (value, limit = 160) => {
+    const normalized = String(value || "").replace(/\s+/g, " ").trim();
+    if (normalized.length <= limit) return normalized;
+    return `${normalized.slice(0, Math.max(0, limit - 3))}...`;
+  };
+  const sendSMS = async (phoneNumber, message) => {
+    const { data, error } = await supabase.functions.invoke("send-sms", {
+      body: {
+        to: `+91${phoneNumber}`,
+        message: message,
+      },
     });
-    if (!r.ok) throw new Error(`Resend error: ${r.status} ${await r.text()}`);
-    return r.json();
+    if (error) throw error;
+    return data;
   };
 
   let sentCount = 0;
@@ -113,14 +122,14 @@ async function handleExpiryReminders(req, res, admin) {
     try {
       const subject = replaceTokens({ text: template.subject, firstName: customer.first_name, reviewLink: integration?.google_business_link });
       const body = replaceTokens({ text: template.body_text, firstName: customer.first_name, reviewLink: integration?.google_business_link });
-      const from = integration?.sender_profile ? `${integration.sender_profile} <${resendFromEmail}>` : resendFromEmail;
+      const smsMessage = trimSms(`${subject}: ${body}`);
 
-      await sendWithResend({ apiKey: resendApiKey, from, to: customer.email, subject, text: body, replyTo: integration?.reply_to_email || undefined });
-      try { await admin.from("communication_logs").insert({ gym_id: customer.gym_id, customer_id: customer.id, template_name: "EXPIRY_REMINDER", recipient_email: customer.email, subject, status: "sent" }); } catch (_) {}
+      await sendSMS(normalizePhone(customer.phone), smsMessage);
+      try { await admin.from("communication_logs").insert({ gym_id: customer.gym_id, customer_id: customer.id, template_name: "EXPIRY_REMINDER", recipient_email: customer.phone, subject, status: "sent" }); } catch (_) {}
       sentCount++;
     } catch (err) {
       console.error(`[expiry-reminders] Failed to send to ${customer.id}:`, err.message);
-      try { await admin.from("communication_logs").insert({ gym_id: customer.gym_id, customer_id: customer.id, template_name: "EXPIRY_REMINDER", recipient_email: customer.email, subject: template.subject, status: "failed", error_message: err.message }); } catch (_) {}
+      try { await admin.from("communication_logs").insert({ gym_id: customer.gym_id, customer_id: customer.id, template_name: "EXPIRY_REMINDER", recipient_email: customer.phone, subject: template.subject, status: "failed", error_message: err.message }); } catch (_) {}
     }
   }
 

@@ -3,15 +3,15 @@ const readline = require('node:readline/promises');
 const { stdin, stdout } = require('node:process');
 
 const url = process.env.VITE_SUPABASE_URL 
-  ? `${process.env.VITE_SUPABASE_URL}/functions/v1/broadcast-email`
-  : 'https://tauunmprgfnjzwbjulwb.supabase.co/functions/v1/broadcast-email';
+  ? `${process.env.VITE_SUPABASE_URL}/functions/v1/send-sms`
+  : 'https://tauunmprgfnjzwbjulwb.supabase.co/functions/v1/send-sms';
 
 const key = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
-const testRecipientEmail = process.env.TEST_RECIPIENT_EMAIL;
+const testRecipientPhone = process.env.TEST_RECIPIENT_PHONE || process.env.TEST_RECIPIENT_EMAIL;
 
 async function confirmSend() {
-  console.warn('WARNING: This script will trigger the broadcast-email Edge Function.');
-  console.warn('Only proceed if TEST_RECIPIENT_EMAIL is a safe test inbox.');
+  console.warn('WARNING: This script will trigger the send-sms Edge Function.');
+  console.warn('Only proceed if TEST_RECIPIENT_PHONE is a safe test number.');
 
   const rl = readline.createInterface({ input: stdin, output: stdout });
   const answer = await rl.question('Type SEND to continue, or anything else to cancel: ');
@@ -27,8 +27,8 @@ async function test() {
     return;
   }
 
-  if (!testRecipientEmail) {
-    console.error('Error: TEST_RECIPIENT_EMAIL is not set. Aborting test send.');
+  if (!testRecipientPhone) {
+    console.error('Error: TEST_RECIPIENT_PHONE is not set. Aborting test send.');
     return;
   }
 
@@ -46,10 +46,8 @@ async function test() {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        subject: 'Test',
-        message: 'Test Broadcast from Script',
-        recipientGroup: 'INDIVIDUAL',
-        recipientEmail: testRecipientEmail
+        to: `+91${String(testRecipientPhone).replace(/\D/g, '')}`,
+        message: 'Test SMS from Script'
       })
     });
     

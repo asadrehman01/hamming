@@ -462,7 +462,7 @@ Deno.serve(async (req) => {
     const paymentCsv = String(body?.paymentCsv || "").trim();
     const customerFileName = String(body?.customerFileName || "customers.csv");
     const paymentFileName = String(body?.paymentFileName || "payments.csv");
-    const notifyEmail = String(body?.notifyEmail || "").trim();
+    const notifyPhone = String(body?.notifyPhone || body?.notifyEmail || "").trim();
 
     if (!customerCsv && !paymentCsv) {
       return new Response(
@@ -833,21 +833,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (notifyEmail) {
-      const summaryLines = [
-        "Your migration run has completed.",
-        "",
-        `Source preset: ${sourcePreset}`,
-        `Customers parsed: ${customersParsed}`,
-        `Customers imported: ${customersInserted + customersUpdated}`,
-        `Payments parsed: ${paymentsParsed}`,
-        `Payments imported: ${paymentsInserted}`,
-        `Imported revenue: INR ${importedRevenue.toLocaleString()}`,
-      ];
+    if (notifyPhone) {
+      const rawMessage = `Migration complete. Source ${sourcePreset}. Customers ${customersInserted + customersUpdated}/${customersParsed}. Payments ${paymentsInserted}/${paymentsParsed}. Revenue INR ${importedRevenue.toLocaleString()}.`;
+      const summaryMessage = rawMessage.length > 160
+        ? `${rawMessage.slice(0, 157)}...`
+        : rawMessage;
 
       try {
         const notifyResponse = await fetch(
-          `${supabaseUrl}/functions/v1/broadcast-email`,
+          `${supabaseUrl}/functions/v1/send-sms`,
           {
             method: "POST",
             headers: {
@@ -855,10 +849,8 @@ Deno.serve(async (req) => {
               Authorization: `Bearer ${serviceRoleKey}`,
             },
             body: JSON.stringify({
-              subject: "Migration Completed",
-              message: summaryLines.join("\n"),
-              recipientGroup: "INDIVIDUAL",
-              recipientEmail: notifyEmail,
+              to: `+91${notifyPhone.replace(/\D/g, "")}`,
+              message: summaryMessage,
             }),
           },
         );
@@ -867,12 +859,12 @@ Deno.serve(async (req) => {
             .text()
             .catch(() => notifyResponse.statusText);
           console.error(
-            `Failed to send notification email to ${notifyEmail}: ${notifyResponse.status} - ${notifyError}`,
+            `Failed to send notification SMS to ${notifyPhone}: ${notifyResponse.status} - ${notifyError}`,
           );
         }
       } catch (notifyError) {
         console.error(
-          `Error sending notification email to ${notifyEmail}: ${notifyError instanceof Error ? notifyError.message : String(notifyError)}`,
+          `Error sending notification SMS to ${notifyPhone}: ${notifyError instanceof Error ? notifyError.message : String(notifyError)}`,
         );
       }
     }

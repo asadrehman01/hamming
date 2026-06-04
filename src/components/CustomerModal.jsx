@@ -4,59 +4,23 @@ import { getUserWithRetry } from "../lib/authUser";
 import { toMonthStartDateString } from "../lib/financeDates";
 import SecureImage from "./SecureImage";
 
-// Helper: Send email via Supabase Edge Function with exponential backoff retry.
+// Helper: Send SMS via Supabase Edge Function with exponential backoff retry.
 // Never throws; always logs result (success or final failure).
-const sendEmailViaEdgeFunction = async ({
-  subject,
-  message,
-  htmlMessage,
-  recipientEmail,
-  description = "email",
-}) => {
-  const maxAttempts = 4;
-  const backoffMs = [100, 200, 400, 800]; // exponential backoff
+const trimSms = (value, limit = 160) => {
+  const normalized = String(value || "").replace(/\s+/g, " ").trim();
+  if (normalized.length <= limit) return normalized;
+  return `${normalized.slice(0, Math.max(0, limit - 3))}...`;
+};
 
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    try {
-      if (attempt > 0) {
-        await new Promise((res) => setTimeout(res, backoffMs[attempt - 1]));
-        console.log(`[${description}] Retry attempt ${attempt + 1}/${maxAttempts}...`);
-      } else {
-        console.log(`[${description}] Sending to ${recipientEmail}...`);
-      }
-
-      const { data, error } = await supabase.functions.invoke("broadcast-email", {
-        body: {
-          subject,
-          message,
-          htmlMessage: htmlMessage || undefined,
-          recipientGroup: "INDIVIDUAL",
-          recipientEmail,
-        },
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      if (data?.error) {
-        throw new Error(data.error);
-      }
-
-      console.log(`[${description}] SUCCESS to ${recipientEmail}`);
-      return { success: true, data };
-    } catch (err) {
-      const msg = err?.message || String(err);
-      console.warn(`[${description}] Attempt ${attempt + 1} failed: ${msg}`);
-
-      if (attempt === maxAttempts - 1) {
-        console.error(`[${description}] FINAL FAILURE after ${maxAttempts} attempts to ${recipientEmail}: ${msg}`);
-        return { success: false, error: msg };
-      }
-    }
-  }
-
-  return { success: false, error: "Unknown error" };
+const sendSMS = async (phoneNumber, message) => {
+  const { data, error } = await supabase.functions.invoke("send-sms", {
+    body: {
+      to: `+91${phoneNumber.replace(/\D/g, "")}`,
+      message: message,
+    },
+  });
+  if (error) console.error("SMS failed:", error);
+  return { data, error };
 };
 
 const formatBillDate = (value) => {
@@ -286,6 +250,22 @@ const buildReceiptHtml = ({
     </table>
   </body>
 </html>`;
+};
+
+const buildReceiptSms = ({
+  gymDisplayName,
+  billNumber,
+  membershipPlan,
+  membershipStart,
+  membershipEnd,
+  amount,
+}) => {
+  const dateRange = membershipStart && membershipEnd
+    ? `${formatBillDate(membershipStart)}-${formatBillDate(membershipEnd)}`
+    : "";
+  return trimSms(
+    `Receipt ${billNumber}: INR ${Number(amount || 0).toLocaleString("en-IN")} for ${membershipPlan || "membership"}${dateRange ? ` (${dateRange})` : ""}. ${gymDisplayName || "Gym"}.`,
+  );
 };
 
 const CustomerModal = ({
@@ -625,7 +605,7 @@ const CustomerModal = ({
       }
       // Google Review Auto-Sender (Only for Brand New Customers)
       if (!initialData) {
-        // Send review email first, then wait before sending receipt to avoid spam-like bursts.
+      // Send review SMS first, then wait before sending receipt to avoid spam-like bursts.
         try {
           const { data: integ } = await supabase
             .from("gym_integrations")
@@ -635,7 +615,7 @@ const CustomerModal = ({
             .not("google_business_link", "is", null)
             .maybeSingle();
 
-          if (integ?.google_business_link && resultData.email && resultData.first_name) {
+          if (integ?.google_business_link && resultData.phone && resultData.first_name) {
             const { data: revTemplate } = await supabase
               .from("automation_templates")
               .select("subject, body_text")
@@ -658,24 +638,15 @@ const CustomerModal = ({
             const personalizedBody = activeTemplate.body_text
               .replace(/{first_name}/g, resultData.first_name)
               .replace(/{review_link}/g, reviewLink);
-            const personalizedSubject = activeTemplate.subject.replace(
-              /{first_name}/g,
-              resultData.first_name,
-            );
 
-            const reviewResult = await sendEmailViaEdgeFunction({
-              subject: personalizedSubject,
-              message: personalizedBody,
-              recipientEmail: resultData.email,
-              description: "Review Request",
-            });
-            onboardingStatus = reviewResult.success
-              ? `Sent to ${resultData.email}.`
+            const reviewResult = await sendSMS(resultData.phone, trimSms(personalizedBody));
+            onboardingStatus = !reviewResult.error
+              ? `Sent to ${resultData.phone}.`
               : `Failed (${reviewResult.error || "unknown error"}).`;
 
             await new Promise((resolve) => setTimeout(resolve, 3000));
-          } else if (!resultData.email) {
-            onboardingStatus = "Skipped (customer email missing).";
+          } else if (!resultData.phone) {
+            onboardingStatus = "Skipped (customer phone missing).";
           } else if (!resultData.first_name) {
             onboardingStatus = "Skipped (customer first name missing).";
           } else {
@@ -697,76 +668,31 @@ const CustomerModal = ({
           if (billingSettingsError) {
             console.error("Failed to load billing settings:", billingSettingsError);
             receiptStatus = "Failed (could not load billing settings).";
-          } else if (billingSettings?.receipt_enabled && resultData?.email) {
+          } else if (billingSettings?.receipt_enabled && resultData?.phone) {
             const billDate = new Date();
             const billNumber = `${(billingSettings.invoice_prefix || "REC").toUpperCase()}-${billDate
               .toISOString()
               .slice(0, 10)
               .replace(/-/g, "")}-${String(resultData.id || "").slice(0, 8).toUpperCase()}`;
 
-            const customerName = `${resultData.first_name || ""} ${resultData.last_name || ""}`.trim();
-            const subject = `Receipt ${billNumber} | ${billingSettings.gym_display_name || gymName || "Gym"}`;
-            const message = buildReceiptMessage({
+            const message = buildReceiptSms({
               gymDisplayName: billingSettings.gym_display_name || gymName || "Gym",
               billNumber,
-              issuedAt: billDate,
-              customerName,
-              customerEmail: resultData.email,
-              customerPhone: resultData.phone,
               membershipPlan: duration,
               membershipStart: startDate,
               membershipEnd: endDate,
               amount: normalizedPaidAmount,
-              contactEmail: billingSettings.contact_email,
-              contactPhone: billingSettings.contact_phone,
-              addressLine1: billingSettings.address_line1,
-              addressLine2: billingSettings.address_line2,
-              city: billingSettings.city,
-              state: billingSettings.state,
-              postalCode: billingSettings.postal_code,
-              taxLabel: billingSettings.tax_label,
-              taxValue: billingSettings.tax_value,
-              footerNote: billingSettings.footer_note,
-            });
-
-            const htmlMessage = buildReceiptHtml({
-              gymDisplayName: billingSettings.gym_display_name || gymName || "Gym",
-              billNumber,
-              issuedAt: billDate,
-              customerName,
-              customerEmail: resultData.email,
-              customerPhone: resultData.phone,
-              membershipPlan: duration,
-              membershipStart: startDate,
-              membershipEnd: endDate,
-              amount: normalizedPaidAmount,
-              contactEmail: billingSettings.contact_email,
-              contactPhone: billingSettings.contact_phone,
-              addressLine1: billingSettings.address_line1,
-              addressLine2: billingSettings.address_line2,
-              city: billingSettings.city,
-              state: billingSettings.state,
-              postalCode: billingSettings.postal_code,
-              taxLabel: billingSettings.tax_label,
-              taxValue: billingSettings.tax_value,
-              footerNote: billingSettings.footer_note,
             });
 
             // Send receipt with retry (never fails the save)
-            const receiptResult = await sendEmailViaEdgeFunction({
-              subject,
-              message,
-              htmlMessage,
-              recipientEmail: resultData.email,
-              description: "Receipt",
-            });
-            receiptStatus = receiptResult.success
-              ? `Sent to ${resultData.email}.`
+            const receiptResult = await sendSMS(resultData.phone, message);
+            receiptStatus = !receiptResult.error
+              ? `Sent to ${resultData.phone}.`
               : `Failed (${receiptResult.error || "unknown error"}).`;
           } else if (!billingSettings?.receipt_enabled) {
             receiptStatus = "Skipped (receipt disabled in Billing settings).";
           } else {
-            receiptStatus = "Skipped (customer email missing).";
+            receiptStatus = "Skipped (customer phone missing).";
           }
         } catch (receiptError) {
           console.error("Failed to auto-send receipt:", receiptError);

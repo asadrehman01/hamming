@@ -2,8 +2,24 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { getUserWithRetry } from "../lib/authUser";
-import { sendBroadcastEmail } from "../lib/backendApi";
 import { AlertCircle, CheckCircle2, Loader2, Send } from "lucide-react";
+
+const trimSms = (value, limit = 160) => {
+  const normalized = String(value || "").replace(/\s+/g, " ").trim();
+  if (normalized.length <= limit) return normalized;
+  return `${normalized.slice(0, Math.max(0, limit - 3))}...`;
+};
+
+const sendSMS = async (phoneNumber, message) => {
+  const { data, error } = await supabase.functions.invoke("send-sms", {
+    body: {
+      to: `+91${String(phoneNumber).replace(/\D/g, "")}`,
+      message: message,
+    },
+  });
+  if (error) console.error("SMS failed:", error);
+  return { data, error };
+};
 
 const DupePage = () => {
   const navigate = useNavigate();
@@ -113,10 +129,46 @@ const DupePage = () => {
         throw new Error("Invalid recipient group selected.");
       }
 
-      await sendBroadcastEmail({ subject, message, recipientGroup });
+      const { data: auth } = await getUserWithRetry(supabase);
+      const user = auth?.user;
+      if (!user?.id) throw new Error("User not authenticated");
+
+      const { data: customers, error: customerError } = await supabase
+        .from("customers")
+        .select("phone, first_name, membership_end_date")
+        .eq("gym_id", user.id)
+        .not("phone", "is", null);
+
+      if (customerError) throw customerError;
+
+      const todayIso = new Date().toISOString().split("T")[0];
+      const recipients = (customers || [])
+        .filter((customer) => {
+          if (recipientGroup === "ACTIVE") {
+            return !customer.membership_end_date || customer.membership_end_date >= todayIso;
+          }
+          if (recipientGroup === "EXPIRED") {
+            return customer.membership_end_date && customer.membership_end_date < todayIso;
+          }
+          return true;
+        })
+        .filter((customer) => String(customer.phone || "").trim());
+
+      let sentCount = 0;
+      for (const customer of recipients) {
+        const smsSubject = subject || template.subject;
+        const smsMessage = message || template.body_text;
+        const personalizedMessage = trimSms(
+          `${smsSubject ? `${smsSubject}: ` : ""}${smsMessage}`.replace(/\{first_name\}/gi, customer.first_name || "there"),
+        );
+        const { error } = await sendSMS(customer.phone, personalizedMessage);
+        if (error) throw error;
+        sentCount += 1;
+      }
+
       setStatus({
         type: "success",
-        message: "Broadcast initiated successfully!",
+        message: `Broadcast initiated successfully! Sent ${sentCount} SMS messages.`,
       });
       setSubject("");
       setMessage("");
@@ -336,7 +388,7 @@ const DupePage = () => {
             onSubmit={handleSaveTemplate}
             className="space-y-3 border border-white/10 p-4"
           >
-            <h2 className="text-sm">Expiry Reminder</h2>
+            <h2 className="text-sm">Expiry SMS Template</h2>
             <input
               value={template.subject}
               onChange={(e) =>
@@ -367,7 +419,7 @@ const DupePage = () => {
             onSubmit={handleSaveReviewTemplate}
             className="space-y-3 border border-white/10 p-4"
           >
-            <h2 className="text-sm">Google Review Request</h2>
+            <h2 className="text-sm">Google Review SMS Template</h2>
             <input
               value={reviewTemplate.subject}
               onChange={(e) =>

@@ -132,26 +132,6 @@ export const getBackendApi = async (path) => {
   return response.json();
 };
 
-const ensureBroadcastDelivery = (responsePayload) => {
-  if (!responsePayload || typeof responsePayload !== "object") {
-    return responsePayload;
-  }
-
-  const failedCount = Number(responsePayload.failedCount || 0);
-  if (responsePayload.success === false || failedCount > 0) {
-    const firstFailure = Array.isArray(responsePayload.failures)
-      ? responsePayload.failures[0]
-      : null;
-    const reason = firstFailure?.error || responsePayload.message || "Email delivery failed.";
-    throw new Error(reason);
-  }
-
-  return responsePayload;
-};
-
-export const sendBroadcastEmail = async (payload) =>
-  ensureBroadcastDelivery(await postBackendApi("/api/broadcast-email", payload));
-
 export const runAutoMigrationOnServer = async (payload) =>
   postBackendApi("/api/run-auto-migration", payload);
 

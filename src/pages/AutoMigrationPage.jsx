@@ -302,7 +302,7 @@ const AutoMigrationPage = ({ onboarding = false, embedded = false }) => {
       customerFileName: customerFile?.name || null,
       paymentCsv,
       paymentFileName: paymentFile?.name || null,
-      notifyEmail: user?.email || null,
+      notifyPhone: user?.phone || user?.email || null,
     });
   };
   const insertRowsWithFallback = async ({

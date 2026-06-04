@@ -9,7 +9,7 @@
 - Runs migration server-side for customer and payment CSV payloads.
 - Imports data in chunks for better large-volume stability.
 - Logs import jobs, errors, and reconciliation data.
-- Optionally sends completion email via existing broadcast-email function.
+- Optionally sends completion SMS via existing send-sms function.
 
 ## Required Secrets
 
@@ -40,4 +40,4 @@ Request body fields:
 - customerFileName
 - paymentCsv
 - paymentFileName
-- notifyEmail
+- notifyPhone

@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { supabase } from "../src/lib/supabaseClient.js";
 import { getEnv } from "./_env.js";
 
 const getBearerToken = (req) => {
@@ -25,13 +26,12 @@ const replaceTokens = ({ text, firstName, reviewLink }) =>
     .replace(/\{first_name\}/gi, firstName || "there")
     .replace(/\{review_link\}/gi, reviewLink || "");
 
-const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+const normalizePhone = (value) => String(value || "").replace(/\D/g, "");
 
-const maskEmail = (value) => {
-  const email = String(value || "").trim();
-  const [localPart, domain] = email.split("@");
-  if (!localPart || !domain) return "[redacted]";
-  return `${localPart.slice(0, 2)}***@${domain}`;
+const maskPhone = (value) => {
+  const phone = normalizePhone(value);
+  if (phone.length < 4) return "[redacted]";
+  return `${phone.slice(0, 2)}***${phone.slice(-2)}`;
 };
 
 const isActiveMember = (membershipEndDate) => {
@@ -43,53 +43,27 @@ const isActiveMember = (membershipEndDate) => {
   return end >= now;
 };
 
-const sendWithResend = async ({ apiKey, from, to, subject, text, html, replyTo }) => {
-  const normalizedText = String(text || "").trim();
-  const normalizedHtml = String(html || "").trim();
+const trimSms = (value, limit = 160) => {
+  const normalized = String(value || "").replace(/\s+/g, " ").trim();
+  if (normalized.length <= limit) return normalized;
+  return `${normalized.slice(0, Math.max(0, limit - 3))}...`;
+};
 
-  if (!normalizedText && !normalizedHtml) {
-    throw new Error("Email payload must include text or html content.");
+const sendSMS = async (phoneNumber, message) => {
+  if (!supabase) {
+    const error = new Error("Supabase client is not configured.");
+    console.error("SMS failed:", error);
+    return { data: null, error };
   }
 
-  const payload = {
-    from,
-    to: [to],
-    subject,
-  };
-
-  if (normalizedText) {
-    payload.text = normalizedText;
-  }
-
-  if (normalizedHtml) {
-    payload.html = normalizedHtml;
-  }
-
-  if (replyTo) {
-    payload.reply_to = replyTo;
-  }
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
+  const { data, error } = await supabase.functions.invoke("send-sms", {
+    body: {
+      to: `+91${phoneNumber}`,
+      message: message,
     },
-    body: JSON.stringify(payload),
-    signal: controller.signal,
   });
-
-  clearTimeout(timeoutId);
-
-  if (!response.ok) {
-    const textBody = await response.text();
-    throw new Error(`Resend error ${response.status}: ${textBody || response.statusText}`);
-  }
-
-  return response.json().catch(() => ({}));
+  if (error) console.error("SMS failed:", error);
+  return { data, error };
 };
 
 export default async function handler(req, res) {
@@ -101,15 +75,8 @@ export default async function handler(req, res) {
     const supabaseUrl = getEnv("SUPABASE_URL", "VITE_SUPABASE_URL");
     const supabaseAnonKey = getEnv("SUPABASE_ANON_KEY", "VITE_SUPABASE_ANON_KEY");
     const serviceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
-    const resendApiKey = getEnv("RESEND_API_KEY");
-    const resendFromEmail = getEnv("RESEND_FROM_EMAIL");
-
     if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
       return res.status(500).json({ error: "Missing Supabase server environment variables." });
-    }
-
-    if (!resendApiKey || !resendFromEmail) {
-      return res.status(500).json({ error: "Missing RESEND_API_KEY or RESEND_FROM_EMAIL." });
     }
 
     const token = getBearerToken(req);
@@ -135,7 +102,7 @@ export default async function handler(req, res) {
     const htmlMessage =
       typeof body?.htmlMessage === "string" ? body.htmlMessage.trim() : "";
     const recipientGroup = String(body?.recipientGroup || "ALL").toUpperCase();
-    const recipientEmail = String(body?.recipientEmail || "").trim();
+    const recipientPhoneRaw = String(body?.recipientPhone || body?.recipientEmail || "").trim();
 
     if (!subject || (!message && !htmlMessage)) {
       return res
@@ -153,30 +120,31 @@ export default async function handler(req, res) {
     let recipients = [];
 
     if (recipientGroup === "INDIVIDUAL") {
-      if (!recipientEmail || !isValidEmail(recipientEmail)) {
-        return res.status(400).json({ error: "recipientEmail is required for INDIVIDUAL recipientGroup." });
+      const normalizedPhone = normalizePhone(recipientPhoneRaw);
+      if (!normalizedPhone) {
+        return res.status(400).json({ error: "recipientPhone is required for INDIVIDUAL recipientGroup." });
       }
 
       recipients = [
         {
-          email: recipientEmail,
-          first_name: recipientEmail.split("@")[0] || "there",
+          phone: normalizedPhone,
+          first_name: "there",
           membership_end_date: null,
         },
       ];
     } else {
       const { data: customers, error: customerError } = await admin
         .from("customers")
-        .select("email, first_name, membership_end_date")
+        .select("phone, first_name, membership_end_date")
         .eq("gym_id", user.id)
-        .not("email", "is", null);
+        .not("phone", "is", null);
 
       if (customerError) {
         throw customerError;
       }
 
       const baseRecipients = Array.from(
-        new Map((customers || []).filter((row) => row.email).map((row) => [row.email.toLowerCase(), row])).values(),
+        new Map((customers || []).filter((row) => row.phone).map((row) => [normalizePhone(row.phone), row])).values(),
       );
 
       if (recipientGroup === "ACTIVE") {
@@ -216,23 +184,13 @@ export default async function handler(req, res) {
       });
 
       try {
-        // Format sender as "Gym Name <email>" if sender_profile exists
-        const fromField = integration?.sender_profile
-          ? `${integration.sender_profile} <${resendFromEmail}>`
-          : resendFromEmail;
-
-        await sendWithResend({
-          apiKey: resendApiKey,
-          from: fromField,
-          to: recipient.email,
-          subject: personalizedSubject,
-          text: personalizedBody,
-          html: personalizedHtml,
-          replyTo: integration?.reply_to_email || undefined,
-        });
+        const smsBody = trimSms(
+          `${personalizedSubject}: ${personalizedBody || personalizedHtml}`,
+        );
+        await sendSMS(normalizePhone(recipient.phone), smsBody);
         sent += 1;
       } catch (emailError) {
-        failures.push({ recipient: maskEmail(recipient.email), error: emailError.message });
+        failures.push({ recipient: maskPhone(recipient.phone), error: emailError.message });
       }
     }
 

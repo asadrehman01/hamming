@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient";
+import { getUserWithRetry } from "./authUser";
 
 export const isCurrentUserAccessAllowed = async () => {
   if (!supabase) {
@@ -6,7 +7,7 @@ export const isCurrentUserAccessAllowed = async () => {
   }
 
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getUserWithRetry(supabase);
     if (!user) return false;
 
     const { data, error } = await supabase

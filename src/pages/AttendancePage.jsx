@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import { getUserWithRetry } from "../lib/authUser";
 import { testScannerConnection, syncScanner, enrollScannerMember, unenrollScannerMember } from "../lib/backendApi";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -145,7 +146,7 @@ const AttendancePage = () => {
       try {
         const {
           data: { user },
-        } = await supabase.auth.getUser();
+        } = await getUserWithRetry(supabase);
 
         if (!active) return;
         if (!user?.id) return;
