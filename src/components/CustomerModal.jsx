@@ -624,9 +624,9 @@ const CustomerModal = ({
               .maybeSingle();
 
             const fallbackTemplate = {
-              subject: "Welcome to the gym, {first_name}! Share your 5-star experience",
+              subject: "Google review SMS",
               body_text:
-                "Hi {first_name},\n\nWelcome to the gym. We are excited to have you with us.\n\nIf your first experience has been great, please rate us 5 stars on Google here:\n{review_link}\n\nYour feedback helps us grow and helps more people discover our gym.\n\nThank you for being part of our community!",
+                "Hi {first_name}, welcome to the gym! 🎉 Loving it so far? Rate us 5 stars here: {review_link} — thanks for joining us!",
             };
 
             const activeTemplate = {

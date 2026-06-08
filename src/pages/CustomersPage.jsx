@@ -1129,22 +1129,19 @@ const CustomersPage = () => {
             </h1>
           </div>
           <div className="mt-6 flex flex-col lg:flex-row items-stretch lg:items-center gap-3 md:gap-4 w-full">
-            
-            <button
-              onClick={handleOpenNewModal}
-              className="new-application-btn px-5 py-2.5 text-[10px] tracking-[0.12em] dm-sans-light-008 font-medium whitespace-nowrap"
-            >
-              
-              New Application
-            </button>
-            {/* Search and Filter Area */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto lg:ml-auto">
+            <div className="flex w-full gap-3 lg:w-auto lg:shrink-0">
+              <button
+                onClick={handleOpenNewModal}
+                className="new-application-btn flex-1 px-3 py-2.5 text-[10px] tracking-[0.12em] dm-sans-light-008 font-medium whitespace-nowrap"
+              >
+                New Application
+              </button>
               <button
                 type="button"
                 onClick={exportToExcel}
                 disabled={exportLoading || loading || customers.length === 0}
                 title="Exports all loaded customers"
-                className="new-application-btn inline-flex items-center justify-center gap-2 px-5 py-2.5 text-[10px] tracking-[0.12em] dm-sans-light-008 font-medium whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed"
+                className="new-application-btn flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 text-[10px] tracking-[0.12em] dm-sans-light-008 font-medium whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {exportLoading ? (
                   <>
@@ -1158,7 +1155,10 @@ const CustomersPage = () => {
                   </>
                 )}
               </button>
-              
+            </div>
+            {/* Search and Filter Area */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto lg:ml-auto">
+
               {/* Search Bar */}
               <div className="relative group">
                 

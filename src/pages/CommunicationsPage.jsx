@@ -19,9 +19,9 @@ const DEFAULT_EXPIRY_TEMPLATE = {
 };
 
 const DEFAULT_REVIEW_TEMPLATE = {
-  subject: "Welcome to the gym, {first_name}! Share your 5-star experience",
+  subject: "Google review SMS",
   body_text:
-    "Hi {first_name}, thanks for joining! Please review us: {review_link}",
+    "Hi {first_name}, welcome to the gym! 🎉 Loving it so far? Rate us 5 stars here: {review_link} — thanks for joining us!",
 };
 
 const trimSms = (value, limit = 160) => {
